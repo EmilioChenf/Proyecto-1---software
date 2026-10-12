@@ -14,6 +14,69 @@ beforeEach(()=>{
   vi.mocked(service.getGlobalMaintenanceRequest).mockResolvedValue({vigente:{id_tarifa:1,monto:500,vigente_desde:'2026-01-01'},historial:[]});
   vi.mocked(service.saveHouseContractRequest).mockResolvedValue({id_casa:42,id_contrato:1,id_version:1,version:1,primer_periodo:'2030-01-01',total_mensual:500});
 });
+
+it('H5 conserva modo y datos de persona nueva al volver desde confirmación',async()=>{
+  await people();fireEvent.change(screen.getByLabelText('Propietario: origen'),{target:{value:'new'}});
+  for(const [key,value] of Object.entries({nombre:'Nueva persona',correo:'nueva@test.local',telefono:'55551234',password:'test-pass'}))fireEvent.change(screen.getByLabelText(`Propietario: ${key}`),{target:{value}});
+  fireEvent.click(screen.getByText('Continuar'));await screen.findByText('Guardar configuración');
+  fireEvent.click(screen.getByText('Anterior'));
+  expect(screen.getByLabelText('Propietario: origen')).toHaveValue('new');
+  expect(screen.getByLabelText('Propietario: nombre')).toHaveValue('Nueva persona');
+  expect(screen.getByLabelText('Propietario: correo')).toHaveValue('nueva@test.local');
+  expect(screen.getByLabelText('Propietario: telefono')).toHaveValue('55551234');
+  expect(screen.getByLabelText('Propietario: password')).toHaveValue('test-pass');
+  expect(screen.queryByLabelText('Propietario: usuario')).not.toBeInTheDocument();
+});
+
+function futureDates(){const d=new Date();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);const first=d.toISOString().slice(0,10);d.setUTCMonth(d.getUTCMonth()+1);return [first,d.toISOString().slice(0,10)];}
+function futureOccupant(){
+  const [first,second]=futureDates();
+  vi.mocked(service.getHouseContractsRequest).mockResolvedValue({id_casa:42,version_contractual:1,estado_configuracion:'CONFIGURADA',
+    versiones:[{id_version:1,id_contrato:1,tipo:'PROPIEDAD_PRIVADA',cuota_vivienda:'0',meses_financiamiento:null,vigente_desde:first,vigente_hasta:null,id_responsable:1,responsable_nombre:'Propietaria',estado:'VIGENTE',cuotas_generadas:0}],
+    titularidades:[{id_usuario:1,titular_empresa:false,nombre:'Propietaria',vigente_desde:first,vigente_hasta:null}],
+    habitantes:[{id_usuario:2,nombre:'Arrendatario',calidad:'INQUILINO_PRIVADO',vigente_desde:first,vigente_hasta:null}]});
+  return second;
+}
+it('H6 fecha efectiva futura conserva al inquilino en una edición financiera',async()=>{
+  const second=futureOccupant();await contract();
+  fireEvent.change(screen.getByLabelText('Fecha efectiva'),{target:{value:second}});
+  await screen.findByText('Q500.00');
+  fireEvent.click(screen.getByText('Continuar'));
+  expect(screen.getByLabelText('Agregar inquilino privado')).toBeChecked();
+  expect(screen.getByLabelText('Inquilino privado: usuario')).toHaveValue('2');
+  fireEvent.click(screen.getByText('Continuar'));fireEvent.click(screen.getByLabelText(/Confirmo vivienda/));fireEvent.click(screen.getByText('Guardar configuración'));
+  await waitFor(()=>expect(saved).toHaveBeenCalledOnce());
+  expect(service.saveHouseContractRequest).toHaveBeenCalledWith(42,expect.objectContaining({habitantes_accion:'CONSERVAR',inquilino_privado:{id_usuario:2}}));
+});
+it('H6 solamente la remoción explícita solicita actualizar habitantes',async()=>{
+  const second=futureOccupant();await contract();fireEvent.change(screen.getByLabelText('Fecha efectiva'),{target:{value:second}});
+  await screen.findByText('Q500.00');
+  fireEvent.click(screen.getByText('Continuar'));fireEvent.click(screen.getByLabelText('Agregar inquilino privado'));
+  fireEvent.click(screen.getByText('Continuar'));fireEvent.click(screen.getByLabelText(/Confirmo vivienda/));fireEvent.click(screen.getByText('Guardar configuración'));
+  await waitFor(()=>expect(saved).toHaveBeenCalledOnce());
+  expect(service.saveHouseContractRequest).toHaveBeenCalledWith(42,expect.objectContaining({habitantes_accion:'ACTUALIZAR',inquilino_privado:null}));
+});
+it('H9 paso vivienda muestra contrato vigente, titular, responsable y ocupación',async()=>{
+  futureOccupant();
+  const configured=await service.getHouseContractsRequest(42);
+  configured.versiones[0].vigente_desde='2020-01-01';configured.titularidades[0].vigente_desde='2020-01-01';
+  configured.habitantes[0].vigente_desde='2020-01-01';
+  open();fireEvent.click(screen.getByText(/Mapa 3D/));
+  expect(await screen.findByText('Contrato vigente')).toBeInTheDocument();
+  expect(screen.getByText('Titular actual')).toBeInTheDocument();
+  expect(screen.getByText('Responsable financiero actual')).toBeInTheDocument();
+  expect(screen.getByText('Ocupación')).toBeInTheDocument();
+  expect(screen.getByText('Ocupación').parentElement).toHaveTextContent('Ocupada · Arrendatario');
+  expect(screen.getByText('Estado').parentElement).toHaveTextContent('Activa');
+  expect(screen.getByText('Contrato vigente').parentElement).toHaveTextContent('Propiedad privada');
+  expect(screen.getByText('Titular actual').parentElement).toHaveTextContent('Propietaria');
+  expect(screen.getByText('Responsable financiero actual').parentElement).toHaveTextContent('Propietaria');
+  expect(screen.getByText(/2020-01-01/)).toBeInTheDocument();
+});
+it('H9 vivienda sin contrato muestra pendiente de configuración en el primer paso',async()=>{
+  open();fireEvent.click(screen.getByText(/Mapa 3D/));
+  expect(await screen.findByText('Pendiente de configuración')).toBeInTheDocument();
+});
 afterEach(cleanup);
 function open(){return render(<PropertyContractWizard open onClose={closed} onSaved={saved}/>);}
 async function contract(){open();fireEvent.click(screen.getByText(/Mapa 3D/));await waitFor(()=>expect(screen.queryByText('Cargando configuración contractual…')).not.toBeInTheDocument());fireEvent.click(screen.getByText('Continuar'));await screen.findByLabelText('Tipo contractual');}
