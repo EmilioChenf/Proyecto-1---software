@@ -16,17 +16,16 @@ async function payObligation(userId, role, quotaIdValue) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const ownershipJoin = role === "residente"
-      ? "INNER JOIN RESIDENTE titular ON titular.id_residente = c.id_residente AND titular.id_usuario = ?"
-      : `INNER JOIN INQUILINO_CASA ic ON ic.id_casa = c.id_casa
-         INNER JOIN INQUILINO titular ON titular.id_inquilino = ic.id_inquilino AND titular.id_usuario = ? AND titular.autorizado = TRUE`;
+    const ownershipJoin = `INNER JOIN USUARIO actor ON actor.id_usuario=? AND actor.activo=1
+      LEFT JOIN RESIDENTE titular ON titular.id_usuario=actor.id_usuario`;
     const [rows] = await connection.execute(
       `SELECT cu.id_cuota, cu.id_casa, cu.monto, DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') fecha_limite,
-        srv.nombre concepto
+        COALESCE(cu.concepto_snapshot,srv.nombre) concepto,cu.responsable_snapshot
        FROM CUOTA cu INNER JOIN CASA c ON c.id_casa = cu.id_casa
        INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
        ${ownershipJoin}
-       WHERE cu.id_cuota = ? FOR UPDATE`,
+       WHERE cu.id_cuota = ? AND (cu.id_responsable=actor.id_usuario OR
+         (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND titular.id_residente=c.id_residente)) FOR UPDATE`,
       [userId, quotaId],
     );
     if (!rows.length) {
@@ -49,9 +48,10 @@ async function payObligation(userId, role, quotaIdValue) {
     if (balance <= 0) throw httpError("La obligación ya fue pagada.", 409);
     await assertNoRecurrenteOperation(connection, quotaId);
     const [payment] = await connection.execute(
-      "INSERT INTO PAGO (id_cuota, monto_pagado, fecha_pago) VALUES (?, ?, CURDATE())",
+      "INSERT INTO PAGO (id_cuota, monto_pagado, fecha_pago) VALUES (?, ?, DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')))",
       [quotaId, balance],
     );
+    await require('./paymentAttribution').attributePayment(connection,payment.insertId,userId,quota.responsable_snapshot);
     const [transaction] = await connection.execute(
       `INSERT INTO TRANSACCION_SIMULADA (id_pago, id_usuario, id_casa, rol, concepto, monto, estado)
        VALUES (?, ?, ?, ?, ?, ?, 'APROBADA')`,

@@ -66,6 +66,8 @@ function buildSummary(quotas, currentDate = getCurrentDateInTimezone()) {
 }
 
 async function listResidentAccountStatement(userId) {
+  const contractual = await require('./contractFinancialAccount').account(userId,'residente');
+  if (contractual) return {resumen:contractual.resumen,cuotas:contractual.cuotas};
   const currentDate = getCurrentDateInTimezone();
   const rows = await query(
     `
@@ -93,7 +95,7 @@ async function listResidentAccountStatement(userId) {
         ON p.id_cuota = cu.id_cuota
       LEFT JOIN RECARGO_APLICADO rec
         ON rec.id_cuota = cu.id_cuota
-      WHERE r.id_usuario = ?
+      WHERE r.id_usuario = ? AND c.relaciones_confirmadas_en IS NULL
         AND LOWER(COALESCE(srv.tipo_servicio, '')) <> 'alquiler'
         AND LOWER(srv.nombre) NOT LIKE '%alquiler%'
         AND LOWER(srv.nombre) NOT LIKE '%renta%'

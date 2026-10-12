@@ -75,6 +75,7 @@ const QUOTA_BALANCES_SQL = `
     ${expressions.sobrepago} AS sobrepago
   FROM (
     SELECT cu.id_cuota, cu.id_casa, cu.id_servicio, cu.monto, cu.fecha_limite,
+      cu.id_responsable,cu.responsable_snapshot,cu.periodo,cu.concepto,cu.concepto_snapshot,
       COALESCE(rec.recargo, 0) AS recargo, COALESCE(pg.total_pagado, 0) AS total_pagado,
       pg.ultimo_pago, COALESCE(rf.total_reembolsado,0) AS total_reembolsado
     FROM CUOTA cu

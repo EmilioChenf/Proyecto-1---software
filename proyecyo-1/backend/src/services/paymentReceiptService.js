@@ -25,18 +25,16 @@ function paymentReference(id) {
 }
 
 async function receiptRows(userId, role, paymentId) {
-  const tenantJoin = role === "inquilino"
-    ? `INNER JOIN INQUILINO_CASA ic ON ic.id_casa = c.id_casa
-       INNER JOIN INQUILINO titular ON titular.id_inquilino = ic.id_inquilino
-         AND titular.id_usuario = ? AND titular.autorizado = TRUE`
-    : `INNER JOIN RESIDENTE titular ON titular.id_residente = c.id_residente
-         AND titular.id_usuario = ?`;
+  const tenantJoin = `LEFT JOIN RESIDENTE titular ON titular.id_residente=c.id_residente`;
+  const legacyPermission = role==='residente' ? 'c.relaciones_confirmadas_en IS NULL AND titular.id_usuario=usuario.id_usuario' : 'FALSE';
   const rows = await query(
     `SELECT pg.id_pago, pg.id_cuota, pg.monto_pagado,
             DATE_FORMAT(pg.fecha_pago, '%Y-%m-%d') AS fecha_pago,
-            srv.nombre AS servicio, cu.monto AS monto_cuota,
+            COALESCE(cu.concepto_snapshot,srv.nombre) AS servicio, cu.monto AS monto_cuota,
+            DATE_FORMAT(cu.periodo,'%Y-%m') periodo,cu.concepto,
             DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') AS fecha_limite,
-            usuario.nombre AS titular_nombre, usuario.correo AS titular_correo,
+            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pg.titular_snapshot,'$.nombre')),JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),usuario.nombre) AS titular_nombre,
+            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(pg.titular_snapshot,'$.correo')),JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.correo')),usuario.correo) AS titular_correo,
             c.numero, c.torre, c.id_casa,
             origen.origen AS pago_origen, origen.ambiente AS pago_ambiente,
             tr.id_transaccion, tr.id_pago AS transaccion_pago, tr.id_cuota AS transaccion_cuota,
@@ -55,11 +53,14 @@ async function receiptRows(userId, role, paymentId) {
        INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
        INNER JOIN CASA c ON c.id_casa = cu.id_casa
        ${tenantJoin}
-       INNER JOIN USUARIO usuario ON usuario.id_usuario = titular.id_usuario
+       INNER JOIN USUARIO usuario ON usuario.id_usuario = ?
        LEFT JOIN PAGO_ORIGEN origen ON origen.id_pago = pg.id_pago
        LEFT JOIN TRANSACCION_RECURRENTE tr ON tr.id_pago = pg.id_pago
        LEFT JOIN CHECKOUT_RECURRENTE co ON co.id_checkout = tr.id_checkout
-      WHERE ${paymentId == null ? "origen.origen='RECURRENTE' AND tr.estado IN ('CONFIRMADA','REEMBOLSADA_PARCIAL','REEMBOLSADA') ORDER BY pg.fecha_pago DESC, pg.id_pago DESC" : "pg.id_pago = ? LIMIT 1"}`,
+       LEFT JOIN TRANSACCION_SIMULADA sim ON sim.id_pago=pg.id_pago
+      WHERE (cu.id_responsable=usuario.id_usuario OR pg.id_actor=usuario.id_usuario OR tr.id_usuario=usuario.id_usuario
+        OR sim.id_usuario=usuario.id_usuario OR (cu.id_responsable IS NULL AND ${legacyPermission}))
+      AND ${paymentId == null ? "origen.origen='RECURRENTE' AND tr.estado IN ('CONFIRMADA','REEMBOLSADA_PARCIAL','REEMBOLSADA') ORDER BY pg.fecha_pago DESC, pg.id_pago DESC" : "pg.id_pago = ? LIMIT 1"}`,
     paymentId == null ? [userId] : [userId, paymentId],
   );
   return rows;
@@ -80,6 +81,7 @@ function mapReceipt(row) {
   const payment = {
     id_pago: Number(row.id_pago), id_cuota: Number(row.id_cuota),
     numero_comprobante: paymentReference(row.id_pago), servicio: row.servicio,
+    periodo:row.periodo||null,concepto:row.concepto||null,
     monto_pagado: Number(row.monto_pagado || 0), monto_cuota: Number(row.monto_cuota || 0),
     fecha_pago: row.fecha_pago, fecha_limite: row.fecha_limite,
     titular_nombre: row.titular_nombre, titular_correo: row.titular_correo,
@@ -131,8 +133,7 @@ async function getResidentTransactionReceipt(userId, transactionIdInput) {
   const rows = await query(`SELECT tr.id_pago, tr.estado FROM TRANSACCION_RECURRENTE tr
     INNER JOIN CUOTA cu ON cu.id_cuota=tr.id_cuota AND cu.id_casa=tr.id_casa
     INNER JOIN CASA ca ON ca.id_casa=cu.id_casa
-    INNER JOIN RESIDENTE r ON r.id_residente=ca.id_residente AND r.id_usuario=?
-    WHERE tr.id_transaccion=? LIMIT 1`, [userId, transactionId]);
+    WHERE tr.id_usuario=? AND tr.id_transaccion=? LIMIT 1`, [userId, transactionId]);
   if (!rows[0]) throw receiptError("RECEIPT_NOT_FOUND", 404, "No se encontró el comprobante solicitado para este usuario.");
   if (!HISTORICAL_SUCCESS.includes(rows[0].estado) || !rows[0].id_pago) throw notConfirmed();
   return getPaymentReceipt(userId, "residente", rows[0].id_pago);
@@ -174,6 +175,8 @@ function createPaymentReceiptPdf(payment) {
       ["Moneda", payment.moneda || "GTQ"], ["Estado", payment.estado === "CONFIRMADO" ? "Confirmado" : "Aplicado"],
       ["Proveedor", payment.proveedor || "Histórico"],
     ];
+    if(payment.periodo)rows.push(['Período',payment.periodo]);
+    if(payment.concepto)rows.push(['Concepto contractual',payment.concepto]);
     if (payment.reembolso_posterior) rows.push(["Reembolso posterior", "Reembolsado"], ["Monto devuelto", `Q${payment.reembolsado.toFixed(2)}`], ["Abono neto actual", `Q${payment.abono_neto.toFixed(2)}`]);
     if (payment.origen === "RECURRENTE") rows.push(["Transacción externa", payment.referencia_transaccion],
       ["Referencia interna", `Pago ${payment.id_pago} · Transacción ${payment.id_transaccion} · Checkout ${payment.id_checkout}`]);

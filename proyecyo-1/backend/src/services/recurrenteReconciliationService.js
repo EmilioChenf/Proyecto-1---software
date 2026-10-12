@@ -69,7 +69,7 @@ async function loadCatalog(criteria, pool = defaultPool) {
       co.id_residente,co.id_casa,co.monto_centavos co_monto,co.moneda co_moneda,co.ambiente co_ambiente,
       co.estado co_estado,co.estado_proveedor,co.sandbox_id,DATE_FORMAT(co.verificado_en,'%Y-%m-%d %H:%i:%s.%f') verificado_en,
       DATE_FORMAT(co.actualizado_en,'%Y-%m-%d %H:%i:%s.%f') co_actualizado,
-      ca.id_residente actual_residente,cu.id_casa cuota_casa,r.id_usuario residente_usuario,u.nombre residente_nombre,
+      r.id_residente actual_residente,cu.id_casa cuota_casa,COALESCE(cu.id_responsable,co.id_usuario) residente_usuario,u.nombre residente_nombre,
       CONCAT_WS('-',NULLIF(ca.torre,''),ca.numero) unidad,srv.nombre concepto,
       tr.id_transaccion,tr.id_externo tr_externo,tr.id_pago_externo,tr.id_pago,tr.id_cuota tr_cuota,tr.id_usuario tr_usuario,tr.id_casa tr_casa,
       tr.monto_centavos tr_monto,tr.moneda tr_moneda,tr.ambiente tr_ambiente,tr.estado tr_estado,
@@ -79,8 +79,9 @@ async function loadCatalog(criteria, pool = defaultPool) {
       pg.id_pago pg_id,pg.id_cuota pg_cuota,pg.monto_pagado,DATE_FORMAT(pg.fecha_pago,'%Y-%m-%d') fecha_pago,
       po.origen,po.ambiente pago_ambiente,b.saldo_pendiente,b.total_pagado,b.total_reembolsado,b.abono_neto,b.recargo,b.sobrepago
       FROM CHECKOUT_RECURRENTE co JOIN CUOTA cu ON cu.id_cuota=co.id_cuota
-      JOIN CASA ca ON ca.id_casa=cu.id_casa JOIN RESIDENTE r ON r.id_residente=ca.id_residente
-      JOIN USUARIO u ON u.id_usuario=r.id_usuario JOIN SERVICIO srv ON srv.id_servicio=cu.id_servicio
+      JOIN CASA ca ON ca.id_casa=cu.id_casa LEFT JOIN RESIDENTE r
+        ON r.id_usuario=COALESCE(cu.id_responsable,co.id_usuario)
+      JOIN USUARIO u ON u.id_usuario=COALESCE(cu.id_responsable,co.id_usuario) JOIN SERVICIO srv ON srv.id_servicio=cu.id_servicio
       JOIN (${QUOTA_BALANCES_SQL}) b ON b.id_cuota=co.id_cuota
       LEFT JOIN TRANSACCION_RECURRENTE tr ON tr.id_checkout=co.id_checkout
       LEFT JOIN PAGO pg ON pg.id_pago=tr.id_pago LEFT JOIN PAGO_ORIGEN po ON po.id_pago=pg.id_pago

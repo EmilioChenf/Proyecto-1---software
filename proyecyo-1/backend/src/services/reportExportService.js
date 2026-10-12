@@ -16,17 +16,21 @@ const REPORTS = {
     FROM RESERVA r JOIN USUARIO u ON u.id_usuario=r.id_usuario
     JOIN AMENIDAD am ON am.id_amenidad=r.id_amenidad` },
   morosos: { title: "Morosos", columns: { fecha: "Vencimiento", residente: "Residente", unidad: "Unidad", monto: "Saldo pendiente (Q)" }, sql: `
-    SELECT DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') fecha, u.nombre residente,
+    SELECT DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') fecha,
+      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') residente,
       CONCAT_WS('-', NULLIF(c.torre, ''), c.numero) unidad,
       cu.saldo_pendiente monto
     FROM (${QUOTA_BALANCES_SQL}) cu JOIN CASA c ON c.id_casa=cu.id_casa
-    JOIN RESIDENTE r ON r.id_residente=c.id_residente JOIN USUARIO u ON u.id_usuario=r.id_usuario
+    LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
+    LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
     WHERE cu.fecha_limite < ? AND cu.saldo_pendiente > 0` },
   sanciones: { title: "Sanciones", columns: { fecha: "Fecha", hora: "Hora", residente: "Residente", motivo: "Motivo", monto: "Monto (Q)", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d') fecha,
-      DATE_FORMAT(s.fecha_generacion, '%H:%i:%s') hora, u.nombre residente, s.motivo, s.monto, s.estado
+      DATE_FORMAT(s.fecha_generacion, '%H:%i:%s') hora, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') residente, s.motivo, s.monto, s.estado
     FROM SANCION s JOIN CASA c ON c.id_casa=s.id_casa
-    JOIN RESIDENTE r ON r.id_residente=c.id_residente JOIN USUARIO u ON u.id_usuario=r.id_usuario` },
+    LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
+    LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
+    LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)` },
 };
 const invalid = message => Object.assign(new Error(message), { status: 400 });
 function validate(type, format) {

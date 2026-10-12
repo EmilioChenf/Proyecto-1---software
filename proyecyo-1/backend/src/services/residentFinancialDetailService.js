@@ -63,7 +63,7 @@ async function getResidentHouse(userId) {
              c.torre
       FROM CASA c
       INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente
-      WHERE r.id_usuario = ?
+      WHERE r.id_usuario = ? AND c.relaciones_confirmadas_en IS NULL
       LIMIT 1
     `,
     [userId],
@@ -86,6 +86,8 @@ const OWNER_VISIBLE_SERVICE_SQL = `LOWER(COALESCE(srv.tipo_servicio, '')) <> 'al
         AND LOWER(srv.nombre) NOT LIKE '%renta%'`;
 
 async function getFinancialDetail(userId, filters = {}) {
+  const contractual = await require('./contractFinancialAccount').detail(userId,filters);
+  if (contractual) return contractual;
   const desde = normalizeDate(filters.desde);
   const hasta = normalizeDate(filters.hasta);
   const house = await getResidentHouse(userId);

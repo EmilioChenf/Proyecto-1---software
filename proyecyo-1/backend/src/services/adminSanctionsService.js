@@ -294,19 +294,17 @@ async function listSanctions(filters = {}) {
         DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d %H:%i') AS fecha_generacion,
         c.numero,
         c.torre,
-        u.nombre AS residente,
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') AS residente,
         cu.monto AS cuota_monto,
         DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') AS fecha_limite,
         srv.nombre AS servicio
       FROM SANCION s
       INNER JOIN CASA c
         ON c.id_casa = s.id_casa
-      INNER JOIN RESIDENTE r
-        ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO u
-        ON u.id_usuario = r.id_usuario
-      LEFT JOIN CUOTA cu
-        ON cu.id_cuota = s.id_cuota
+      LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
+      LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
+      LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR
+        (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
       LEFT JOIN SERVICIO srv
         ON srv.id_servicio = cu.id_servicio
       ${whereClause}
@@ -349,16 +347,16 @@ async function listSanctionHistory(filters = {}) {
         s.monto,
         c.numero,
         c.torre,
-        u.nombre AS residente
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') AS residente
       FROM SANCION_HISTORIAL h
       INNER JOIN SANCION s
         ON s.id_sancion = h.id_sancion
       INNER JOIN CASA c
         ON c.id_casa = s.id_casa
-      INNER JOIN RESIDENTE r
-        ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO u
-        ON u.id_usuario = r.id_usuario
+      LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
+      LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
+      LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR
+        (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
       LEFT JOIN USUARIO actor
         ON actor.id_usuario = h.realizado_por
       ${whereClause}

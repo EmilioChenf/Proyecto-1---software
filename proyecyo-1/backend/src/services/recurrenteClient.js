@@ -82,7 +82,7 @@ function createRecurrenteClient({ fetchImpl = (...args) => globalThis.fetch(...a
     async createCheckout(local, beforeRequest) {
       const config = configuration();
       await sandbox(config); // A TEST prefix alone also permits legacy_test: do not infer the tenant.
-      const returnUrl = `${config.origin}/residente/pagos/retorno?referencia=${encodeURIComponent(local.referencia_local)}`;
+      const returnUrl = `${config.origin}/${local.rol==='inquilino'?'inquilino':'residente'}/pagos/retorno?referencia=${encodeURIComponent(local.referencia_local)}`;
       const body = {
         items: [{ name: `NexusResidencial - ${String(local.concepto).replace(/[\r\n\t]/g, " ").slice(0, 120)}`,
           amount_in_cents: local.monto_centavos, currency: "GTQ", quantity: 1 }],

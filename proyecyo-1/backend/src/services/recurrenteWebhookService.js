@@ -74,7 +74,7 @@ function createWebhookService({ pool = defaultPool } = {}) {
         return await complete(event.disposition, event.code);
       }
 
-      const [refs] = await c.execute("SELECT id_checkout,id_cuota FROM CHECKOUT_RECURRENTE WHERE ambiente='sandbox' AND id_externo=?", [event.checkoutId]);
+      const [refs] = await c.execute("SELECT id_checkout,id_cuota,id_usuario FROM CHECKOUT_RECURRENTE WHERE ambiente='sandbox' AND id_externo=?", [event.checkoutId]);
       if (!refs[0]) {
         // A signed event can outrun HU13's persistence of the external checkout ID.
         // Do not bind an unknown checkout from metadata; let Svix retry safely.
@@ -82,9 +82,11 @@ function createWebhookService({ pool = defaultPool } = {}) {
       }
       // Same lock order as HU13 and academic payments: quota, then checkout.
       // Lock the parent before any consistent reads of PAGO to serialize balances.
-      const [quotas] = await c.execute(`SELECT cu.id_cuota,cu.id_casa,cu.monto,r.id_residente,r.id_usuario
-        FROM CUOTA cu JOIN CASA ca ON ca.id_casa=cu.id_casa
-        JOIN RESIDENTE r ON r.id_residente=ca.id_residente WHERE cu.id_cuota=? FOR UPDATE`, [refs[0].id_cuota]);
+      const [quotas] = await c.execute(`SELECT cu.id_cuota,cu.id_casa,cu.monto,r.id_residente,
+        COALESCE(cu.id_responsable,?) id_usuario,cu.responsable_snapshot
+        FROM CUOTA cu
+        LEFT JOIN RESIDENTE r ON r.id_usuario=COALESCE(cu.id_responsable,?)
+        WHERE cu.id_cuota=? FOR UPDATE`, [refs[0].id_usuario,refs[0].id_usuario,refs[0].id_cuota]);
       const [checkouts] = await c.execute("SELECT * FROM CHECKOUT_RECURRENTE WHERE id_checkout=? FOR UPDATE", [refs[0].id_checkout]);
       const local = checkouts[0], quota = quotas[0];
       if(local) await c.execute('UPDATE EVENTO_RECURRENTE SET id_checkout=? WHERE id_evento=?',[local.id_checkout,inbox.id_evento]);
@@ -155,6 +157,7 @@ function createWebhookService({ pool = defaultPool } = {}) {
       const surcharge = toCents(before.recargo_pendiente) - toCents(after.recargo_pendiente);
       // PAGO, its source, canonical transaction, checkout and inbox commit together.
       const [payment] = await c.execute("INSERT INTO PAGO(id_cuota,monto_pagado,fecha_pago) VALUES(?,?,?)", [local.id_cuota, money(event.amount), event.time.accountingDate]);
+      await require('./paymentAttribution').attributePayment(c,payment.insertId,local.id_usuario,quota.responsable_snapshot);
       await c.execute("INSERT INTO PAGO_ORIGEN(id_pago,id_cuota,origen,ambiente) VALUES(?,?,'RECURRENTE','sandbox')", [payment.insertId, local.id_cuota]);
       const audit = [payment.insertId, event.paymentId, inbox.id_evento, event.time.utc, event.time.original, capital, surcharge];
       if (transaction) {

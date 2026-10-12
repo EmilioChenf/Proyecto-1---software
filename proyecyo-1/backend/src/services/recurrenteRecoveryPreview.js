@@ -58,8 +58,10 @@ async function previewReview(connection, { receipt, event, sandboxId }) {
   if (event.disposition === 'REFUND') return previewRefund(connection,{receipt,event,sandboxId});
   const [checkouts] = await connection.execute("SELECT * FROM CHECKOUT_RECURRENTE WHERE ambiente='sandbox' AND id_externo=?",[event.checkoutId]);
   const local = checkouts[0]; if (checkouts.length !== 1 || local.sandbox_id !== sandboxId) return reject();
-  const [quotas] = await connection.execute(`SELECT cu.id_cuota,cu.id_casa,r.id_residente,r.id_usuario
-    FROM CUOTA cu JOIN CASA ca ON ca.id_casa=cu.id_casa JOIN RESIDENTE r ON r.id_residente=ca.id_residente WHERE cu.id_cuota=?`,[local.id_cuota]);
+  const [quotas] = await connection.execute(`SELECT cu.id_cuota,cu.id_casa,r.id_residente,COALESCE(cu.id_responsable,co.id_usuario) id_usuario
+    FROM CUOTA cu JOIN CHECKOUT_RECURRENTE co ON co.id_cuota=cu.id_cuota AND co.id_checkout=?
+    LEFT JOIN RESIDENTE r ON r.id_usuario=COALESCE(cu.id_responsable,co.id_usuario)
+    WHERE cu.id_cuota=?`,[local.id_checkout,local.id_cuota]);
   const quota = quotas[0];
   if (!quota || Number(local.id_casa) !== Number(quota.id_casa) || Number(local.id_residente) !== Number(quota.id_residente)
     || Number(local.id_usuario) !== Number(quota.id_usuario) || Number(receipt.id_checkout) !== Number(local.id_checkout)

@@ -10,13 +10,14 @@ const { successReviewSql } = require('./recurrenteReviewGuard');
 
 async function lockedQuota(connection, userId, quotaId) {
   const [rows] = await connection.execute(`SELECT cu.id_cuota, cu.id_casa, cu.monto,
-      r.id_residente, srv.nombre concepto
+      r.id_residente, srv.nombre concepto, tu.nombre rol
     FROM CUOTA cu INNER JOIN CASA c ON c.id_casa = cu.id_casa
-    INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente AND r.id_usuario = ?
-    INNER JOIN USUARIO u ON u.id_usuario = r.id_usuario AND u.activo = TRUE
-    INNER JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario = u.id_tipo_usuario AND LOWER(tu.nombre) = 'residente'
+    INNER JOIN USUARIO u ON u.id_usuario = ? AND u.activo = TRUE
+    LEFT JOIN RESIDENTE r ON r.id_usuario = u.id_usuario
+    INNER JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario = u.id_tipo_usuario AND LOWER(tu.nombre) IN ('residente','inquilino')
     INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
-    WHERE cu.id_cuota = ? FOR UPDATE`, [userId, quotaId]);
+    WHERE cu.id_cuota = ? AND (cu.id_responsable=u.id_usuario OR
+      (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND c.id_residente=r.id_residente)) FOR UPDATE`, [userId, quotaId]);
   if (!rows.length) {
     const [exists] = await connection.execute("SELECT id_cuota FROM CUOTA WHERE id_cuota = ?", [quotaId]);
     throw new CheckoutError(exists.length ? "QUOTA_NOT_OWNED" : "QUOTA_NOT_FOUND");
@@ -48,7 +49,7 @@ function createCheckoutService({ pool = defaultPool, client = createRecurrenteCl
       id_usuario: userId, id_residente: quota.id_residente, id_casa: quota.id_casa,
       monto_centavos: toCents(quota.balance.saldo), capital_centavos: toCents(quota.balance.capital_pendiente),
       recargo_centavos: toCents(quota.balance.recargo_pendiente), moneda: "GTQ", ambiente: "sandbox",
-      sandbox_id: sandboxId, concepto: quota.concepto };
+      sandbox_id: sandboxId, concepto: quota.concepto, rol: quota.rol };
     const [result] = await connection.execute(`INSERT INTO CHECKOUT_RECURRENTE
       (referencia_local,idempotency_key,id_cuota,id_usuario,id_residente,id_casa,monto_centavos,
        capital_centavos,recargo_centavos,moneda,ambiente,sandbox_id,estado)
@@ -77,7 +78,7 @@ function createCheckoutService({ pool = defaultPool, client = createRecurrenteCl
       if (active.some((row) => row.estado === "INCIERTO")) throw new CheckoutError("CHECKOUT_UNCERTAIN");
       if (active.length > 1) throw new CheckoutError("CHECKOUT_INCOMPATIBLE");
       if (active.length) {
-        const local = active[0];
+        const local = {...active[0],rol:quota.rol};
         if (reference && local.referencia_local !== reference) throw new CheckoutError("CHECKOUT_INCOMPATIBLE");
         // A requested retry may verify an old amount to establish expiration;
         // it may never reuse that amount or an operation of another owner/tenant.
@@ -198,11 +199,12 @@ function createCheckoutService({ pool = defaultPool, client = createRecurrenteCl
     try {
       const [rows] = await c.execute(`SELECT co.* FROM CHECKOUT_RECURRENTE co
         JOIN CUOTA cu ON cu.id_cuota=co.id_cuota AND cu.id_casa=co.id_casa
-        JOIN CASA ca ON ca.id_casa=cu.id_casa AND ca.id_residente=co.id_residente
-        JOIN RESIDENTE r ON r.id_residente=ca.id_residente AND r.id_usuario=co.id_usuario
-        JOIN USUARIO u ON u.id_usuario=r.id_usuario AND u.activo=TRUE
-        JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario=u.id_tipo_usuario AND LOWER(tu.nombre)='residente'
-        WHERE co.referencia_local=? AND co.id_usuario=? AND co.ambiente='sandbox' AND co.sandbox_id=?`,
+        JOIN CASA ca ON ca.id_casa=cu.id_casa
+        LEFT JOIN RESIDENTE r ON r.id_residente=ca.id_residente AND r.id_usuario=co.id_usuario
+        JOIN USUARIO u ON u.id_usuario=co.id_usuario AND u.activo=TRUE
+        JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario=u.id_tipo_usuario AND LOWER(tu.nombre) IN ('residente','inquilino')
+        WHERE co.referencia_local=? AND co.id_usuario=? AND co.ambiente='sandbox' AND co.sandbox_id=?
+          AND (cu.id_responsable=co.id_usuario OR cu.id_responsable IS NULL)`,
       [reference, userId, client.sandboxId()]);
       if (!rows[0]) throw new CheckoutError("CHECKOUT_NOT_FOUND");
       return rows[0];

@@ -44,18 +44,12 @@ async function recipients(c, quotaId, debt = true) {
   const ownerVisibility = debt ? `AND LOWER(COALESCE(s.tipo_servicio,'')) <> 'alquiler'
     AND LOWER(s.nombre) NOT LIKE '%alquiler%' AND LOWER(s.nombre) NOT LIKE '%renta%'` : '';
   const [rows] = await c.execute(`SELECT u.id_usuario FROM CUOTA q JOIN CASA ca ON ca.id_casa=q.id_casa
-    JOIN RESIDENTE r ON r.id_residente=ca.id_residente JOIN USUARIO u ON u.id_usuario=r.id_usuario
+    LEFT JOIN RESIDENTE r ON r.id_residente=ca.id_residente
+    JOIN USUARIO u ON u.id_usuario=q.id_responsable OR
+      (q.id_responsable IS NULL AND ca.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
     JOIN TIPO_USUARIO t ON t.id_tipo_usuario=u.id_tipo_usuario JOIN SERVICIO s ON s.id_servicio=q.id_servicio
-    WHERE q.id_cuota=? AND u.activo=TRUE AND LOWER(t.nombre)='residente' ${ownerVisibility}
-    UNION
-    SELECT u.id_usuario FROM INQUILINO i JOIN USUARIO u ON u.id_usuario=i.id_usuario
-    JOIN TIPO_USUARIO t ON t.id_tipo_usuario=u.id_tipo_usuario
-    WHERE i.autorizado=TRUE AND u.activo=TRUE AND LOWER(t.nombre)='inquilino'
-    AND (SELECT c.id_casa FROM INQUILINO ii JOIN INQUILINO_CASA ic ON ic.id_inquilino=ii.id_inquilino
-      JOIN CASA c ON c.id_casa=ic.id_casa JOIN RESIDENTE r ON r.id_residente=c.id_residente
-      JOIN USUARIO propietario ON propietario.id_usuario=r.id_usuario
-      WHERE ii.id_usuario=u.id_usuario AND ii.autorizado=TRUE LIMIT 1)
-      = (SELECT id_casa FROM CUOTA WHERE id_cuota=?)`, [quotaId, quotaId]);
+    WHERE q.id_cuota=? AND u.activo=TRUE AND LOWER(t.nombre) IN ('residente','inquilino')
+      AND (q.id_responsable IS NOT NULL OR (LOWER(t.nombre)='residente' ${ownerVisibility}))`, [quotaId]);
   return rows.map(r => Number(r.id_usuario));
 }
 async function stage(c, quota, userId, cycle, today, lead) {

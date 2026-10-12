@@ -1,4 +1,15 @@
 const { query } = require("../database/mysql");
+// Recheck financial visibility when reading already delivered notifications.
+// Personal payment events remain available to their historical actor.
+const FINANCIAL_VISIBILITY_SQL = `AND (
+  (e.id_cuota IS NULL AND NOT EXISTS(SELECT 1 FROM RECORDATORIO_PAGO rp WHERE rp.id_notificacion=n.id_notificacion))
+  OR EXISTS(SELECT 1 FROM CUOTA fq JOIN CASA fc ON fc.id_casa=fq.id_casa
+    LEFT JOIN RESIDENTE fr ON fr.id_residente=fc.id_residente
+    WHERE fq.id_cuota=COALESCE(e.id_cuota,(SELECT rp.id_cuota FROM RECORDATORIO_PAGO rp WHERE rp.id_notificacion=n.id_notificacion LIMIT 1))
+      AND (fq.id_responsable=n.id_usuario OR (fq.id_responsable IS NULL AND fc.relaciones_confirmadas_en IS NULL AND fr.id_usuario=n.id_usuario)))
+  OR (e.id_pago IS NOT NULL AND EXISTS(SELECT 1 FROM PAGO fp LEFT JOIN TRANSACCION_RECURRENTE ft ON ft.id_pago=fp.id_pago
+    WHERE fp.id_pago=e.id_pago AND (fp.id_actor=n.id_usuario OR ft.id_usuario=n.id_usuario)))
+)`;
 
 function normalizeNotification(row) {
   return {
@@ -49,6 +60,7 @@ async function listNotifications(userId) {
   const rows = await query(
     `${NOTIFICATION_SELECT}
       WHERE n.id_usuario = ?
+      ${FINANCIAL_VISIBILITY_SQL}
       ORDER BY n.creado_en DESC, n.id_notificacion DESC
       LIMIT 20
     `,
@@ -95,7 +107,7 @@ async function listNotificationsPage(userId, options = {}) {
   // Se pide una fila extra para saber si existe otra pagina sin contar toda la tabla.
   const rows = await query(
     `${NOTIFICATION_SELECT}
-      WHERE n.id_usuario = ?${PAGE_FILTERS[filter]}${cursorSql}
+      WHERE n.id_usuario = ?${PAGE_FILTERS[filter]}${cursorSql} ${FINANCIAL_VISIBILITY_SQL}
       ORDER BY n.creado_en DESC, n.id_notificacion DESC
       LIMIT ${requestedLimit + 1}
     `,
@@ -114,8 +126,9 @@ async function countUnreadNotifications(userId) {
   const rows = await query(
     `
       SELECT COUNT(*) AS total
-      FROM NOTIFICACION
-      WHERE id_usuario = ? AND leido = FALSE
+      FROM NOTIFICACION n
+      LEFT JOIN ENTREGA_NOTIFICACION_FINANCIERA e ON e.id_notificacion=n.id_notificacion AND e.id_usuario=n.id_usuario
+      WHERE n.id_usuario = ? AND n.leido = FALSE ${FINANCIAL_VISIBILITY_SQL}
     `,
     [userId],
   );
@@ -167,6 +180,7 @@ async function markNotificationAsRead(userId, notificationId) {
       LEFT JOIN VISITANTE v ON v.id_visitante = a.id_visitante
       LEFT JOIN CASA c ON c.id_casa = a.id_casa
       WHERE n.id_notificacion = ? AND n.id_usuario = ?
+      ${FINANCIAL_VISIBILITY_SQL}
       LIMIT 1
     `,
     [normalizedId, userId],

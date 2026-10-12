@@ -33,6 +33,7 @@ function mapAdminPayment(row) {
     unidad: row.unidad,
     propietario_nombre: row.propietario_nombre,
     propietario_correo: row.propietario_correo,
+    propietario_actual:row.propietario_actual||null,id_responsable:row.id_responsable?Number(row.id_responsable):null,
     monto_pendiente: Number(row.monto_pendiente),
     recargo_aplicado: Number(row.recargo_aplicado || 0),
     recargo_pendiente: Number(row.recargo_pendiente || 0),
@@ -75,8 +76,10 @@ async function listDelinquentResidents(filters = {}) {
             WHEN c.torre IS NOT NULL AND c.torre <> '' THEN CONCAT(c.torre, '-', c.numero)
             ELSE c.numero
           END AS unidad,
-          propietario.nombre AS propietario_nombre,
-          propietario.correo AS propietario_correo,
+          COALESCE(saldo.responsable_nombre,responsable.nombre,
+            IF(c.relaciones_confirmadas_en IS NULL,propietario.nombre,'Responsable pendiente de confirmar')) AS propietario_nombre,
+          COALESCE(responsable.correo,IF(c.relaciones_confirmadas_en IS NULL,propietario.correo,NULL)) AS propietario_correo,
+          propietario.nombre propietario_actual,saldo.id_responsable,
           COALESCE(saldo.monto_pendiente, 0) AS monto_pendiente,
           COALESCE(saldo.recargo_aplicado, 0) AS recargo_aplicado,
           COALESCE(saldo.recargo_pendiente, 0) AS recargo_pendiente,
@@ -88,11 +91,12 @@ async function listDelinquentResidents(filters = {}) {
             ELSE 'PENDIENTE'
           END AS estado
         FROM CASA c
-        INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente
-        INNER JOIN USUARIO propietario ON propietario.id_usuario = r.id_usuario
+        LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
+        LEFT JOIN USUARIO propietario ON propietario.id_usuario = r.id_usuario
         LEFT JOIN (
           SELECT
             cu.id_casa,
+            cu.id_responsable,MAX(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre'))) responsable_nombre,
             SUM(cu.capital_pendiente) AS monto_pendiente,
             SUM(cu.recargo) AS recargo_aplicado,
             SUM(cu.recargo_pendiente) AS recargo_pendiente,
@@ -106,8 +110,9 @@ async function listDelinquentResidents(filters = {}) {
               END
             ) AS tiene_mora
           FROM (${QUOTA_BALANCES_SQL}) cu
-          GROUP BY cu.id_casa
+          GROUP BY cu.id_casa,cu.id_responsable
         ) saldo ON saldo.id_casa = c.id_casa
+        LEFT JOIN USUARIO responsable ON responsable.id_usuario=saldo.id_responsable
       ) resumen
       WHERE ${sqlFilters.join(" AND ")}
       ORDER BY (resumen.estado = 'MOROSO') DESC, resumen.monto_pendiente DESC, resumen.propietario_nombre ASC
@@ -168,11 +173,14 @@ async function getMonthlyFinancialReport(monthValue, yearValue) {
   const period = normalizePeriod(monthValue, yearValue);
   const rows = await query(
     `SELECT c.id_casa, CONCAT(COALESCE(c.torre, ''), IF(c.torre IS NULL OR c.torre = '', '', '-'), c.numero) AS unidad,
-            u.nombre AS usuario, s.nombre AS concepto, cu.monto,
+            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') AS usuario,
+            COALESCE(cu.concepto_snapshot,s.nombre) AS concepto,cu.periodo,cu.id_responsable,cu.monto,
             DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') AS fecha_limite,
             cu.total_pagado AS pagado, cu.total_reembolsado, cu.recargo
        FROM (${QUOTA_BALANCES_SQL}) cu INNER JOIN CASA c ON c.id_casa = cu.id_casa
-       INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente INNER JOIN USUARIO u ON u.id_usuario = r.id_usuario
+       LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
+       LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR
+         (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
        INNER JOIN SERVICIO s ON s.id_servicio = cu.id_servicio
       ORDER BY cu.fecha_limite, unidad`,
     [],

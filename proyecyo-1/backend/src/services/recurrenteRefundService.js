@@ -25,14 +25,15 @@ async function localTransaction(c, id) {
     co.moneda checkout_moneda,co.id_cuota checkout_cuota,co.id_usuario checkout_usuario,co.id_casa checkout_casa,
     p.monto_pagado,DATE_FORMAT(p.fecha_pago,'%Y-%m-%d') fecha_pago,po.origen,po.ambiente pago_ambiente,
     cu.monto,cu.id_casa cuota_casa,DATE_FORMAT(cu.fecha_limite,'%Y-%m-%d') fecha_limite,srv.nombre concepto,
-    r.id_usuario residente_usuario,co.id_residente,ca.id_residente actual_residente,u.nombre residente,
+    COALESCE(cu.id_responsable,co.id_usuario) residente_usuario,co.id_residente,r.id_residente actual_residente,u.nombre residente,
     CONCAT_WS('-',NULLIF(ca.torre,''),ca.numero) unidad,
     COALESCE(CASE WHEN e.tipo_evento='payment_intent.succeeded' THEN e.id_operacion_externa END,
       (SELECT orig.id_operacion_externa FROM EVENTO_RECURRENTE orig WHERE orig.id_checkout=tr.id_checkout
        AND orig.tipo_evento='payment_intent.succeeded' AND orig.estado='PROCESADO' ORDER BY orig.id_evento LIMIT 1)) legacy_intent
     FROM TRANSACCION_RECURRENTE tr JOIN CHECKOUT_RECURRENTE co ON co.id_checkout=tr.id_checkout
     JOIN CUOTA cu ON cu.id_cuota=tr.id_cuota JOIN CASA ca ON ca.id_casa=cu.id_casa
-    JOIN RESIDENTE r ON r.id_residente=ca.id_residente JOIN USUARIO u ON u.id_usuario=r.id_usuario
+    LEFT JOIN RESIDENTE r ON r.id_usuario=COALESCE(cu.id_responsable,co.id_usuario)
+    JOIN USUARIO u ON u.id_usuario=COALESCE(cu.id_responsable,co.id_usuario)
     JOIN SERVICIO srv ON srv.id_servicio=cu.id_servicio LEFT JOIN PAGO p ON p.id_pago=tr.id_pago AND p.id_cuota=tr.id_cuota
     LEFT JOIN PAGO_ORIGEN po ON po.id_pago=p.id_pago LEFT JOIN EVENTO_RECURRENTE e ON e.id_evento=tr.id_evento
     WHERE tr.id_transaccion=?`, [id]);
