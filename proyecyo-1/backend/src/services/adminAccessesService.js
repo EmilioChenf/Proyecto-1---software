@@ -444,16 +444,14 @@ async function listAdminAccesses(filters = {}, reportRange = null) {
         v.placa,
         c.numero,
         c.torre,
-        propietario.nombre AS autorizado_por
+        autorizante.nombre AS autorizado_por
       FROM ACCESO a
       INNER JOIN VISITANTE v
         ON v.id_visitante = a.id_visitante
       INNER JOIN CASA c
         ON c.id_casa = a.id_casa
-      INNER JOIN RESIDENTE r
-        ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO propietario
-        ON propietario.id_usuario = r.id_usuario
+      LEFT JOIN USUARIO autorizante
+        ON autorizante.id_usuario = a.id_usuario_autoriza
       LEFT JOIN REGISTRO_ACCESO ra
         ON ra.id_acceso = a.id_acceso
       WHERE ${sqlFilters.join(" AND ")}

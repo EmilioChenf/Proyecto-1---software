@@ -8,7 +8,7 @@ const { ensureValidDate } = require("../utils/dateTimeValidation");
 const TIMEZONE = "America/Guatemala";
 const MAX_ROWS = 10000;
 const REPORTS = {
-  accesos: { title: "Accesos", columns: { fecha: "Fecha", hora: "Ingreso / inicio", hora_salida: "Salida", nombre: "Nombre", casa_unidad: "Unidad", placa: "Placa", tipo: "Tipo", estado: "Estado" } },
+  accesos: { title: "Accesos", columns: { fecha: "Fecha", hora: "Ingreso / inicio", hora_salida: "Salida", nombre: "Nombre", casa_unidad: "Unidad", placa: "Placa", tipo: "Tipo", estado: "Estado", autorizado_por: "Autorizado por" } },
   reservas: { title: "Reservas", columns: { fecha: "Fecha", hora_inicio: "Inicio", hora_fin: "Fin", usuario: "Usuario", amenidad: "Amenidad", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(r.fecha, '%Y-%m-%d') fecha,
       TIME_FORMAT(r.hora_inicio, '%H:%i:%s') hora_inicio, TIME_FORMAT(r.hora_fin, '%H:%i:%s') hora_fin,
