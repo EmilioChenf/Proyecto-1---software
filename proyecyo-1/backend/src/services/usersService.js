@@ -422,7 +422,9 @@ async function updateUser(id, payload) {
     throw error;
   }
 
-  const house = ensureHousePayloadForRole(userType.nombre, payload);
+  const relationshipChanged = userType.nombre !== originalUser.rol ||
+    (Object.prototype.hasOwnProperty.call(payload, 'id_casa') && Number(payload.id_casa || 0) !== Number(originalUser.id_casa || 0));
+  const house = relationshipChanged ? ensureHousePayloadForRole(userType.nombre, payload) : originalUser.id_casa;
   const existingEmail = await query(
     "SELECT id_usuario FROM USUARIO WHERE correo = ? AND id_usuario <> ? LIMIT 1",
     [correo, id],
@@ -467,7 +469,7 @@ async function updateUser(id, payload) {
       );
     }
 
-    await syncRoleRelations(connection, id, userType.nombre, house, originalUser.rol);
+    if (relationshipChanged) await syncRoleRelations(connection, id, userType.nombre, house, originalUser.rol);
     await connection.commit();
 
     return getUserById(id);

@@ -101,7 +101,7 @@ export function UserFormModal({
     if (!editingUser && !values.password.trim()) nextErrors.password = "La contrasena es obligatoria.";
     else if (values.password && values.password.trim().length < 4) nextErrors.password = "La contrasena debe tener al menos 4 caracteres.";
     if (!values.id_tipo_usuario) nextErrors.id_tipo_usuario = "Seleccione un rol.";
-    if (houseRole && !values.id_casa) nextErrors.id_casa = "Selecciona y confirma una vivienda en el mapa.";
+    if (houseRole && !values.id_casa && !(sameRole && !editingUser?.id_casa)) nextErrors.id_casa = "Selecciona y confirma una vivienda en el mapa.";
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };

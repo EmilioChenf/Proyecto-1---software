@@ -27,6 +27,17 @@ function renderModal(onSubmit = vi.fn().mockResolvedValue(undefined)) {
 }
 
 describe("UserFormModal", () => {
+  it('H4 permite editar datos del antiguo propietario sin asignarle vivienda',async()=>{
+    vi.mocked(getHousesRequest).mockResolvedValue({resumen:{total:0,disponibles:0,ocupadas:0,inactivas:0},viviendas:[]});
+    const user=userEvent.setup(),submit=vi.fn().mockResolvedValue(undefined);
+    render(<UserFormModal isOpen isSubmitting={false} userTypes={userTypes}
+      editingUser={{id_usuario:9,nombre:'Juan',correo:'juan@test.local',telefono:'',id_tipo_usuario:3,rol:'residente',id_casa:null,unidad:null,numero_casa:null,torre:null}}
+      onClose={vi.fn()} onSubmit={submit}/>);
+    await user.type(screen.getByLabelText('Telefono'),'55551234');
+    await user.click(screen.getByRole('button',{name:'Actualizar usuario'}));
+    expect(submit).toHaveBeenCalledWith(expect.objectContaining({telefono:'55551234',id_casa:null,id_tipo_usuario:'3'}));
+    expect(screen.queryByText('Selecciona y confirma una vivienda en el mapa.')).not.toBeInTheDocument();
+  });
   it("muestra errores al intentar crear un usuario con campos obligatorios vacios", async () => {
     const user = userEvent.setup();
     const onSubmit = renderModal();
