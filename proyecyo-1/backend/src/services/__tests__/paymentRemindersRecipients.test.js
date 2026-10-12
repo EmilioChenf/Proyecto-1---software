@@ -4,8 +4,8 @@ const { calculateBalance } = require('../financialBalance');
 test('destinatarios usan relaciones activas y la unidad del estado de cuenta', async () => {
  const c = {execute:jest.fn().mockResolvedValue([[{id_usuario:10},{id_usuario:20}]])};
  expect(await rules.recipients(c,27)).toEqual([10,20]);
- const [sql,args]=c.execute.mock.calls[0];expect(args).toEqual([27,27]);
- expect(sql).toContain('i.autorizado=TRUE');expect(sql).toContain('u.activo=TRUE');expect(sql).toContain('LIMIT 1');
+ const [sql,args]=c.execute.mock.calls[0];expect(args).toEqual([27]);
+ expect(sql).toContain('u.id_usuario=q.id_responsable');expect(sql).toContain('u.activo=TRUE');expect(sql).toContain('ca.relaciones_confirmadas_en IS NULL');
 });
 test('recordatorio excluye alquiler/renta del propietario sin ampliar permisos',async()=>{
  const c={execute:jest.fn().mockResolvedValue([[]])};await rules.recipients(c,1);

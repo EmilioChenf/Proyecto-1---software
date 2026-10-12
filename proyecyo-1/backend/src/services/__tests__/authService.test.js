@@ -51,3 +51,4 @@ describe("authService.getCurrentSession", () => {
     await expect(getCurrentSession(4)).rejects.toMatchObject({ status: 403 });
   });
 });
+jest.mock('../contractHouseRelations',()=>({syncUserRelations:jest.fn(async()=>{})}));

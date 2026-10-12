@@ -3,14 +3,22 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { ResidentePaymentReturnView } from "./ResidentePaymentReturnView";
-import { getResidentCheckoutStatusRequest, retryResidentCheckoutRequest, redirectToRecurrente } from "@/services/recurrenteCheckoutService";
+import { getResidentCheckoutStatusRequest, retryResidentCheckoutRequest, getTenantCheckoutStatusRequest, retryTenantCheckoutRequest, redirectToRecurrente } from "@/services/recurrenteCheckoutService";
 import type { RecurrenteCheckoutStatus } from "@/types/recurrenteCheckout";
 vi.mock("@/components/layout/AppShell", () => ({ AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
-vi.mock("@/services/recurrenteCheckoutService", () => ({ getResidentCheckoutStatusRequest: vi.fn(), retryResidentCheckoutRequest: vi.fn(), redirectToRecurrente: vi.fn() }));
+vi.mock("@/services/recurrenteCheckoutService", () => ({ getResidentCheckoutStatusRequest: vi.fn(), retryResidentCheckoutRequest: vi.fn(), getTenantCheckoutStatusRequest:vi.fn(),retryTenantCheckoutRequest:vi.fn(),redirectToRecurrente: vi.fn() }));
 const reference = "00000000-0000-4000-8000-000000000015";
 const status = (estado: RecurrenteCheckoutStatus["estado"] = "RECHAZADO", accion: RecurrenteCheckoutStatus["accion"] = "CONTINUAR"): RecurrenteCheckoutStatus => ({ referencia_local: reference, estado, accion, mensaje: "Estado consultado en backend." });
 const mount = (query = "") => render(<MemoryRouter initialEntries={[`/residente/pagos/retorno?referencia=${reference}${query}`]}><ResidentePaymentReturnView /></MemoryRouter>);
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(getResidentCheckoutStatusRequest).mockResolvedValue(status()); });
+it("renta directa consulta su canal y no confirma por parámetros de retorno",async()=>{
+  vi.mocked(getTenantCheckoutStatusRequest).mockResolvedValue(status('PENDIENTE','NINGUNA'));
+  render(<MemoryRouter initialEntries={[`/inquilino/pagos/retorno?referencia=${reference}&status=paid`]}><ResidentePaymentReturnView tenant /></MemoryRouter>);
+  expect(await screen.findByText("Tu pago está pendiente de verificación")).toBeInTheDocument();
+  expect(getTenantCheckoutStatusRequest).toHaveBeenCalledWith(reference);
+  expect(getResidentCheckoutStatusRequest).not.toHaveBeenCalled();
+  expect(retryTenantCheckoutRequest).not.toHaveBeenCalled();
+});
 it("muestra carga y no permite retry mientras consulta estado", async () => {
   let resolve!: (s: RecurrenteCheckoutStatus) => void;
   vi.mocked(getResidentCheckoutStatusRequest).mockReturnValue(new Promise((r) => { resolve = r; }));

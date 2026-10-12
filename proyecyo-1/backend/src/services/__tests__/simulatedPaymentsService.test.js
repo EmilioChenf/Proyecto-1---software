@@ -12,6 +12,7 @@ function successfulPayment() {
     .mockResolvedValueOnce([[{ recargo: quota.recargo, pagado: quota.pagado }]])
     .mockResolvedValueOnce([[]])
     .mockResolvedValueOnce([{ insertId: 21 }])
+    .mockResolvedValueOnce([{ affectedRows:1 }])
     .mockResolvedValueOnce([{ insertId: 31 }])
     .mockResolvedValueOnce([{ affectedRows: 1 }]);
 }
@@ -21,8 +22,9 @@ test("registra un pago residente con monto y recargo calculados en backend", asy
   const result = await payObligation(4, "residente", 3);
   expect(result).toMatchObject({ id_pago: 21, total: 115, recargo: 15, estado: "APROBADA" });
   expect(mockConnection.execute.mock.calls[3][1]).toEqual([3, 115]);
-  expect(mockConnection.execute.mock.calls[4][1]).toEqual([21, 4, 8, "residente", "Mantenimiento", 115]);
-  expect(mockConnection.execute.mock.calls[5][0]).toContain("'SIMULADO', 'academic'");
+  expect(mockConnection.execute.mock.calls[4][0]).toContain('titular_snapshot');
+  expect(mockConnection.execute.mock.calls[5][1]).toEqual([21, 4, 8, "residente", "Mantenimiento", 115]);
+  expect(mockConnection.execute.mock.calls[6][0]).toContain("'SIMULADO', 'academic'");
   expect(mockConnection.commit).toHaveBeenCalledTimes(1);
 });
 
@@ -30,8 +32,8 @@ test("un inquilino autorizado reutiliza el mismo flujo", async () => {
   successfulPayment();
   const result = await payObligation(9, "inquilino", 3);
   expect(result.estado).toBe("APROBADA");
-  expect(mockConnection.execute.mock.calls[0][0]).toContain("titular.autorizado = TRUE");
-  expect(mockConnection.execute.mock.calls[4][1][3]).toBe("inquilino");
+  expect(mockConnection.execute.mock.calls[0][0]).toContain('cu.id_responsable=actor.id_usuario');
+  expect(mockConnection.execute.mock.calls[5][1][3]).toBe("inquilino");
 });
 
 test("rechaza al inquilino sin relación autorizada", async () => {

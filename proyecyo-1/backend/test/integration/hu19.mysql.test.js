@@ -336,15 +336,15 @@ else {
       await locked(f.id,c => enqueuePayment(c,{...f.local[0],id_usuario:4},f.transactions[0].id_pago,delivery(f.pairs[0].intent).event));
       const other = (await entries(f.id)).find(r => r.id_usuario === 4); assert.equal(await job().deliver(other.id_entrega),'omitida');
     });
-    test('inquilino autorizado recibe deuda de su unidad, revocado antes de entrega no', async () => {
+    test('inquilino privado autorizado no recibe deuda del propietario', async () => {
       const id = await quota(), [tenant] = await query('SELECT i.id_inquilino,i.id_usuario FROM INQUILINO i JOIN INQUILINO_CASA ic ON ic.id_inquilino=i.id_inquilino WHERE ic.id_casa=1 AND i.autorizado=TRUE LIMIT 1');
-      assert(tenant); await job().generateDeadlines(); const row = (await entries(id)).find(r => r.id_usuario === tenant.id_usuario); assert(row);
-      await query('UPDATE INQUILINO SET autorizado=FALSE WHERE id_inquilino=?',[tenant.id_inquilino]);
-      try { assert.equal(await job().deliver(row.id_entrega),'omitida'); } finally { await query('UPDATE INQUILINO SET autorizado=TRUE WHERE id_inquilino=?',[tenant.id_inquilino]); }
+      assert(tenant); await job().run();
+      assert(!(await entries(id)).some(r=>r.id_usuario===tenant.id_usuario));
+      assert(!(await notifications(id)).some(r=>r.id_usuario===tenant.id_usuario));
     });
-    test('alquiler excluido del propietario; inquilino lo ve y recibe', async () => {
+    test('alquiler legado sin responsable explícito no se atribuye al propietario ni al inquilino', async () => {
       const id = await quota({rent:true}); await job().run(); const rows = await entries(id);
-      assert.equal(rows.filter(r => r.id_usuario === 3).length,0); assert(rows.length > 0);
+      assert.equal(rows.length,0);
       const c = await db.pool.getConnection(); try { assert(!(await rules.recipients(c,id)).includes(3)); } finally { c.release(); }
     });
     test('Guatemala: medianoche UTC aún es el día anterior', async () => {

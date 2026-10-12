@@ -92,7 +92,7 @@ describe("asignacion bajo bloqueo (el backend es la autoridad)", () => {
       [/WHERE id_residente = \? AND id_casa <> \?/, [[{ id_casa: 1, numero: "302", torre: "B" }]]],
       [/FROM CUOTA/, [[{ n: 3 }]]],
     ]);
-    await expect(houses.assignResidentToHouse(conn, 9, 5)).rejects.toMatchObject({ status: 409, code: "VIVIENDA_CON_HISTORIAL" });
+    await expect(houses.assignResidentToHouse(conn, 9, 5)).rejects.toMatchObject({ status: 409, code: "USAR_ASISTENTE_CONTRACTUAL" });
   });
 
   test("al mudarse, la vivienda anterior con inquilinos no se libera", async () => {

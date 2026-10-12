@@ -1,4 +1,5 @@
 jest.mock("../../database/mysql", () => ({ query: jest.fn() }));
+jest.mock('../contractFinancialAccount',()=>({detail:jest.fn(async()=>null)}));
 
 const fs = require("node:fs");
 const path = require("node:path");

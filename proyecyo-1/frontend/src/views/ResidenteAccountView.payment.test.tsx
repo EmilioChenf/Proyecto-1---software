@@ -56,3 +56,11 @@ it("no duplica la navegacion del sidebar y conserva Actualizar", async () => {
   expect(screen.queryByRole("button", { name: "Volver" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Actualizar" })).toBeEnabled();
 });
+
+it("propietario ve concepto, período y número de cuota", async () => {
+  vi.mocked(getResidentAccountStatementRequest).mockResolvedValue({...pending,cuotas:[{...pending.cuotas[0],servicio:"Cuota de vivienda",periodo:"2026-08-01",numero_cuota:12},{...pending.cuotas[0],id_cuota:4,periodo:"2026-08-01"}]});
+  mount();
+  expect(await screen.findByText("Cuota de vivienda")).toBeInTheDocument();
+  expect(screen.getByText("Mantenimiento")).toBeInTheDocument();
+  expect(screen.getByText("Período 2026-08 · Cuota #12")).toBeInTheDocument();
+});

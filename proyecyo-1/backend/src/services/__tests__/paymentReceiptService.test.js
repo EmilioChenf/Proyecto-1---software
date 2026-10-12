@@ -22,10 +22,10 @@ test("un pago inexistente o ajeno no se expone", async () => {
   expect(query.mock.calls[0][1]).toEqual([99, 7]);
 });
 
-test("inquilino exige relacion autorizada y usa parametros", async () => {
+test("inquilino exige atribución financiera histórica y usa parametros", async () => {
   query.mockResolvedValue([]);
   await expect(getPaymentReceipt(21, "inquilino", 8)).rejects.toMatchObject({ status: 404 });
-  expect(query.mock.calls[0][0]).toContain("titular.autorizado = TRUE");
+  expect(query.mock.calls[0][0]).toContain('cu.id_responsable=usuario.id_usuario');
   expect(query.mock.calls[0][1]).toEqual([21, 8]);
 });
 

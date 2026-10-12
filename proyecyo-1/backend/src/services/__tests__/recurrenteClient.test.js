@@ -29,6 +29,13 @@ test("valida Sandbox antes del POST y envía el contrato oficial, referencias op
   });
   expect(options.body).not.toContain(config.secretKey); expect(JSON.stringify(result)).not.toContain(config.secretKey);
 });
+
+test("renta directa regresa al canal inquilino sin cambiar el contrato del proveedor",async()=>{
+  await client.createCheckout({...local,rol:'inquilino'},beforeRequest);
+  const sent=JSON.parse(fetchImpl.mock.calls[1][1].body);
+  expect(sent.success_url).toBe(`${config.origin}/inquilino/pagos/retorno?referencia=${local.referencia_local}`);
+  expect(sent.cancel_url).toBe(sent.success_url);
+});
 test.each([
   { environment: "live", sandbox_id: config.sandboxId },
   { environment: "legacy_test", sandbox_id: null },

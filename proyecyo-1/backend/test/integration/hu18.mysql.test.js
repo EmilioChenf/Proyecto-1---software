@@ -87,7 +87,10 @@ else {
         }
         await target.query(migration.migrationStatements().find(s=>/CREATE TABLE IF NOT EXISTS REEMBOLSO_RECURRENTE/.test(s)));
         const {BACKUP_TABLES}=require('../../src/database/backupTables');
-        for(const t of BACKUP_TABLES.filter(t=>t!=='REEMBOLSO_RECURRENTE'))for(const r of await query(`SELECT * FROM ${t}`))await target.query(`INSERT INTO ${t} SET ?`,r);
+        for(const t of BACKUP_TABLES.filter(t=>t!=='REEMBOLSO_RECURRENTE'))for(const r of await query(`SELECT * FROM ${t}`)){
+          const serialized=Object.fromEntries(Object.entries(r).map(([k,v])=>[k,v&&typeof v==='object'&&!(v instanceof Date)&&!Buffer.isBuffer(v)?JSON.stringify(v):v]));
+          await target.query(`INSERT INTO ${t} SET ?`,serialized);
+        }
         const original={id_transaccion:txId(f),idempotency_key:randomUUID(),id_usuario_solicitante:1,monto_centavos:500,moneda:'GTQ',ambiente:'sandbox',tipo:'TOTAL',estado:'SOLICITADO'};
         await target.query('INSERT INTO REEMBOLSO_RECURRENTE SET ?',original);await target.query('SET FOREIGN_KEY_CHECKS=1');
         const old=(await target.query('SELECT * FROM REEMBOLSO_RECURRENTE'))[0];await migration.applyRecurrenteRefundsMigration(target);

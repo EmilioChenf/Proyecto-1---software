@@ -1,4 +1,5 @@
 jest.mock("../../database/mysql", () => ({ query: jest.fn() }));
+jest.mock('../contractFinancialAccount',()=>({...jest.requireActual('../contractFinancialAccount'),detail:jest.fn(async()=>null)}));
 const { query } = require("../../database/mysql");
 const { getFinancialDetail } = require("../residentFinancialDetailService");
 const { listTenantAccountStatement } = require("../tenantAccountService");

@@ -1,6 +1,7 @@
 // HU32: una misma cuota no puede aparecer "Vencida" en Mis pagos y "Pendiente" en
 // Cargos y pagos. Ambas vistas (y la cuenta del inquilino) usan quotaStatus.
 jest.mock("../../database/mysql", () => ({ query: jest.fn() }));
+jest.mock('../contractFinancialAccount',()=>({account:jest.fn(async()=>null),detail:jest.fn(async()=>null)}));
 const { query } = require("../../database/mysql");
 const { listResidentAccountStatement } = require("../residentAccountService");
 const { getFinancialDetail } = require("../residentFinancialDetailService");

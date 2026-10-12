@@ -27,7 +27,7 @@ describe("HU32 solicitudes de autorización del inquilino", () => {
     await listOwnerAuthorizationRequests(3);
     const [sql, params] = query.mock.calls[0];
     expect(sql).toContain("INNER JOIN CASA c ON c.id_casa = s.id_casa");
-    expect(sql).toContain("INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente");
+    expect(sql).toContain("LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente");
     expect(sql).toContain("WHERE r.id_usuario = ? AND s.estado = ?");
     expect(params).toEqual([3, "PENDIENTE"]);
   });

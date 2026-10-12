@@ -118,6 +118,7 @@ async function prepareSuiteDatabase(context) {
     const migrations = require("../../../src/database/recurrenteMigration");
     for (const apply of [migrations.applyRecurrentePreparation, migrations.applyRecurrenteCheckoutMigration,
       migrations.applyRecurrenteConfirmationMigration, migrations.applyRecurrenteAttemptsMigration]) await apply(target);
+    await require('../../../src/database/propertyContractMigration').applyPropertyContractMigration(target);
     await copyReceiptEvidence(context.source, target, context.snapshot);
     // The financial copy intentionally contains only the established receipt cases.
     const copied=await protectedSnapshot(target);
@@ -126,6 +127,7 @@ async function prepareSuiteDatabase(context) {
     await migrations.applyRecurrenteIntentHistoryMigration(target);
     await migrations.applyRecurrenteReviewPrecisionMigration(target);
     await migrations.applyFinancialNotificationsMigration(target);
+    await require('../../../src/database/propertyContractMigration').applyPropertyContractMigration(target);
   } finally { await target.end(); }
 }
 

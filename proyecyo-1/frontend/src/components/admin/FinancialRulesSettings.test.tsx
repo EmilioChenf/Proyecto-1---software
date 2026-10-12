@@ -5,6 +5,7 @@ import { FinancialRulesSettings } from "@/components/admin/FinancialRulesSetting
 import { apiRequest } from "@/services/api";
 
 vi.mock("@/services/api", () => ({ apiRequest: vi.fn() }));
+vi.mock('@/components/admin/GlobalMaintenanceSettings',()=>({GlobalMaintenanceSettings:()=>null}));
 
 const rule = { dia_limite: 10, tipo: "PORCENTAJE", porcentaje: 5, monto_fijo: 0, dias_gracia: 3, activo: true, vigente_desde: "2026-01-01" };
 

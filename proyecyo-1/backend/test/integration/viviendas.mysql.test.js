@@ -148,7 +148,7 @@ else {
         const spare = await house("208");
         await assert.rejects(
           users.updateUser(owner.id_usuario, { nombre: owner.nombre, correo: owner.correo, id_tipo_usuario: await roleId("residente"), id_casa: spare.id_casa }),
-          { status: 409, code: "VIVIENDA_CON_HISTORIAL" },
+          { status: 409, code: "USAR_ASISTENTE_CONTRACTUAL" },
         );
         assert.equal((await casa(1)).id_residente !== null, true);
         assert.equal((await casa(spare.id_casa)).id_residente, null, "rollback: la vivienda nueva no quedo ocupada");

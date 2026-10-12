@@ -264,8 +264,8 @@ if (process.env.RUN_PHASE0_MYSQL_TESTS !== "1") {
       assert.equal(detail.cargos.find((q) => q.id_cuota === fullyOutside).saldo, 0);
       assert.equal(detail.pagos.filter((p) => p.id_cuota === fullyOutside).length, 0);
       const tenant = await require("../../src/services/tenantAccountService").listTenantAccountStatement(4, { desde: "2026-08-01", hasta: "2026-08-31" });
-      assert.equal(tenant.cuotas_adicionales.find((q) => q.id_cuota === id).saldo_pendiente, 0);
-      assert.equal(tenant.cuotas_adicionales.find((q) => q.id_cuota === fullyOutside).saldo_pendiente, 0);
+      assert.equal(tenant.resumen.saldo_pendiente, 0);
+      assert(!tenant.cuotas.some(q=>q.id_cuota===id || q.id_cuota===fullyOutside));
       const report = await require("../../src/services/adminPaymentsService").getMonthlyFinancialReport(8, 2026);
       assert.equal(report.pagos.filter((p) => p.id_cuota === id).length, 1);
       assert.equal(report.pagos.filter((p) => p.id_cuota === fullyOutside).length, 0);
