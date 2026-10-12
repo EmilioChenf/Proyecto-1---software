@@ -71,27 +71,39 @@ async function activateScheduledTransfer(c, houseId, today=guatemalaToday()) {
   return {estado:'ACTIVA',id_version:version.id_version};
 }
 
-// Upgrade explicit scheduled transfers previously written by 009, including
-// those due today when their operational owner is still the outgoing owner.
-// Preserve their IDs and original rows; do not infer unknown historical owners.
+// 009 had no activation marker. Reconcile its open/future title transitions
+// against the operational owner, regardless of whether their date has passed.
+// Explicit activation state wins; contradictory legacy evidence requires review.
 async function protectLegacyScheduledTransfers(c) {
   const today=guatemalaToday();
+  const review=()=>Object.assign(new Error('La transferencia legada requiere conciliación antes del arranque.'),{code:'LEGACY_TRANSFERS_REVIEW_REQUIRED'});
+  const sameUser=(a,b)=>a==null?b==null:b!=null&&Number(a)===Number(b);
   const [scheduled]=await c.execute(`SELECT t.*,p.id_titularidad previousTitle,p.id_usuario oldOwner
     FROM CASA_TITULARIDAD t JOIN CASA_TITULARIDAD p ON p.id_casa=t.id_casa AND p.vigente_hasta=t.vigente_desde
-    WHERE t.vigente_desde>=? AND t.id_version_pendiente IS NULL
-      AND (t.vigente_desde>? OR EXISTS(SELECT 1 FROM CASA c LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
-        WHERE c.id_casa=t.id_casa AND r.id_usuario<=>p.id_usuario))
-      AND NOT(t.id_usuario<=>p.id_usuario) ORDER BY t.id_casa,t.vigente_desde`,[today,today]);
+    WHERE t.id_version_pendiente IS NULL AND (t.vigente_hasta IS NULL OR t.vigente_hasta>?)
+      AND NOT(t.id_usuario<=>p.id_usuario) ORDER BY t.id_casa,t.vigente_desde`,[today]);
   const protectedHouses=new Set();
   for(const title of scheduled) {
     await c.execute('SELECT id_casa FROM CASA WHERE id_casa=? FOR UPDATE',[title.id_casa]);
     const {effectivePeriod}=require('./propertyContractsService').__private__;
     const first=effectivePeriod(day(title.vigente_desde));
-    const [[version]]=await c.execute("SELECT * FROM CONTRATO_CASA_VERSION WHERE id_casa=? AND vigente_desde=? AND activacion_estado='ACTIVA' AND activado_en IS NULL FOR UPDATE",[title.id_casa,first]);
-    if(!version)continue;
+    const [[version]]=await c.execute(`SELECT v.*,rf.id_usuario responsible,ct.tipo
+      FROM CONTRATO_CASA_VERSION v JOIN CASA_RESPONSABLE_FINANCIERO rf ON rf.id_responsabilidad=v.id_responsabilidad
+      JOIN CONTRATO_CASA ct ON ct.id_contrato=v.id_contrato
+      WHERE v.id_casa=? AND v.vigente_desde=? FOR UPDATE`,[title.id_casa,first]);
+    if(!version)throw review();
+    if(version.activacion_estado!=='ACTIVA'||version.activado_en||version.activacion_fecha||version.activacion_datos)continue;
+    if(title.id_usuario===null?version.tipo!=='RENTA_DIRECTA':!sameUser(version.responsible,title.id_usuario))throw review();
+    const [[operational]]=await c.execute(`SELECT r.id_usuario FROM CASA c LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
+      WHERE c.id_casa=?`,[title.id_casa]);
+    // A due title already reflected by CASA is completed legacy history. Do not
+    // reopen it or invent an activation timestamp that 009 never recorded.
+    if(day(title.vigente_desde)<=today&&sameUser(operational.id_usuario,title.id_usuario))continue;
+    if(!sameUser(operational.id_usuario,title.oldOwner))throw review();
     if(protectedHouses.has(title.id_casa))throw Object.assign(new Error('Hay varias ventas legadas programadas para una vivienda; se requiere conciliarlas antes del arranque.'),{code:'LEGACY_TRANSFERS_REVIEW_REQUIRED'});
     protectedHouses.add(title.id_casa);
     const [[previous]]=await c.execute('SELECT * FROM CONTRATO_CASA_VERSION WHERE id_casa=? AND vigente_desde<? ORDER BY vigente_desde DESC LIMIT 1 FOR UPDATE',[title.id_casa,first]);
+    if(!previous)throw review();
     const [inhabitants]=await c.execute('SELECT id_habitante FROM CASA_HABITANTE WHERE id_casa=? AND vigente_desde=?',[title.id_casa,day(title.vigente_desde)]);
     const [closedHabitants]=await c.execute('SELECT id_habitante FROM CASA_HABITANTE WHERE id_casa=? AND vigente_hasta=?',[title.id_casa,day(title.vigente_desde)]);
     const plan={oldOwner:title.oldOwner,newOwner:title.id_usuario,previousTitle:title.previousTitle,previousVersion:previous?.id_version||null,
