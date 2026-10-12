@@ -23,7 +23,7 @@ async function user(role,label){
 async function house(){const r=await query('INSERT INTO CASA(numero,torre,id_residente,activo) VALUES(?,NULL,NULL,1)',[randomUUID().slice(0,8)]);return r.insertId;}
 function payload(type='PROPIEDAD_PRIVADA',person=owner,extra={}){return {id_operacion:randomUUID(),version:0,tipo:type,fecha_efectiva:today,cuota_vivienda:type==='PROPIEDAD_PRIVADA'?'0':'4000',meses_financiamiento:type==='COMPRA_FINANCIADA'?2:null,responsable:{id_usuario:person},responsable_habita:false,inquilino_privado:null,confirmado:true,...extra};}
 async function configured(type='PROPIEDAD_PRIVADA',person=owner,extra={}){const id=await house();await contracts.configureHouse(id,payload(type,person,extra),admin);return id;}
-async function rows(id){return query('SELECT * FROM CUOTA WHERE id_casa=? ORDER BY id_cuota',[id]);}
+async function rows(id){return query("SELECT q.*,DATE_FORMAT(q.periodo,'%Y-%m-%d') periodo FROM CUOTA q WHERE id_casa=? ORDER BY id_cuota",[id]);}
 async function settle(id){for(const q of await rows(id))await payObligation(q.id_responsable,q.id_responsable===renter?'inquilino':'residente',q.id_cuota);}
 test.before(async()=>{
   admin=await user('admin','Admin contratos');owner=await user('residente','Propietario');newOwner=await user('residente','Nuevo propietario');buyer=await user('residente','Comprador');renter=await user('inquilino','Arrendatario');privateTenant=await user('inquilino','Inquilino privado');
@@ -153,6 +153,42 @@ test('B40 checkout legado conserva actor confirmado antes de clasificar la casa'
   const [payment]=await query('SELECT * FROM PAGO WHERE id_cuota=?',[legacy]);
   assert.equal(Number(payment.id_actor),owner);
   assert.equal((await query('SELECT id_responsable FROM CUOTA WHERE id_cuota=?',[legacy]))[0].id_responsable,null);
+});
+
+test('B41 cambio contractual a mitad de mes conserva el mes emitido y aplica al siguiente',async()=>{
+  const id=await configured();await billHouse(id,first);await settle(id);const before=await rows(id);
+  const middle=first.slice(0,7)+'-15',next=contracts.__private__.nextPeriod(middle);
+  await contracts.configureHouse(id,payload('COMPRA_FINANCIADA',owner,{version:1,fecha_efectiva:middle,cuota_vivienda:'700',meses_financiamiento:1}),admin);
+  assert.deepEqual(await rows(id),before);
+  assert.equal((await billHouse(id,first)).estado,'YA_FACTURADO');
+  await billHouse(id,next);
+  const charges=(await rows(id)).filter(q=>q.periodo===next);
+  assert.equal(Number(charges.find(q=>q.concepto==='VIVIENDA').monto),700);
+  assert.equal(Number(charges.find(q=>q.concepto==='MANTENIMIENTO').monto),550);
+});
+test('B42 fin de financiamiento permite transición privada confirmada y mantiene deuda histórica',async()=>{
+  const id=await configured('COMPRA_FINANCIADA',buyer,{meses_financiamiento:1});
+  await billHouse(id,first);const historical=await rows(id),next=contracts.__private__.nextPeriod(first);
+  await contracts.configureHouse(id,payload('PROPIEDAD_PRIVADA',buyer,{version:1,fecha_efectiva:next}),admin);
+  await billHouse(id,next);
+  assert.deepEqual((await rows(id)).slice(0,historical.length),historical);
+  assert.deepEqual((await rows(id)).filter(q=>q.periodo===next).map(q=>q.concepto),['MANTENIMIENTO']);
+  assert.equal((await contracts.getHouseContracts(id)).versiones[0].tipo,'PROPIEDAD_PRIVADA');
+});
+test('B43 aviso financiero legado ajeno se oculta sin ocultar avisos operativos del inquilino',async()=>{
+  const id=await configured();await billHouse(id,first);const q=(await rows(id))[0];
+  const debt=(await query("INSERT INTO NOTIFICACION(id_usuario,tipo,titulo,mensaje) VALUES(?,'RECORDATORIO_PAGO','Deuda privada','Dato financiero privado')",[privateTenant])).insertId;
+  await query("INSERT INTO RECORDATORIO_PAGO(id_casa,id_cuota,id_usuario,id_notificacion,tipo,titulo,mensaje,monto,fecha_limite,dias_para_vencer,fecha_envio) VALUES(?,?,?,?,'VENCIDO','Deuda','TEST',500,?,-1,?)",[id,q.id_cuota,privateTenant,debt,q.fecha_limite,today]);
+  const operational=(await query("INSERT INTO NOTIFICACION(id_usuario,tipo,titulo,mensaje) VALUES(?,'AVISO','Acceso autorizado','Aviso operativo')",[privateTenant])).insertId;
+  const notifications=require('../../src/services/notificationsService'),visible=await notifications.listNotifications(privateTenant);
+  assert(!visible.some(n=>n.id_notificacion===debt));assert(visible.some(n=>n.id_notificacion===operational));
+  await assert.rejects(notifications.markNotificationAsRead(privateTenant,debt),{status:404});
+});
+test('B44 venta financiada en Q0 bloquea sólo deuda emitida y conserva cuotas pagadas',async()=>{
+  const id=await configured('COMPRA_FINANCIADA',buyer);await billHouse(id,first);await settle(id);const before=await rows(id);
+  await contracts.configureHouse(id,payload('PROPIEDAD_PRIVADA',newOwner,{version:1,fecha_efectiva:contracts.__private__.nextPeriod(first)}),admin);
+  assert.deepEqual(await rows(id),before);
+  assert.equal((await contracts.getHouseContracts(id)).versiones[0].id_responsable,newOwner);
 });
 
 test.describe('Migración aditiva desde esquema anterior',()=>{
