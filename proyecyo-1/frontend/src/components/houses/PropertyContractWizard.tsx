@@ -35,6 +35,7 @@ export function PropertyContractWizard({open,onClose,onSaved,initialHouse=null}:
   const [personMode,setPersonMode]=useState<PersonMode>('existing'),[tenantMode,setTenantMode]=useState<PersonMode>('existing'),[occupantsChanged,setOccupantsChanged]=useState(false);
   const [users,setUsers]=useState<UserRecord[]>([]),[tariff,setTariff]=useState<MaintenanceTariff|null>(null),[confirmed,setConfirmed]=useState(false);
   const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[failure,setFailure]=useState(''),[operation,setOperation]=useState(()=>crypto.randomUUID());
+  const hasPrivateTenant=type==='PROPIEDAD_PRIVADA'&&privateTenant;
   const period=firstBillingPeriod(start),total=Number(type==='PROPIEDAD_PRIVADA'?0:amount)+(Number(tariff?.monto)||0);
   useEffect(()=>{if(!open)return;let active=true;getUsersRequest().then(v=>{if(active)setUsers(v);}).catch(e=>{if(active)setFailure(e.message);});return()=>{active=false;};},[open]);
   useEffect(()=>{
@@ -53,11 +54,18 @@ export function PropertyContractWizard({open,onClose,onSaved,initialHouse=null}:
     if(!contracts||occupantsChanged)return;
     const inhabitants=contracts.habitantes.filter(h=>!h.id_version_pendiente&&h.vigente_desde<=start&&(!h.vigente_hasta||h.vigente_hasta>start));
     setLives(inhabitants.some(h=>h.id_usuario===person.id_usuario));
-    const currentTenant=inhabitants.find(h=>h.calidad==='INQUILINO_PRIVADO');
+    const currentTenant=type==='PROPIEDAD_PRIVADA'?inhabitants.find(h=>h.calidad==='INQUILINO_PRIVADO'):undefined;
     setPrivateTenant(Boolean(currentTenant));setTenant(currentTenant?{id_usuario:currentTenant.id_usuario}:{});setTenantMode('existing');
-  },[contracts,start,person.id_usuario,occupantsChanged]);
+  },[contracts,start,person.id_usuario,occupantsChanged,type]);
   useEffect(()=>{if(!open||!period)return;let active=true;setTariff(null);getGlobalMaintenanceRequest(period).then(v=>{if(active)setTariff(v.vigente);}).catch(e=>{if(active)setFailure(e.message);});return()=>{active=false;};},[open,period]);
-  function changeType(value:ContractType){setType(value);setPerson({});setPersonMode('existing');setConfirmed(false);setOperation(crypto.randomUUID());}
+  function changeType(value:ContractType){
+    if(value===type)return;
+    // A new type discards dependent drafts; saved inhabitants remain unchanged
+    // unless the user explicitly edits occupancy in the selected type.
+    setType(value);setAmount('');setTerm('');setPerson({});setPersonMode('existing');
+    setPrivateTenant(false);setTenant({});setTenantMode('existing');setLives(false);setOccupantsChanged(false);
+    setConfirmed(false);setOperation(crypto.randomUUID());
+  }
   function next(){
     setFailure('');
     if(step===0&&(!house||!contracts||loading)){setFailure('Selecciona una vivienda y espera a que cargue su configuración.');return;}
@@ -67,13 +75,13 @@ export function PropertyContractWizard({open,onClose,onSaved,initialHouse=null}:
       if(type!=='PROPIEDAD_PRIVADA'&&(!/^\d+(\.\d{1,2})?$/.test(amount)||Number(amount)<=0)){setFailure('La cuota de vivienda o renta debe ser mayor que cero y tener hasta dos decimales.');return;}
       if(type==='COMPRA_FINANCIADA'&&(!Number.isInteger(Number(term))||Number(term)<1||Number(term)>1200)){setFailure('Indica un plazo de entre 1 y 1200 meses.');return;}
     }
-    if(step===2&&(!personValid(person)||(privateTenant&&!personValid(tenant)))){setFailure('Completa los datos de las personas seleccionadas.');return;}
+    if(step===2&&(!personValid(person)||(hasPrivateTenant&&!personValid(tenant)))){setFailure('Completa los datos de las personas seleccionadas.');return;}
     setStep(step+1);setConfirmed(false);
   }
   const personName=(p:ContractPerson)=>users.find(u=>u.id_usuario===p.id_usuario)?.nombre||p.nombre||'Sin seleccionar';
   async function save(){
     if(!house||!contracts||!confirmed||busy)return;setBusy(true);setFailure('');
-    try{await saveHouseContractRequest(house.id_casa,{id_operacion:operation,version:contracts.version_contractual,tipo:type,fecha_efectiva:start,cuota_vivienda:type==='PROPIEDAD_PRIVADA'?'0':amount,meses_financiamiento:type==='COMPRA_FINANCIADA'?Number(term):null,responsable:person,responsable_habita:lives,inquilino_privado:type==='PROPIEDAD_PRIVADA'&&privateTenant?tenant:null,habitantes_accion:!contracts.versiones.length||occupantsChanged?'ACTUALIZAR':'CONSERVAR',confirmado:true});onSaved();onClose();}
+    try{await saveHouseContractRequest(house.id_casa,{id_operacion:operation,version:contracts.version_contractual,tipo:type,fecha_efectiva:start,cuota_vivienda:type==='PROPIEDAD_PRIVADA'?'0':amount,meses_financiamiento:type==='COMPRA_FINANCIADA'?Number(term):null,responsable:person,responsable_habita:lives,inquilino_privado:hasPrivateTenant?tenant:null,habitantes_accion:!contracts.versiones.length||occupantsChanged?'ACTUALIZAR':'CONSERVAR',confirmado:true});onSaved();onClose();}
     catch(e){setFailure(e instanceof Error?e.message:'No fue posible guardar el contrato.');}finally{setBusy(false);}
   }
   const personLabel=type==='COMPRA_FINANCIADA'?'Comprador':type==='RENTA_DIRECTA'?'Arrendatario directo':'Propietario';
@@ -115,7 +123,7 @@ export function PropertyContractWizard({open,onClose,onSaved,initialHouse=null}:
     {step===3&&<div className="space-y-4">
       {contracts?.versiones.length&&!occupantsChanged&&<p>Se conservan los habitantes para la fecha efectiva: {preservedInhabitants.map(h=>h.nombre).join(', ')||'Sin habitantes confirmados'}. Esta edición no solicita bajas.</p>}
       <dl className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">{[
-      ['Vivienda',house?.codigo],['Tipo contractual',contractLabels[type]],['Responsable financiero',personName(person)],['Fecha efectiva',start],['Primer período',period],['Cuota vivienda / renta',currency(type==='PROPIEDAD_PRIVADA'?0:Number(amount))],['Mantenimiento global',currency(Number(tariff?.monto)||0)],['Total mensual',currency(total)],['Plazo',type==='COMPRA_FINANCIADA'?`${term} cuotas de vivienda`:'No aplica'],['Habitantes',[lives?personName(person):'',privateTenant?personName(tenant):''].filter(Boolean).join(', ')||'Desocupada'],['Propietario',type==='RENTA_DIRECTA'?'La residencial':personName(person)],['Inquilino privado',privateTenant?`${personName(tenant)} · Q0`:'No aplica']
+      ['Vivienda',house?.codigo],['Tipo contractual',contractLabels[type]],['Responsable financiero',personName(person)],['Fecha efectiva',start],['Primer período',period],['Cuota vivienda / renta',currency(type==='PROPIEDAD_PRIVADA'?0:Number(amount))],['Mantenimiento global',currency(Number(tariff?.monto)||0)],['Total mensual',currency(total)],['Plazo',type==='COMPRA_FINANCIADA'?`${term} cuotas de vivienda`:'No aplica'],['Habitantes',[lives?personName(person):'',hasPrivateTenant?personName(tenant):''].filter(Boolean).join(', ')||'Desocupada'],['Propietario',type==='RENTA_DIRECTA'?'La residencial':personName(person)],['Inquilino privado',hasPrivateTenant?`${personName(tenant)} · Q0`:'No aplica']
       ].map(([label,value])=><div key={label}><dt className="text-sm text-muted-foreground">{label}</dt><dd className="break-words font-medium">{value}</dd></div>)}</dl>
       {contracts?.versiones.length?<p>Si cambia el propietario, el sistema verificará que su saldo real esté en Q0. Las cuotas y los pagos anteriores conservan a su titular.</p>:<p>Los registros históricos sin responsable confirmado quedan disponibles para revisión administrativa.</p>}
       <label className="flex items-start gap-2"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>Confirmo vivienda, personas, fecha efectiva y obligaciones del resumen.</label>
