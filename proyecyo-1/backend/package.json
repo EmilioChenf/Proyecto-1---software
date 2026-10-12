@@ -6,6 +6,7 @@
   "scripts": {
     "test:property:mysql":"node scripts/run-isolated-tests.js property",
     "test:postaudit:mysql":"node scripts/run-isolated-tests.js postaudit",
+    "test:finalaudit:mysql":"node scripts/run-isolated-tests.js finalaudit",
     "migrate:recurrente": "node scripts/migrate-recurrente.js",
     "test:phase0:mysql": "node scripts/run-isolated-tests.js phase0",
     "test:phase0:functional": "node scripts/run-isolated-tests.js functional",
