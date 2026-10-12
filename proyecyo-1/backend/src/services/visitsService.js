@@ -1075,9 +1075,20 @@ async function createArrivalNotification(connection, accessId) {
       FROM ACCESO a
       INNER JOIN VISITANTE v ON v.id_visitante = a.id_visitante
       INNER JOIN CASA c ON c.id_casa = a.id_casa
-      INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO u ON u.id_usuario = r.id_usuario
-      WHERE a.id_acceso = ?
+      INNER JOIN USUARIO u ON u.id_usuario = a.id_usuario_autoriza AND u.activo = 1
+      INNER JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario = u.id_tipo_usuario
+      WHERE a.id_acceso = ? AND LOWER(tu.nombre) IN ('residente','inquilino')
+        AND (
+          EXISTS(SELECT 1 FROM RESIDENTE r WHERE r.id_residente=c.id_residente AND r.id_usuario=u.id_usuario)
+          OR (c.relaciones_confirmadas_en IS NOT NULL AND EXISTS(
+            SELECT 1 FROM CASA_HABITANTE h WHERE h.id_casa=c.id_casa AND h.id_usuario=u.id_usuario
+              AND h.autorizado=1 AND h.id_version_pendiente IS NULL
+              AND h.vigente_desde<=DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00'))
+              AND (h.vigente_hasta IS NULL OR h.vigente_hasta>DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')))))
+          OR (c.relaciones_confirmadas_en IS NULL AND EXISTS(
+            SELECT 1 FROM INQUILINO i JOIN INQUILINO_CASA ic ON ic.id_inquilino=i.id_inquilino
+            WHERE i.id_usuario=u.id_usuario AND i.autorizado=1 AND ic.id_casa=c.id_casa))
+        )
       LIMIT 1
     `,
     [accessId],
