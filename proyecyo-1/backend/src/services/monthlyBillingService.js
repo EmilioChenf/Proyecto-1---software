@@ -4,11 +4,12 @@ const { toCents } = require('./financialBalance');
 const { getMaintenance, __private__: { date,transaction,executeWith } } = require('./propertyContractsService');
 
 const LABELS = { VIVIENDA:'Cuota de vivienda', ALQUILER_RESIDENCIAL:'Renta directa', MANTENIMIENTO:'Mantenimiento' };
-async function billHouse(houseId, period, actor = null, metadata = {}) {
+async function billHouse(houseId, period, actor = null, metadata = {}, asOf = period>guatemalaToday()?period:guatemalaToday()) {
   return transaction(async (c) => {
     const exec = executeWith(c);
     const [house] = await exec('SELECT id_casa,activo,relaciones_confirmadas_en FROM CASA WHERE id_casa=? FOR UPDATE', [houseId]);
     if (!house || !house.activo || !house.relaciones_confirmadas_en) return {id_casa:houseId,estado:'PENDIENTE_CONFIGURACION',generadas:0};
+    await require('./contractHouseRelations').syncHouseRelations(c,houseId,asOf);
     const [frozen] = await exec('SELECT id_casa FROM FACTURACION_CASA_PERIODO WHERE id_casa=? AND periodo=?', [houseId,period]);
     if (frozen) return {id_casa:houseId,estado:'YA_FACTURADO',generadas:0};
     const [version] = await exec(`SELECT v.*,ct.tipo,ct.meses_financiamiento,rf.id_usuario,
@@ -16,7 +17,7 @@ async function billHouse(houseId, period, actor = null, metadata = {}) {
       JOIN CONTRATO_CASA ct ON ct.id_contrato=v.id_contrato
       JOIN CASA_RESPONSABLE_FINANCIERO rf ON rf.id_responsabilidad=v.id_responsabilidad
       JOIN USUARIO u ON u.id_usuario=rf.id_usuario
-      WHERE v.id_casa=? AND v.vigente_desde<=? AND (v.vigente_hasta IS NULL OR v.vigente_hasta>?)
+      WHERE v.id_casa=? AND v.activacion_estado='ACTIVA' AND v.vigente_desde<=? AND (v.vigente_hasta IS NULL OR v.vigente_hasta>?)
       ORDER BY v.vigente_desde DESC LIMIT 1`, [houseId,period,period]);
     if (!version) return {id_casa:houseId,estado:'SIN_CONTRATO_VIGENTE',generadas:0};
     const tariff = await getMaintenance(period,exec);
@@ -55,7 +56,16 @@ async function generateMonthlyBilling({periodo,automatic=false,now=new Date(),ac
   if (automatic && today.slice(8)!=='01') return {periodo:period,generadas:0,resultados:[],omitido:true};
   const houses = await query('SELECT id_casa FROM CASA WHERE activo=1 ORDER BY id_casa');
   const results=[];
-  for (const house of houses) results.push(await billHouse(Number(house.id_casa),period,actor,metadata));
-  return {periodo:period,generadas:results.reduce((n,r)=>n+r.generadas,0),resultados:results};
+  for (const house of houses) {
+    try { results.push(await billHouse(Number(house.id_casa),period,actor,metadata,today)); }
+    catch(error) {
+      require('../utils/safeLogger').logger.error('Falló la facturación de una vivienda.',{id_casa:Number(house.id_casa),periodo:period,code:error.code||'FACTURACION_ERROR'});
+      results.push({id_casa:Number(house.id_casa),estado:'ERROR',generadas:0,code:error.code||'FACTURACION_ERROR'});
+    }
+  }
+  return {periodo:period,generadas:results.reduce((n,r)=>n+r.generadas,0),resultados:results,
+    procesadas:results.filter(r=>r.estado==='FACTURADO').length,
+    omitidas:results.filter(r=>!['FACTURADO','ERROR'].includes(r.estado)).length,
+    fallidas:results.filter(r=>r.estado==='ERROR').length};
 }
 module.exports = { generateMonthlyBilling, __private__:{billHouse,LABELS} };

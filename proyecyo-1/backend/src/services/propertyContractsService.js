@@ -139,6 +139,7 @@ async function configureHouse(houseId, body, actor, metadata) {
       FROM CONTRATO_CASA_VERSION v JOIN CONTRATO_CASA ct ON ct.id_contrato=v.id_contrato
       JOIN CASA_RESPONSABLE_FINANCIERO rf ON rf.id_responsabilidad=v.id_responsabilidad
       WHERE v.id_casa=? ORDER BY v.vigente_desde DESC LIMIT 1`, [houseId]);
+    if (previous && previous.activacion_estado!=='ACTIVA') throw error(409, 'Hay una transferencia pendiente; resuélvela antes de programar otro cambio.', 'TRANSFERENCIA_PENDIENTE');
     if (previous && String(previous.vigente_desde instanceof Date ? previous.vigente_desde.toISOString().slice(0,10) : previous.vigente_desde)>=config.first) throw error(409, 'Ya existe una configuración para ese mes o un mes posterior.', 'VIGENCIA_CONFLICTO');
     const role = config.tipo==='RENTA_DIRECTA' ? 'inquilino' : 'residente';
     const person = await resolvePerson(c, body.responsable, role);
@@ -146,6 +147,7 @@ async function configureHouse(houseId, body, actor, metadata) {
     const oldOwner = priorTitle?.id_usuario || (await exec('SELECT id_usuario FROM RESIDENTE WHERE id_residente=?', [house.id_residente]))[0]?.id_usuario;
     const newOwner = config.tipo==='RENTA_DIRECTA' ? null : person.id_usuario;
     if (oldOwner && Number(oldOwner)!==Number(newOwner)) await outstandingForTransfer(c, houseId, oldOwner);
+    const scheduledTransfer = Boolean(oldOwner && Number(oldOwner)!==Number(newOwner) && config.start>guatemalaToday());
     let contractId = previous?.id_contrato;
     const continuing = previous && previous.tipo===config.tipo && Number(previous.id_responsable)===Number(person.id_usuario);
     if (continuing && config.tipo==='COMPRA_FINANCIADA' && Number(previous.meses_financiamiento)!==config.term) throw error(422, 'El plazo original del financiamiento se conserva.', 'PLAZO_INMUTABLE');
@@ -154,17 +156,17 @@ async function configureHouse(houseId, body, actor, metadata) {
       if (Number(count.n)<Number(previous.meses_financiamiento)) throw error(409, 'El financiamiento aún no ha generado todas sus cuotas.', 'FINANCIAMIENTO_INCOMPLETO');
     }
     if (!continuing) {
-      if (previous) await exec("UPDATE CONTRATO_CASA SET estado='CERRADO' WHERE id_contrato=?", [previous.id_contrato]);
+      if (previous && !scheduledTransfer) await exec("UPDATE CONTRATO_CASA SET estado='CERRADO' WHERE id_contrato=?", [previous.id_contrato]);
       const created = await exec('INSERT INTO CONTRATO_CASA(id_casa,tipo,fecha_inicio,primer_periodo,meses_financiamiento,creado_por) VALUES(?,?,?,?,?,?)', [houseId,config.tipo,config.start,config.first,config.term,actor]);
       contractId = created.insertId;
     }
-    if (previous) await exec('UPDATE CONTRATO_CASA_VERSION SET vigente_hasta=? WHERE id_version=? AND vigente_hasta IS NULL', [config.first,previous.id_version]);
-    await exec('UPDATE CASA_RESPONSABLE_FINANCIERO SET vigente_hasta=? WHERE id_casa=? AND vigente_hasta IS NULL', [config.first,houseId]);
+    if (previous && !scheduledTransfer) await exec('UPDATE CONTRATO_CASA_VERSION SET vigente_hasta=? WHERE id_version=? AND vigente_hasta IS NULL', [config.first,previous.id_version]);
+    if (!scheduledTransfer) await exec('UPDATE CASA_RESPONSABLE_FINANCIERO SET vigente_hasta=? WHERE id_casa=? AND vigente_hasta IS NULL', [config.first,houseId]);
     const quality = { COMPRA_FINANCIADA:'COMPRADOR', RENTA_DIRECTA:'ARRENDATARIO_DIRECTO', PROPIEDAD_PRIVADA:'PROPIETARIO' }[config.tipo];
     const responsibility = await exec('INSERT INTO CASA_RESPONSABLE_FINANCIERO(id_casa,id_usuario,calidad,vigente_desde,creado_por) VALUES(?,?,?,?,?)', [houseId,person.id_usuario,quality,config.first,actor]);
     const version = await exec('INSERT INTO CONTRATO_CASA_VERSION(id_contrato,id_casa,id_responsabilidad,cuota_vivienda,vigente_desde,creado_por) VALUES(?,?,?,?,?,?)', [contractId,houseId,responsibility.insertId,config.installment,config.first,actor]);
     // Title and occupants are explicit; neither is inferred from the financial role.
-    if (!priorTitle || Number(priorTitle.id_usuario)!==Number(newOwner) || Boolean(priorTitle.titular_empresa)!==(newOwner===null)) {
+    if (!scheduledTransfer && (!priorTitle || Number(priorTitle.id_usuario)!==Number(newOwner) || Boolean(priorTitle.titular_empresa)!==(newOwner===null))) {
       if (priorTitle) await exec('UPDATE CASA_TITULARIDAD SET vigente_hasta=? WHERE id_titularidad=?', [config.start,priorTitle.id_titularidad]);
       await exec('INSERT INTO CASA_TITULARIDAD(id_casa,id_usuario,titular_empresa,vigente_desde,creado_por) VALUES(?,?,?,?,?)', [houseId,newOwner,newOwner===null,config.start,actor]);
     }
@@ -174,17 +176,25 @@ async function configureHouse(houseId, body, actor, metadata) {
       if (config.tipo!=='PROPIEDAD_PRIVADA') throw error(422, 'El inquilino privado requiere propiedad privada.', 'INQUILINO_PRIVADO_INVALIDO');
       inhabitants.push({person:await resolvePerson(c,body.inquilino_privado,'inquilino'),quality:'INQUILINO_PRIVADO'});
     }
-    const existing = await exec('SELECT id_usuario FROM CASA_HABITANTE WHERE id_casa=? AND vigente_hasta IS NULL', [houseId]);
-    for (const row of existing) await exec('UPDATE CASA_HABITANTE SET vigente_hasta=? WHERE id_casa=? AND id_usuario=? AND vigente_hasta IS NULL', [config.start,houseId,row.id_usuario]);
+    if (body.habitantes_accion && !['CONSERVAR','ACTUALIZAR'].includes(body.habitantes_accion)) throw error(422, 'Indica si deseas conservar o actualizar habitantes.', 'HABITANTES_ACCION_INVALIDA');
+    const inhabitantsAction = !previous || body.habitantes_accion==='ACTUALIZAR' ? 'ACTUALIZAR' : 'CONSERVAR';
     for (const inhabitant of inhabitants) {
-      const [other] = await exec('SELECT id_casa FROM CASA_HABITANTE WHERE id_usuario=? AND id_casa<>? AND (vigente_hasta IS NULL OR vigente_hasta>?) LIMIT 1 FOR UPDATE', [inhabitant.person.id_usuario,houseId,config.start]);
+      const [other] = await exec('SELECT id_casa FROM CASA_HABITANTE WHERE id_usuario=? AND id_casa<>? AND id_version_pendiente IS NULL AND (vigente_hasta IS NULL OR vigente_hasta>?) LIMIT 1 FOR UPDATE', [inhabitant.person.id_usuario,houseId,config.start]);
       if (other) throw error(409, 'La persona ya habita otra vivienda.', 'HABITANTE_CONFLICTO');
-      await exec('INSERT INTO CASA_HABITANTE(id_casa,id_usuario,calidad,vigente_desde,creado_por) VALUES(?,?,?,?,?)', [houseId,inhabitant.person.id_usuario,inhabitant.quality,config.start,actor]);
+    }
+    const plannedInhabitants=inhabitants.map(i=>({id_usuario:i.person.id_usuario,calidad:i.quality}));
+    if (scheduledTransfer) {
+      const plan={oldOwner,newOwner,previousVersion:previous?.id_version||null,previousTitle:priorTitle?.id_titularidad||null,
+        first:config.first,inhabitantsAction,inhabitants:plannedInhabitants};
+      await exec("UPDATE CONTRATO_CASA_VERSION SET activacion_estado='PENDIENTE',activacion_fecha=?,activacion_datos=? WHERE id_version=?",[config.start,JSON.stringify(plan),version.insertId]);
+      await exec('UPDATE CASA_RESPONSABLE_FINANCIERO SET id_version_pendiente=? WHERE id_responsabilidad=?',[version.insertId,responsibility.insertId]);
+    } else if (inhabitantsAction==='ACTUALIZAR') {
+      await require('./contractActivationService').applyInhabitants(c,houseId,plannedInhabitants,config.start,actor);
     }
     await exec('UPDATE CASA SET version_contractual=version_contractual+1,relaciones_confirmadas_en=COALESCE(relaciones_confirmadas_en,UTC_TIMESTAMP()) WHERE id_casa=?', [houseId]);
     await require('./contractHouseRelations').syncHouseRelations(c,houseId);
     const result = { id_casa:Number(houseId),id_contrato:Number(contractId),id_version:Number(version.insertId),version:Number(house.version_contractual)+1,tipo:config.tipo,fecha_efectiva:config.start,primer_periodo:config.first,responsable:person,mantenimiento:maintenance.monto,total_mensual:(toCents(config.installment)+toCents(maintenance.monto))/100 };
-    await recordAudit({ userId:actor,action:oldOwner && Number(oldOwner)!==Number(newOwner)?'PROPERTY_TRANSFERRED':'PROPERTY_CONTRACT_CONFIGURED',entity:'CASA',entityId:houseId,previousData:{contrato:previous,titular:priorTitle,id_propietario:oldOwner},newData:{...result,id_propietario:newOwner,habitantes:inhabitants.map(i=>({id_usuario:i.person.id_usuario,calidad:i.quality})),id_operacion:operationId},metadata }, exec);
+    await recordAudit({ userId:actor,action:scheduledTransfer?'PROPERTY_TRANSFER_SCHEDULED':oldOwner && Number(oldOwner)!==Number(newOwner)?'PROPERTY_TRANSFERRED':'PROPERTY_CONTRACT_CONFIGURED',entity:'CASA',entityId:houseId,previousData:{contrato:previous,titular:priorTitle,id_propietario:oldOwner},newData:{...result,id_propietario:newOwner,habitantes:plannedInhabitants,habitantes_accion:inhabitantsAction,id_operacion:operationId},metadata }, exec);
     await exec('INSERT INTO OPERACION_CONTRACTUAL(id_operacion,id_usuario,id_casa,request_hash,resultado) VALUES(?,?,?,?,?)', [operationId,actor,houseId,hash,JSON.stringify(result)]);
     return result;
   });

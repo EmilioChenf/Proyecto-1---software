@@ -10,7 +10,7 @@ const GUATEMALA_TODAY_SQL="DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00'))";
 const HOUSE_STATUSES = Object.freeze({ AVAILABLE: "DISPONIBLE", OCCUPIED: "OCUPADA" });
 const HOUSE_STATUS_SQL = `CASE WHEN c.relaciones_confirmadas_en IS NULL THEN
   CASE WHEN c.id_residente IS NULL THEN 'DISPONIBLE' ELSE 'OCUPADA' END
-  WHEN EXISTS(SELECT 1 FROM CASA_HABITANTE h WHERE h.id_casa=c.id_casa
+  WHEN EXISTS(SELECT 1 FROM CASA_HABITANTE h WHERE h.id_casa=c.id_casa AND h.id_version_pendiente IS NULL
     AND h.vigente_desde<=${GUATEMALA_TODAY_SQL} AND (h.vigente_hasta IS NULL OR h.vigente_hasta>${GUATEMALA_TODAY_SQL}))
   THEN 'OCUPADA' ELSE 'DISPONIBLE' END`;
 const houseStatus = (row) => (row.id_residente == null ? HOUSE_STATUSES.AVAILABLE : HOUSE_STATUSES.OCCUPIED);
@@ -82,7 +82,8 @@ function validateHousePayload(payload = {}) {
 const HOUSE_SELECT = `
   SELECT c.id_casa, c.numero, c.torre, c.id_residente, c.precio, c.area_terreno, c.area_construccion,
     c.version_contractual,c.relaciones_confirmadas_en,
-    (SELECT ct.tipo FROM CONTRATO_CASA ct WHERE ct.id_casa=c.id_casa AND ct.fecha_inicio<=${GUATEMALA_TODAY_SQL}
+    (SELECT ct.tipo FROM CONTRATO_CASA ct JOIN CONTRATO_CASA_VERSION cv ON cv.id_contrato=ct.id_contrato
+      WHERE ct.id_casa=c.id_casa AND cv.activacion_estado='ACTIVA' AND ct.fecha_inicio<=${GUATEMALA_TODAY_SQL}
       ORDER BY ct.fecha_inicio DESC,ct.id_contrato DESC LIMIT 1) tipo_contractual,
     c.habitaciones, c.banos, c.niveles, c.modelo, c.mapa_fila, c.mapa_columna, c.activo,
     DATE_FORMAT(c.creado_en, '%Y-%m-%d %H:%i:%s') AS creado_en,
@@ -294,7 +295,7 @@ async function setHouseActive(id, activo) {
     const [rows] = await connection.execute("SELECT id_casa, id_residente, relaciones_confirmadas_en FROM CASA WHERE id_casa = ? FOR UPDATE", [houseId]);
     if (!rows.length) throw fail(404, "Vivienda no encontrada.");
     const [[inhabitants]] = rows[0].relaciones_confirmadas_en
-      ? await connection.execute(`SELECT COUNT(*) n FROM CASA_HABITANTE WHERE id_casa=? AND vigente_desde<=${GUATEMALA_TODAY_SQL} AND (vigente_hasta IS NULL OR vigente_hasta>${GUATEMALA_TODAY_SQL})`, [houseId])
+      ? await connection.execute(`SELECT COUNT(*) n FROM CASA_HABITANTE WHERE id_casa=? AND id_version_pendiente IS NULL AND vigente_desde<=${GUATEMALA_TODAY_SQL} AND (vigente_hasta IS NULL OR vigente_hasta>${GUATEMALA_TODAY_SQL})`, [houseId])
       : [[{ n: rows[0].id_residente != null ? 1 : 0 }]];
     if (!activo && Number(inhabitants.n)>0) {
       throw fail(409, "No se puede desactivar una vivienda ocupada. Primero reasigna o retira a su residente.", "VIVIENDA_OCUPADA");

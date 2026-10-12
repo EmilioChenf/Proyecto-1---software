@@ -16,7 +16,7 @@ function httpError(message, status) {
 const OWNED_HOUSE_JOIN = `
   INNER JOIN CASA c ON c.id_casa = s.id_casa
   LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente`;
-const permission = (company) => company ? `EXISTS(SELECT 1 FROM CASA_TITULARIDAD ct WHERE ct.id_casa=c.id_casa AND ct.titular_empresa=1 AND ct.vigente_desde<=DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')) AND (ct.vigente_hasta IS NULL OR ct.vigente_hasta>DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')))) AND EXISTS(SELECT 1 FROM USUARIO actor JOIN TIPO_USUARIO t ON t.id_tipo_usuario=actor.id_tipo_usuario WHERE actor.id_usuario=? AND actor.activo=1 AND t.nombre='admin')` : 'r.id_usuario = ?';
+const permission = (company) => company ? `EXISTS(SELECT 1 FROM CASA_TITULARIDAD ct WHERE ct.id_casa=c.id_casa AND ct.titular_empresa=1 AND ct.id_version_pendiente IS NULL AND ct.vigente_desde<=DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')) AND (ct.vigente_hasta IS NULL OR ct.vigente_hasta>DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')))) AND EXISTS(SELECT 1 FROM USUARIO actor JOIN TIPO_USUARIO t ON t.id_tipo_usuario=actor.id_tipo_usuario WHERE actor.id_usuario=? AND actor.activo=1 AND t.nombre='admin')` : 'r.id_usuario = ?';
 
 function mapRequest(row) {
   return {

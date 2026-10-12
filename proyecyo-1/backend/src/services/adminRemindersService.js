@@ -323,7 +323,8 @@ async function runScheduledReminders() {
   try {
     try {
       await require('./contractHouseRelations').syncEffectiveRelations();
-      await require('./monthlyBillingService').generateMonthlyBilling({automatic:true});
+      const billing=await require('./monthlyBillingService').generateMonthlyBilling({automatic:true});
+      if(billing.fallidas)logger.error('Hay viviendas pendientes de reintento.',{procesadas:billing.procesadas,omitidas:billing.omitidas,fallidas:billing.fallidas,periodo:billing.periodo});
     } catch (error) { logger.error('No fue posible completar la facturación mensual.',error); }
     try {
       const result = await sendPaymentReminders(null);
