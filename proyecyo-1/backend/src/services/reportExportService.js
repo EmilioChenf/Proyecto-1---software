@@ -3,6 +3,7 @@ const ExcelJS = require("exceljs");
 const db = require("../database/mysql");
 const { QUOTA_BALANCES_SQL } = require("./financialBalance");
 const accesses = require("./adminAccessesService");
+const { RESPONSIBLE_NAME, RESPONSIBLE_JOIN } = require("./sanctionHistoricalActor");
 const { ensureValidDate } = require("../utils/dateTimeValidation");
 
 const TIMEZONE = "America/Guatemala";
@@ -26,11 +27,10 @@ const REPORTS = {
     WHERE cu.fecha_limite < ? AND cu.saldo_pendiente > 0` },
   sanciones: { title: "Sanciones", columns: { fecha: "Fecha", hora: "Hora", residente: "Residente", motivo: "Motivo", monto: "Monto (Q)", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d') fecha,
-      DATE_FORMAT(s.fecha_generacion, '%H:%i:%s') hora, COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') residente, s.motivo, s.monto, s.estado
+      DATE_FORMAT(s.fecha_generacion, '%H:%i:%s') hora, ${RESPONSIBLE_NAME} residente, s.motivo, s.monto, s.estado
     FROM SANCION s JOIN CASA c ON c.id_casa=s.id_casa
     LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
-    LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
-    LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)` },
+    ${RESPONSIBLE_JOIN}` },
 };
 const invalid = message => Object.assign(new Error(message), { status: 400 });
 function validate(type, format) {

@@ -1,5 +1,6 @@
 const { QUOTA_BALANCES_SQL } = require("./financialBalance");
 const { query } = require("../database/mysql");
+const { RESPONSIBLE_NAME, RESPONSIBLE_JOIN } = require("./sanctionHistoricalActor");
 
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 const OVERDUE_FEE_RULE = {
@@ -110,7 +111,7 @@ function appendSearchFilter(filters, params, search) {
 
   filters.push(`
     (
-      LOWER(u.nombre) LIKE ?
+      LOWER(${RESPONSIBLE_NAME}) LIKE ?
       OR LOWER(s.motivo) LIKE ?
       OR LOWER(s.detalle) LIKE ?
       OR LOWER(
@@ -294,7 +295,7 @@ async function listSanctions(filters = {}) {
         DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d %H:%i') AS fecha_generacion,
         c.numero,
         c.torre,
-        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') AS residente,
+        ${RESPONSIBLE_NAME} AS residente,
         cu.monto AS cuota_monto,
         DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') AS fecha_limite,
         srv.nombre AS servicio
@@ -302,9 +303,7 @@ async function listSanctions(filters = {}) {
       INNER JOIN CASA c
         ON c.id_casa = s.id_casa
       LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
-      LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
-      LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR
-        (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
+      ${RESPONSIBLE_JOIN}
       LEFT JOIN SERVICIO srv
         ON srv.id_servicio = cu.id_servicio
       ${whereClause}
@@ -347,16 +346,14 @@ async function listSanctionHistory(filters = {}) {
         s.monto,
         c.numero,
         c.torre,
-        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') AS residente
+        ${RESPONSIBLE_NAME} AS residente
       FROM SANCION_HISTORIAL h
       INNER JOIN SANCION s
         ON s.id_sancion = h.id_sancion
       INNER JOIN CASA c
         ON c.id_casa = s.id_casa
       LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
-      LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
-      LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR
-        (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
+      ${RESPONSIBLE_JOIN}
       LEFT JOIN USUARIO actor
         ON actor.id_usuario = h.realizado_por
       ${whereClause}

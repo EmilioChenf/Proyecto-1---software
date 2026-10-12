@@ -1,8 +1,8 @@
 const { query } = require("../database/mysql");
-const RESPONSIBLE_NAME = "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(q.responsable_snapshot,'$.nombre')),u.nombre,'Responsable no confirmado')";
+const { RESPONSIBLE_NAME, RESPONSIBLE_JOIN } = require("./sanctionHistoricalActor");
 const HISTORY_JOIN = ` FROM SANCION s JOIN CASA c ON c.id_casa=s.id_casa
-  LEFT JOIN CUOTA q ON q.id_cuota=s.id_cuota
-  LEFT JOIN USUARIO u ON u.id_usuario=q.id_responsable
+  LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
+  ${RESPONSIBLE_JOIN}
   LEFT JOIN USUARIO cr ON cr.id_usuario=s.creado_por `;
 function pagination(i={}){const page=Math.max(1,Number(i.page)||1),limit=Math.min(100,Math.max(1,Number(i.limit)||20));return{page,limit,offset:(page-1)*limit};}
 function filters(i={}){if(i.desde&&i.hasta&&i.desde>i.hasta)throw Object.assign(new Error("El rango de fechas es inválido."),{status:400});const w=["1=1"],p=[];for(const[v,sql]of[[i.desde,"DATE(s.fecha_generacion)>=?"],[i.hasta,"DATE(s.fecha_generacion)<=?"]])if(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v))throw Object.assign(new Error("Fecha inválida."),{status:400});w.push(sql);p.push(v)}if(i.estado){w.push("s.estado=?");p.push(String(i.estado).toUpperCase())}if(i.regla){w.push("s.codigo_regla=?");p.push(i.regla)}if(i.search){w.push(`LOWER(${RESPONSIBLE_NAME}) LIKE ?`);p.push(`%${String(i.search).toLowerCase()}%`)}return{where:w.join(" AND "),params:p};}
