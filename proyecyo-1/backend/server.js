@@ -82,6 +82,9 @@ async function startServer() {
   const migrationConnection = await pool.getConnection();
   try { await applyRecurrentePreparation(migrationConnection); await applyRecurrenteCheckoutMigration(migrationConnection); await applyRecurrenteConfirmationMigration(migrationConnection); await applyRecurrenteAttemptsMigration(migrationConnection); await applyRecurrenteRefundsMigration(migrationConnection); await applyRecurrenteIntentHistoryMigration(migrationConnection); await applyRecurrenteReviewPrecisionMigration(migrationConnection); await applyFinancialNotificationsMigration(migrationConnection); }
   finally { migrationConnection.release(); }
+  const contractMigrationConnection = await pool.getConnection();
+  try { await require('./src/database/propertyContractMigration').applyPropertyContractMigration(contractMigrationConnection); }
+  finally { contractMigrationConnection.release(); }
   await ensureDemoRequestsSchema();
   startScheduler();
   startReminderScheduler();

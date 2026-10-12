@@ -3,6 +3,9 @@ const { guatemalaDayRangeUtc } = require("../utils/guatemalaTime");
 
 const SENSITIVE_KEY = /password|contrasena|token|secret|authorization|cookie|api[_-]?key/i;
 const ALLOWED_ACTIONS = [
+  'PROPERTY_CONTRACT_CONFIGURED',
+  'PROPERTY_TRANSFERRED',
+  'MAINTENANCE_TARIFF_CREATED',
   "USER_CREATED",
   "USER_UPDATED",
   "USER_DELETED",
