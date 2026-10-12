@@ -16,6 +16,7 @@ type UserFormModalProps = {
   editingUser: UserRecord | null;
   onClose: () => void;
   onSubmit: (values: UserFormValues) => Promise<void>;
+  onConfigureContract?:()=>void;
 };
 
 type FormErrors = Partial<Record<keyof UserFormValues, string>>;
@@ -39,6 +40,7 @@ export function UserFormModal({
   editingUser,
   onClose,
   onSubmit,
+  onConfigureContract,
 }: UserFormModalProps) {
   const [values, setValues] = useState<UserFormValues>(emptyValues);
   const [house, setHouse] = useState<HouseRecord | null>(null);
@@ -198,7 +200,8 @@ export function UserFormModal({
 
             {houseRole ? (
               <div className="min-w-0 md:col-span-2">
-                <HousePicker
+                {onConfigureContract&&<div className="mb-3 space-y-2 rounded-xl border p-3"><p>Configura la vivienda, el contrato, el responsable financiero y los habitantes desde el asistente.</p><Button type="button" variant="outline" onClick={onConfigureContract}>Abrir asistente de vivienda y contrato</Button></div>}
+                {(!onConfigureContract||editingUser)&&<HousePicker
                   key={houseRole}
                   role={houseRole}
                   userId={editingUser?.id_usuario ?? null}
@@ -206,7 +209,7 @@ export function UserFormModal({
                   onChange={chooseHouse}
                   refreshKey={refreshKey}
                   initialHouseId={sameRole ? editingUser?.id_casa ?? null : null}
-                />
+                />}
                 {errors.id_casa ? <p className="mt-2 text-sm text-red-600" role="alert">{errors.id_casa}</p> : null}
               </div>
             ) : null}
@@ -216,7 +219,7 @@ export function UserFormModal({
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting||Boolean(onConfigureContract&&houseRole&&!editingUser)}>
               {isSubmitting ? "Guardando..." : editingUser ? "Actualizar usuario" : "Crear usuario"}
             </Button>
           </div>

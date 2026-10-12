@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { downloadTenantPaymentReceiptRequest, getTenantAccountStatementRequest, payTenantObligationRequest } from "@/services/tenantAccountService";
 import { savePaymentReceipt } from "@/services/paymentReceiptService";
+import {createTenantCheckoutRequest,redirectToRecurrente} from '@/services/recurrenteCheckoutService';
 import type { AccountQuotaStatus } from "@/types/account";
 import { quotaStatusLabels, quotaStatusStyles } from "@/utils/quotaStatus";
 import type { TenantAccountQuota, TenantAccountStatement } from "@/types/tenantAccount";
@@ -148,6 +149,7 @@ function QuotaTable({
                     <td className="px-5 py-4">
                       <p className="font-medium text-slate-950">{quota.servicio}</p>
                       <p className="text-sm text-slate-500">{quota.tipo_servicio}</p>
+                      {quota.periodo&&<p className="text-sm text-slate-500">Período {quota.periodo.slice(0,7)}{quota.numero_cuota?` · Cuota #${quota.numero_cuota}`:''}</p>}
                       <div className="mt-3 h-2 w-44 overflow-hidden rounded-full bg-slate-100">
                         <div
                           className="h-full rounded-full bg-blue-700"
@@ -206,9 +208,10 @@ export function InquilinoAccountView() {
   const [paymentMessage, setPaymentMessage] = useState("");
 
   async function payQuota(quota: TenantAccountQuota) {
-    if (!window.confirm(`Pago simulado para fines académicos.\n\n${quota.servicio}\nMonto base: ${formatCurrency(quota.monto_base)}\nRecargos: ${formatCurrency(quota.recargo)}\nTotal: ${formatCurrency(quota.saldo_pendiente)}\n\n¿Confirmar pago?`)) return;
+    if (!window.confirm(`${statement.modelo_contractual?'Pago mediante Recurrente.':'Pago simulado para fines académicos.'}\n\n${quota.servicio}\nMonto base: ${formatCurrency(quota.monto_base)}\nRecargos: ${formatCurrency(quota.recargo)}\nTotal: ${formatCurrency(quota.saldo_pendiente)}\n\n¿Confirmar pago?`)) return;
     try {
       setPayingId(quota.id_cuota); setErrorMessage(""); setPaymentMessage("");
+      if(statement.modelo_contractual){const checkout=await createTenantCheckoutRequest(quota.id_cuota);redirectToRecurrente(checkout.checkout_url);return;}
       const payment = await payTenantObligationRequest(quota.id_cuota);
       setPaymentMessage(`Pago realizado: ${payment.numero_comprobante}`);
       await loadAccount({ silent: true });
@@ -355,7 +358,8 @@ export function InquilinoAccountView() {
         </Alert>
       ) : null}
 
-      <Alert className="border-sky-200 bg-sky-50 text-sky-800"><AlertTitle>Pago simulado para fines académicos.</AlertTitle><AlertDescription>No se solicitan ni almacenan datos bancarios.</AlertDescription></Alert>
+      {!statement.modelo_contractual&&<Alert className="border-sky-200 bg-sky-50 text-sky-800"><AlertTitle>Pago simulado para fines académicos.</AlertTitle><AlertDescription>No se solicitan ni almacenan datos bancarios.</AlertDescription></Alert>}
+      {statement.mensaje&&<p role="status">{statement.mensaje}</p>}
       {paymentMessage ? <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800"><AlertTitle>Pago realizado</AlertTitle><AlertDescription>{paymentMessage}. El comprobante está disponible en Pagos realizados.</AlertDescription></Alert> : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">

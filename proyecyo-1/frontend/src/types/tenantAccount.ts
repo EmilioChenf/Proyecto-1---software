@@ -2,6 +2,9 @@ import type { AccountQuotaStatus } from "@/types/account";
 import type { FinancialBalanceDetails, FinancialReview } from "./financialBalance";
 
 export interface TenantAccountQuota extends FinancialBalanceDetails {
+  periodo?: string | null;
+  concepto?: string | null;
+  numero_cuota?: number | null;
   id_cuota: number;
   id_casa: number;
   casa_unidad: string;
@@ -38,6 +41,9 @@ export interface TenantAccountHouse {
 }
 
 export interface TenantAccountStatement {
+  modelo_contractual?:boolean;
+  responsabilidad_financiera?:boolean;
+  mensaje?:string|null;
   casa: TenantAccountHouse;
   resumen: TenantAccountSummary;
   alquiler: TenantAccountQuota[];

@@ -313,6 +313,7 @@ export function ResidenteAccountView() {
                       <td className="px-5 py-4">
                         <p className="font-medium text-slate-950">{quota.servicio}</p>
                         <p className="text-sm text-slate-500">{quota.tipo_servicio}</p>
+                        {quota.periodo&&<p className="text-sm text-slate-500">Período {quota.periodo.slice(0,7)}{quota.numero_cuota?` · Cuota #${quota.numero_cuota}`:''}</p>}
                         <div className="mt-3 h-2 w-44 overflow-hidden rounded-full bg-slate-100">
                           <div
                             className="h-full rounded-full bg-blue-700"

@@ -13,6 +13,9 @@ export interface AccountSummary extends FinancialReview {
 }
 
 export interface AccountQuota extends FinancialBalanceDetails {
+  periodo?: string | null;
+  concepto?: string | null;
+  numero_cuota?: number | null;
   id_cuota: number;
   id_casa: number;
   casa_unidad: string;

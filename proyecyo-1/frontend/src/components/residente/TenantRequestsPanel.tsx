@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   getOwnerAuthorizationRequestsRequest,
   resolveOwnerAuthorizationRequest,
+  getCompanyAuthorizationRequestsRequest,resolveCompanyAuthorizationRequest,
 } from "@/services/sprintStoriesService";
 import type { AuthorizationDecision, OwnerAuthorizationRequest } from "@/types/sprintStories";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
@@ -24,7 +25,7 @@ function errorText(error: unknown, fallback: string) {
  * Solicitudes de autorización enviadas por inquilinos de las unidades del
  * residente. El backend valida que la unidad pertenezca al residente.
  */
-export function TenantRequestsPanel() {
+export function TenantRequestsPanel({company=false}:{company?:boolean}={}) {
   const [requests, setRequests] = useState<OwnerAuthorizationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,13 +38,13 @@ export function TenantRequestsPanel() {
   const load = useCallback(async () => {
     try {
       setError("");
-      setRequests(await getOwnerAuthorizationRequestsRequest("TODAS"));
+      setRequests(company?await getCompanyAuthorizationRequestsRequest():await getOwnerAuthorizationRequestsRequest("TODAS"));
     } catch (reason) {
       setError(errorText(reason, "No fue posible cargar las solicitudes de inquilinos."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [company]);
 
   useEffect(() => {
     void load();
@@ -53,7 +54,7 @@ export function TenantRequestsPanel() {
     try {
       setBusyId(request.id_solicitud);
       setActionError("");
-      const updated = await resolveOwnerAuthorizationRequest(request.id_solicitud, decision, respuesta);
+      const updated = company?await resolveCompanyAuthorizationRequest(request.id_solicitud,decision,respuesta):await resolveOwnerAuthorizationRequest(request.id_solicitud, decision, respuesta);
       setRequests((current) => current.map((item) => (item.id_solicitud === updated.id_solicitud ? updated : item)));
       setRejectingId(null);
       setRejectReason("");

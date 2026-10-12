@@ -14,8 +14,10 @@ import {
 } from "@/services/usersService";
 import type { UserFormValues, UserRecord, UserTypeOption } from "@/types/users";
 import { UserFormModal } from "@/components/admin/UserFormModal";
+import {PropertyContractWizard} from '@/components/houses/PropertyContractWizard';
 
 export function UsersManagement() {
+  const [contractOpen,setContractOpen]=useState(false);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [userTypes, setUserTypes] = useState<UserTypeOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,6 +134,7 @@ export function UsersManagement() {
             <Plus className="size-4" />
             Crear usuario
           </Button>
+          <Button variant="outline" onClick={()=>setContractOpen(true)}>Vivienda, contrato y personas</Button>
         </CardHeader>
         <CardContent className="space-y-2.5 px-4 pb-4">
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -230,7 +233,9 @@ export function UsersManagement() {
           }
         }}
         onSubmit={handleSubmit}
+        onConfigureContract={()=>{setIsModalOpen(false);setContractOpen(true);}}
       />
+      {contractOpen&&<PropertyContractWizard open onClose={()=>setContractOpen(false)} onSaved={()=>{setFeedback('Configuración contractual guardada.');void loadData();}}/>}
     </>
   );
 }

@@ -5,6 +5,7 @@ import type { HouseDetail, HouseRecord, HouseSummary } from "@/types/houses";
 import { buildHouseMapLayout } from "@/utils/houseMapLayout";
 import { supportsWebGL } from "./HouseMap";
 import type { MapView, SceneAmbient } from "./HouseMap3D";
+import {contractLabels} from '@/types/propertyContracts';
 import "./houseExplorer.css";
 
 // Pagina /admin/viviendas con el diseño de "Residencial Los Pinos · Elige tu lote".
@@ -166,6 +167,7 @@ export function HouseExplorer({
                   <span>Vivienda {shown.codigo}</span>
                 </div>
                 <p className="price">{money(shown.precio)}</p>
+                <p className="price-note">{contractLabels[shown.tipo_contractual||'PENDIENTE_CONFIGURACION']}</p>
                 <p className="price-note">{shown.precio == null ? "Precio aún no registrado" : "Precio de lista con terreno incluido"}</p>
                 <ul className="specs">
                   <li><Icon name="terreno" /><div><b>{shown.area_terreno != null ? `${shown.area_terreno} m²` : "—"}</b><span>Terreno</span></div></li>

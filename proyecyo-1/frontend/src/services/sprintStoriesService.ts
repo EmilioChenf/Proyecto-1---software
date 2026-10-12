@@ -34,6 +34,8 @@ export function resolveOwnerAuthorizationRequest(id: number, decision: Authoriza
     body: { decision, respuesta },
   });
 }
+export function getCompanyAuthorizationRequestsRequest(){return apiRequest<OwnerAuthorizationRequest[]>('/admin/solicitudes-arrendatarios?estado=TODAS');}
+export function resolveCompanyAuthorizationRequest(id:number,decision:AuthorizationDecision,respuesta=''){return apiRequest<OwnerAuthorizationRequest>(`/admin/solicitudes-arrendatarios/${id}`,{method:'PATCH',body:{decision,respuesta}});}
 
 export function getResidentRegulationsRequest(filters: { search?: string; category?: string } = {}) {
   const query = new URLSearchParams();

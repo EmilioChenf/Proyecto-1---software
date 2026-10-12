@@ -15,6 +15,15 @@ export function createResidentCheckoutRequest(id_cuota: number) {
     method: "POST", body: { id_cuota },
   });
 }
+export function createTenantCheckoutRequest(id_cuota:number){
+  return apiRequest<RecurrenteCheckout>('/inquilino/pagos/recurrente/checkout',{method:'POST',body:{id_cuota}});
+}
+export function getTenantCheckoutStatusRequest(reference:string){
+  return apiRequest<RecurrenteCheckoutStatus>(`/inquilino/pagos/recurrente/checkouts/${encodeURIComponent(reference)}`);
+}
+export function retryTenantCheckoutRequest(referencia_local:string){
+  return apiRequest<RecurrenteCheckout>('/inquilino/pagos/recurrente/reintentar',{method:'POST',body:{referencia_local}});
+}
 
 export function redirectToRecurrente(checkoutUrl: string) {
   let target: URL;

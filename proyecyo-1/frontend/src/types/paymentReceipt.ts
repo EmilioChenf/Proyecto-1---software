@@ -1,4 +1,5 @@
 export interface PaymentReceipt {
+  periodo?:string|null;concepto?:string|null;
   id_pago: number;
   id_cuota: number;
   numero_comprobante: string;

@@ -1,7 +1,7 @@
 // Estado calculado SOLO por el backend (housesService.HOUSE_STATUS_SQL):
 // OCUPADA si la vivienda tiene residente, DISPONIBLE si no.
 export type HouseStatus = "DISPONIBLE" | "OCUPADA";
-export type HouseSelectionRole = "residente" | "inquilino";
+export type HouseSelectionRole = "residente" | "inquilino" | 'contrato';
 
 export interface HouseRecord {
   id_casa: number;
@@ -22,6 +22,8 @@ export interface HouseRecord {
   creado_en: string | null;
   residente: { id_usuario: number; nombre: string } | null;
   cantidad_inquilinos: number;
+  tipo_contractual?:import('./propertyContracts').ContractType|'PENDIENTE_CONFIGURACION';
+  version_contractual?:number;
   // Solo presentes cuando se pide ?seleccion= (informativo; el backend revalida al guardar).
   elegible?: boolean;
   motivo?: string | null;

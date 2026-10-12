@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/services/api";
+import {GlobalMaintenanceSettings} from './GlobalMaintenanceSettings';
 
 type Rule = {
   dia_limite: number;
@@ -65,7 +66,7 @@ export function FinancialRulesSettings() {
     rule.tipo === "PORCENTAJE" ? `${rule.porcentaje}% del capital pendiente` : `un monto fijo de Q${rule.monto_fijo.toFixed(2)}`;
 
   return (
-    <section className="mb-5 rounded-[20px] border bg-white p-5">
+    <><GlobalMaintenanceSettings/><section className="mb-5 rounded-[20px] border bg-white p-5">
       <h2 className="text-lg font-semibold">Fechas límite y recargos</h2>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <label className="text-sm">
@@ -145,6 +146,6 @@ export function FinancialRulesSettings() {
           </Button>
         )}
       </div>
-    </section>
+    </section></>
   );
 }

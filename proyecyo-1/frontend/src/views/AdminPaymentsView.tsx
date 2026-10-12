@@ -219,7 +219,7 @@ export function AdminPaymentsView() {
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-[0.1em] text-slate-500">
                   <th className="px-5 py-3 font-semibold">Unidad</th>
-                  <th className="px-5 py-3 font-semibold">Residente</th>
+                  <th className="px-5 py-3 font-semibold">Responsable financiero</th>
                   <th className="px-5 py-3 font-semibold">Monto pendiente</th>
                   <th className="px-5 py-3 font-semibold">Recargo</th>
                   <th className="px-5 py-3 font-semibold">Total</th>

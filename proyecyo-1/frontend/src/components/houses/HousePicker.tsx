@@ -66,7 +66,7 @@ export function HousePicker({ role, userId, value, onChange, refreshKey = 0, ini
   }, [data, initialHouseId, value, onChange]);
   useEffect(() => { setCandidate(null); if (!value) setOpen(true); }, [role, refreshKey, value]);
 
-  const helper = role === "residente"
+  const helper = role==='contrato' ? 'Selecciona una vivienda activa para revisar o configurar su contrato y sus personas.' : role === "residente"
     ? "Selecciona una vivienda disponible. Al crear el usuario la vivienda pasará a Ocupada."
     : "Selecciona una vivienda ocupada: el inquilino quedará vinculado a la vivienda de su residente.";
 
@@ -105,7 +105,7 @@ export function HousePicker({ role, userId, value, onChange, refreshKey = 0, ini
               selectedId={candidate?.id_casa ?? value?.id_casa ?? null}
               onSelect={setCandidate}
               selectable={(house) => ({ ok: Boolean(house.elegible), motivo: house.motivo })}
-              initialVisible={role === "residente" ? { OCUPADA: false } : { DISPONIBLE: false }}
+              initialVisible={role==='contrato'?{}:role === "residente" ? { OCUPADA: false } : { DISPONIBLE: false }}
               title="Selector de vivienda"
             />
           ) : null}

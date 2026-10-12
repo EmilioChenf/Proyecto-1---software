@@ -3,6 +3,8 @@ import { Plus, RefreshCw } from "lucide-react";
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { HouseExplorer } from "@/components/houses/HouseExplorer";
+import {PropertyContractWizard} from '@/components/houses/PropertyContractWizard';
+import {TenantRequestsPanel} from '@/components/residente/TenantRequestsPanel';
 import { HouseFormModal } from "@/components/houses/HouseFormModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +19,7 @@ import type { HouseDetail, HouseFormValues, HouseList, HouseRecord } from "@/typ
 const message = (error: unknown, fallback: string) => (error instanceof Error && error.message ? error.message : fallback);
 
 export function AdminHousesView({ webglSupported }: { webglSupported?: boolean } = {}) {
+  const [contractOpen,setContractOpen]=useState(false);
   const [data, setData] = useState<HouseList | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -99,7 +102,7 @@ export function AdminHousesView({ webglSupported }: { webglSupported?: boolean }
     <AdminLayout
       title="Viviendas"
       subtitle="Mapa del residencial: estado real de cada vivienda, residentes e inquilinos."
-      actions={<Button onClick={() => setModal({ open: true, editing: null })}><Plus className="size-4" />Agregar vivienda</Button>}
+      actions={<div className="flex flex-wrap gap-2"><Button onClick={() => setModal({ open: true, editing: null })}><Plus className="size-4" />Agregar vivienda</Button><Button variant="outline" onClick={()=>setContractOpen(true)}>Configurar contrato</Button></div>}
     >
       {loading && !data ? (
         <p role="status" className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">Cargando viviendas…</p>
@@ -132,6 +135,8 @@ export function AdminHousesView({ webglSupported }: { webglSupported?: boolean }
       ) : null}
 
       <HouseFormModal open={modal.open} editing={modal.editing} submitting={busy} onClose={() => !busy && setModal({ open: false, editing: null })} onSubmit={save} />
+      <details className="mt-5 rounded-xl border bg-background p-4"><summary className="cursor-pointer font-semibold">Solicitudes de arrendatarios de la residencial</summary><TenantRequestsPanel company/></details>
+      {contractOpen&&<PropertyContractWizard open initialHouse={selected} onClose={()=>setContractOpen(false)} onSaved={()=>{setFeedback('Contrato y personas guardados.');void loadList();if(selected)void loadDetail(selected.id_casa);}}/>}
     </AdminLayout>
   );
 }

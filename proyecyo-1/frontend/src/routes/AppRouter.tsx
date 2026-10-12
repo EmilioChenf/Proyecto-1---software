@@ -127,6 +127,7 @@ export function AppRouter() {
           <Route path="/inquilino/comunicados" element={<ResidentNotificationsView role="inquilino" initialFilter="COMUNICADOS" />} />
           <Route path="/inquilino/sesiones" element={<ActiveSessionsView />} />
           <Route path="/inquilino/estado-cuenta" element={<InquilinoAccountView />} />
+          <Route path="/inquilino/pagos/retorno" element={<ResidentePaymentReturnView tenant />} />
           <Route path="/inquilino/historial-financiero" element={<InquilinoAccountView />} />
         </Route>
 
