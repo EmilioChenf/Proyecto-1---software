@@ -15,7 +15,8 @@ function httpError(message, status) {
 // enviado por el cliente ni solo del id_propietario_usuario guardado al crear.
 const OWNED_HOUSE_JOIN = `
   INNER JOIN CASA c ON c.id_casa = s.id_casa
-  INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente`;
+  LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente`;
+const permission = (company) => company ? `EXISTS(SELECT 1 FROM CASA_TITULARIDAD ct WHERE ct.id_casa=c.id_casa AND ct.titular_empresa=1 AND ct.vigente_desde<=DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')) AND (ct.vigente_hasta IS NULL OR ct.vigente_hasta>DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00')))) AND EXISTS(SELECT 1 FROM USUARIO actor JOIN TIPO_USUARIO t ON t.id_tipo_usuario=actor.id_tipo_usuario WHERE actor.id_usuario=? AND actor.activo=1 AND t.nombre='admin')` : 'r.id_usuario = ?';
 
 function mapRequest(row) {
   return {
@@ -57,7 +58,7 @@ async function listOwnerAuthorizationRequests(ownerUserId, filters = {}) {
       FROM SOLICITUD_AUTORIZACION_DIGITAL s
       ${OWNED_HOUSE_JOIN}
       INNER JOIN USUARIO inquilino ON inquilino.id_usuario = s.id_inquilino_usuario
-      WHERE r.id_usuario = ?${statusSql}
+      WHERE ${permission(filters.companyOnly)}${statusSql}
       ORDER BY (s.estado = 'PENDIENTE') DESC, s.creado_en DESC, s.id_solicitud DESC
       LIMIT 50
     `,
@@ -71,7 +72,7 @@ async function listOwnerAuthorizationRequests(ownerUserId, filters = {}) {
  * Transaccional: bloquea la fila, valida propietario y estado, y notifica al
  * inquilino con NOTIFICACION (no es un evento financiero: no usa el outbox HU19).
  */
-async function resolveOwnerAuthorizationRequest(ownerUserId, requestIdInput, payload = {}) {
+async function resolveOwnerAuthorizationRequest(ownerUserId, requestIdInput, payload = {}, options={}) {
   const requestId = Number(requestIdInput);
   if (!Number.isInteger(requestId) || requestId <= 0) throw httpError("La solicitud es invalida.", 400);
   const decision = String(payload.decision || "").toUpperCase();
@@ -88,7 +89,7 @@ async function resolveOwnerAuthorizationRequest(ownerUserId, requestIdInput, pay
         SELECT s.id_solicitud, s.estado, s.accion, s.id_inquilino_usuario
         FROM SOLICITUD_AUTORIZACION_DIGITAL s
         ${OWNED_HOUSE_JOIN}
-        WHERE s.id_solicitud = ? AND r.id_usuario = ?
+        WHERE s.id_solicitud = ? AND ${permission(options.companyOnly)}
         LIMIT 1
         FOR UPDATE
       `,
@@ -139,7 +140,7 @@ async function resolveOwnerAuthorizationRequest(ownerUserId, requestIdInput, pay
       FROM SOLICITUD_AUTORIZACION_DIGITAL s
       ${OWNED_HOUSE_JOIN}
       INNER JOIN USUARIO inquilino ON inquilino.id_usuario = s.id_inquilino_usuario
-      WHERE s.id_solicitud = ? AND r.id_usuario = ?
+      WHERE s.id_solicitud = ? AND ${permission(options.companyOnly)}
       LIMIT 1
     `,
     [requestId, ownerUserId],

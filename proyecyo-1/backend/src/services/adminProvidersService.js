@@ -180,9 +180,9 @@ async function listAdminProviders(filters = {}) {
         ON s.id_servicio = cs.id_servicio
       INNER JOIN CASA c
         ON c.id_casa = cs.id_casa
-      INNER JOIN RESIDENTE r
+      LEFT JOIN RESIDENTE r
         ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO propietario
+      LEFT JOIN USUARIO propietario
         ON propietario.id_usuario = r.id_usuario
       LEFT JOIN (
         SELECT h1.*

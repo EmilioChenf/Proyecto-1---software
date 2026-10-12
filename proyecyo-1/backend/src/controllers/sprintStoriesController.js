@@ -57,7 +57,7 @@ async function getGuardAccessHistory(req, res, next) {
 
 async function getOwnerAuthorizationRequests(req, res, next) {
   try {
-    res.status(200).json(await listOwnerAuthorizationRequests(req.authUser.id, { estado: req.query.estado }));
+    res.status(200).json(await listOwnerAuthorizationRequests(req.authUser.id, { estado: req.query.estado,companyOnly:req.authUser.role==='admin' }));
   } catch (error) {
     next(error);
   }
@@ -65,7 +65,7 @@ async function getOwnerAuthorizationRequests(req, res, next) {
 
 async function patchOwnerAuthorizationRequest(req, res, next) {
   try {
-    res.status(200).json(await resolveOwnerAuthorizationRequest(req.authUser.id, req.params.id, req.body || {}));
+    res.status(200).json(await resolveOwnerAuthorizationRequest(req.authUser.id, req.params.id, req.body || {},{companyOnly:req.authUser.role==='admin'}));
   } catch (error) {
     next(error);
   }

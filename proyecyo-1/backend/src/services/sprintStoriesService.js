@@ -22,8 +22,8 @@ async function getTenantHouse(userId) {
       FROM INQUILINO i
       INNER JOIN INQUILINO_CASA ic ON ic.id_inquilino = i.id_inquilino
       INNER JOIN CASA c ON c.id_casa = ic.id_casa
-      INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO propietario ON propietario.id_usuario = r.id_usuario
+      LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
+      LEFT JOIN USUARIO propietario ON propietario.id_usuario = r.id_usuario
       WHERE i.id_usuario = ?
         AND i.autorizado = TRUE
       LIMIT 1
@@ -140,13 +140,14 @@ async function createTenantAuthorizationRequest(userId, payload = {}) {
   );
 
   const unit = `${house.torre ? `${house.torre}-` : ""}${house.numero}`;
-  await query(
+  const recipients = house.propietario_usuario_id ? [{id_usuario:house.propietario_usuario_id}] : await query("SELECT u.id_usuario FROM USUARIO u JOIN TIPO_USUARIO t ON t.id_tipo_usuario=u.id_tipo_usuario WHERE u.activo=1 AND t.nombre='admin'");
+  for (const recipient of recipients) await query(
     `
       INSERT INTO NOTIFICACION (id_usuario, tipo, titulo, mensaje, leido)
       VALUES (?, 'SOLICITUD_AUTORIZACION', 'Solicitud digital de autorizacion', ?, FALSE)
     `,
     [
-      house.propietario_usuario_id,
+      recipient.id_usuario,
       `${tenantName} solicito autorizacion para "${accion}" en la unidad ${unit}. Motivo: ${motivo}`,
     ],
   );

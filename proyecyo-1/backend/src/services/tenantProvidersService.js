@@ -55,9 +55,9 @@ async function getTenantHouse(userId) {
         ON ic.id_inquilino = i.id_inquilino
       INNER JOIN CASA c
         ON c.id_casa = ic.id_casa
-      INNER JOIN RESIDENTE r
+      LEFT JOIN RESIDENTE r
         ON r.id_residente = c.id_residente
-      INNER JOIN USUARIO propietario
+      LEFT JOIN USUARIO propietario
         ON propietario.id_usuario = r.id_usuario
       WHERE i.id_usuario = ?
         AND i.autorizado = TRUE
@@ -71,12 +71,6 @@ async function getTenantHouse(userId) {
   if (!house) {
     const error = new Error("No se encontro una casa autorizada para este inquilino.");
     error.status = 404;
-    throw error;
-  }
-
-  if (!house.propietario_usuario_id) {
-    const error = new Error("La unidad no tiene un propietario valido asociado.");
-    error.status = 409;
     throw error;
   }
 
