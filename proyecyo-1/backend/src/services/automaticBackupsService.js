@@ -2,7 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
 const { pool, query } = require("../database/mysql");
-const { BACKUP_TABLES, REQUIRED_FINANCIAL_TABLES, NOTIFICATION_TABLES } = require("../database/backupTables");
+const { BACKUP_TABLES, REQUIRED_FINANCIAL_TABLES, NOTIFICATION_TABLES, PROPERTY_TABLES } = require("../database/backupTables");
 const { sanitizeText } = require("../utils/safeLogger");
 
 const FREQUENCIES = new Set(["DIARIO", "SEMANAL", "MENSUAL"]);
@@ -40,6 +40,7 @@ function sqlValue(value) {
   if (Buffer.isBuffer(value)) return `X'${value.toString("hex")}'`;
   if (value instanceof Date) return `'${value.toISOString().slice(0, 19).replace("T", " ")}'`;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === 'object') value = JSON.stringify(value);
   return `'${String(value).replaceAll("\\", "\\\\").replaceAll("'", "''")}'`;
 }
 
@@ -54,7 +55,7 @@ async function generateSql() {
       try { [rows] = await connection.query({ sql: `SELECT * FROM \`${table}\``, dateStrings: true }); }
       catch (error) {
         // Legacy optional tables may be absent, but never silently omit payment metadata.
-        if (error.code === "ER_NO_SUCH_TABLE" && ![...REQUIRED_FINANCIAL_TABLES,...NOTIFICATION_TABLES].includes(table)) continue;
+        if (error.code === "ER_NO_SUCH_TABLE" && ![...REQUIRED_FINANCIAL_TABLES,...NOTIFICATION_TABLES,...PROPERTY_TABLES].includes(table)) continue;
         throw error;
       }
       for (const row of rows) {

@@ -1,5 +1,6 @@
 const { pool, query } = require("../database/mysql");
 const { toCents } = require("./financialBalance");
+const GUATEMALA_TODAY_SQL="DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','-06:00'))";
 
 // ===== Regla unica de estado de una vivienda =====
 // CASA es la vivienda. Esta OCUPADA si tiene residente (CASA.id_residente) y
@@ -7,10 +8,14 @@ const { toCents } = require("./financialBalance");
 // logica), no un tercer estado: una vivienda inactiva no se puede asignar.
 // El frontend nunca calcula el estado: siempre lo recibe de aqui.
 const HOUSE_STATUSES = Object.freeze({ AVAILABLE: "DISPONIBLE", OCCUPIED: "OCUPADA" });
-const HOUSE_STATUS_SQL = "CASE WHEN c.id_residente IS NULL THEN 'DISPONIBLE' ELSE 'OCUPADA' END";
+const HOUSE_STATUS_SQL = `CASE WHEN c.relaciones_confirmadas_en IS NULL THEN
+  CASE WHEN c.id_residente IS NULL THEN 'DISPONIBLE' ELSE 'OCUPADA' END
+  WHEN EXISTS(SELECT 1 FROM CASA_HABITANTE h WHERE h.id_casa=c.id_casa
+    AND h.vigente_desde<=${GUATEMALA_TODAY_SQL} AND (h.vigente_hasta IS NULL OR h.vigente_hasta>${GUATEMALA_TODAY_SQL}))
+  THEN 'OCUPADA' ELSE 'DISPONIBLE' END`;
 const houseStatus = (row) => (row.id_residente == null ? HOUSE_STATUSES.AVAILABLE : HOUSE_STATUSES.OCCUPIED);
 
-const SELECTION_ROLES = new Set(["residente", "inquilino"]);
+const SELECTION_ROLES = new Set(["residente", "inquilino", 'contrato']);
 const MAX_MAP_INDEX = 30;
 
 function fail(status, message, code) {
@@ -76,6 +81,9 @@ function validateHousePayload(payload = {}) {
 // ===== Lectura =====
 const HOUSE_SELECT = `
   SELECT c.id_casa, c.numero, c.torre, c.id_residente, c.precio, c.area_terreno, c.area_construccion,
+    c.version_contractual,c.relaciones_confirmadas_en,
+    (SELECT ct.tipo FROM CONTRATO_CASA ct WHERE ct.id_casa=c.id_casa AND ct.fecha_inicio<=${GUATEMALA_TODAY_SQL}
+      ORDER BY ct.fecha_inicio DESC,ct.id_contrato DESC LIMIT 1) tipo_contractual,
     c.habitaciones, c.banos, c.niveles, c.modelo, c.mapa_fila, c.mapa_columna, c.activo,
     DATE_FORMAT(c.creado_en, '%Y-%m-%d %H:%i:%s') AS creado_en,
     ${HOUSE_STATUS_SQL} AS estado,
@@ -103,6 +111,8 @@ function mapHouse(row) {
     mapa_fila: toNumber(row.mapa_fila),
     mapa_columna: toNumber(row.mapa_columna),
     creado_en: row.creado_en || null,
+    tipo_contractual:row.tipo_contractual||'PENDIENTE_CONFIGURACION',
+    version_contractual:Number(row.version_contractual||0),
     residente: row.residente_id_usuario
       ? { id_usuario: Number(row.residente_id_usuario), nombre: row.residente_nombre }
       : null,
@@ -114,6 +124,7 @@ function mapHouse(row) {
 // la asignacion real se revalida bajo bloqueo en assignResidentToHouse/assignTenantToHouse.
 function selectionEligibility(house, role, current) {
   if (!house.activo) return { elegible: false, motivo: "Vivienda inactiva." };
+  if (role==='contrato') return {elegible:true,motivo:null};
   if (role === "residente") {
     if (house.estado === HOUSE_STATUSES.AVAILABLE) return { elegible: true, motivo: null };
     if (current.residentUserId && house.residente?.id_usuario === current.residentUserId) {
@@ -136,8 +147,8 @@ async function listHouses(filters = {}) {
     params.push(...Array(5).fill(`%${search}%`));
   }
   const estado = String(filters.estado || "").toUpperCase();
-  if (estado === HOUSE_STATUSES.AVAILABLE) where.push("c.id_residente IS NULL");
-  else if (estado === HOUSE_STATUSES.OCCUPIED) where.push("c.id_residente IS NOT NULL");
+  if (estado === HOUSE_STATUSES.AVAILABLE) where.push(`(${HOUSE_STATUS_SQL})='DISPONIBLE'`);
+  else if (estado === HOUSE_STATUSES.OCCUPIED) where.push(`(${HOUSE_STATUS_SQL})='OCUPADA'`);
   else if (estado) throw fail(400, "Estado de vivienda invalido.");
 
   const role = String(filters.seleccion || "").toLowerCase();
@@ -154,8 +165,8 @@ async function listHouses(filters = {}) {
   }
 
   // Conteos reales de toda la tabla (la leyenda no depende de los filtros aplicados).
-  const [totals] = await query(`SELECT COUNT(*) AS total, COALESCE(SUM(c.id_residente IS NULL), 0) AS disponibles,
-    COALESCE(SUM(c.id_residente IS NOT NULL), 0) AS ocupadas, COALESCE(SUM(c.activo = 0), 0) AS inactivas FROM CASA c`);
+  const [totals] = await query(`SELECT COUNT(*) AS total, COALESCE(SUM((${HOUSE_STATUS_SQL})='DISPONIBLE'), 0) AS disponibles,
+    COALESCE(SUM((${HOUSE_STATUS_SQL})='OCUPADA'), 0) AS ocupadas, COALESCE(SUM(c.activo = 0), 0) AS inactivas FROM CASA c`);
   return {
     resumen: {
       total: Number(totals?.total || 0),
@@ -280,9 +291,12 @@ async function setHouseActive(id, activo) {
   const houseId = Number(id);
   if (typeof activo !== "boolean") throw fail(400, "Indica activo: true o false.");
   await inTransaction(async (connection) => {
-    const [rows] = await connection.execute("SELECT id_casa, id_residente FROM CASA WHERE id_casa = ? FOR UPDATE", [houseId]);
+    const [rows] = await connection.execute("SELECT id_casa, id_residente, relaciones_confirmadas_en FROM CASA WHERE id_casa = ? FOR UPDATE", [houseId]);
     if (!rows.length) throw fail(404, "Vivienda no encontrada.");
-    if (!activo && rows[0].id_residente != null) {
+    const [[inhabitants]] = rows[0].relaciones_confirmadas_en
+      ? await connection.execute(`SELECT COUNT(*) n FROM CASA_HABITANTE WHERE id_casa=? AND vigente_desde<=${GUATEMALA_TODAY_SQL} AND (vigente_hasta IS NULL OR vigente_hasta>${GUATEMALA_TODAY_SQL})`, [houseId])
+      : [[{ n: rows[0].id_residente != null ? 1 : 0 }]];
+    if (!activo && Number(inhabitants.n)>0) {
       throw fail(409, "No se puede desactivar una vivienda ocupada. Primero reasigna o retira a su residente.", "VIVIENDA_OCUPADA");
     }
     await connection.execute("UPDATE CASA SET activo = ? WHERE id_casa = ?", [activo, houseId]);
@@ -304,12 +318,11 @@ async function lockHouse(connection, houseId) {
   return rows[0];
 }
 
-// Una vivienda solo puede quedar sin residente si no deja inquilinos huerfanos ni
-// historial financiero fuera de las vistas que se agrupan por residente (HU13-HU19).
+// A legacy move with financial history must use the confirmed, audited transfer workflow.
 async function releaseHouse(connection, house) {
   const [[history]] = await connection.execute("SELECT COUNT(*) AS n FROM CUOTA WHERE id_casa = ?", [house.id_casa]);
   if (Number(history.n) > 0) {
-    throw fail(409, `La vivienda ${houseLabel(house)} tiene historial financiero (cuotas y pagos); no puede quedar sin residente.`, "VIVIENDA_CON_HISTORIAL");
+    throw fail(409, `Confirma el cambio de titular de ${houseLabel(house)} en el asistente contractual; allí se valida el saldo pendiente y se conserva el historial pagado.`, "USAR_ASISTENTE_CONTRACTUAL");
   }
   const [[tenants]] = await connection.execute("SELECT COUNT(*) AS n FROM INQUILINO_CASA WHERE id_casa = ?", [house.id_casa]);
   if (Number(tenants.n) > 0) {

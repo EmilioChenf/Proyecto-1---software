@@ -322,6 +322,10 @@ async function runScheduledReminders() {
   schedulerRunInProgress = true;
   try {
     try {
+      await require('./contractHouseRelations').syncEffectiveRelations();
+      await require('./monthlyBillingService').generateMonthlyBilling({automatic:true});
+    } catch (error) { logger.error('No fue posible completar la facturación mensual.',error); }
+    try {
       const result = await sendPaymentReminders(null);
       if (result.errores) logger.error('Hay entregas financieras pendientes de reintento.');
     } catch (error) {

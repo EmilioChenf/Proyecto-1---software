@@ -215,3 +215,8 @@ SET @ddl = IF((SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE T
 PREPARE property_stmt FROM @ddl;
 EXECUTE property_stmt;
 DEALLOCATE PREPARE property_stmt;
+-- A company-owned direct rental has no personal owner to impersonate.
+SET @ddl = IF((SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='SOLICITUD_AUTORIZACION_DIGITAL' AND COLUMN_NAME='id_propietario_usuario' AND IS_NULLABLE='NO')>0,'ALTER TABLE SOLICITUD_AUTORIZACION_DIGITAL MODIFY COLUMN id_propietario_usuario INT NULL','SELECT 1');
+PREPARE property_stmt FROM @ddl;
+EXECUTE property_stmt;
+DEALLOCATE PREPARE property_stmt;

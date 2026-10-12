@@ -219,7 +219,17 @@ async function assignTenantHouse(connection, userId, houseId) {
   await assignTenantToHouse(connection, inquilinoId, houseId);
 }
 
-async function syncRoleRelations(connection, userId, roleName, houseId) {
+async function syncRoleRelations(connection, userId, roleName, houseId, previousRole = roleName) {
+  const [contracts] = await connection.execute(`SELECT c.id_casa,u.id_tipo_usuario,t.nombre rol FROM CASA c
+    JOIN USUARIO u ON u.id_usuario=? JOIN TIPO_USUARIO t ON t.id_tipo_usuario=u.id_tipo_usuario
+    WHERE c.relaciones_confirmadas_en IS NOT NULL AND
+      (c.id_casa=? OR EXISTS(SELECT 1 FROM CASA_RESPONSABLE_FINANCIERO rf WHERE rf.id_casa=c.id_casa AND rf.id_usuario=u.id_usuario)
+      OR EXISTS(SELECT 1 FROM CASA_HABITANTE h WHERE h.id_casa=c.id_casa AND h.id_usuario=u.id_usuario))`,[userId,houseId]);
+  if (contracts.length) {
+    const [[linked]]=await connection.execute(`SELECT (EXISTS(SELECT 1 FROM CASA_RESPONSABLE_FINANCIERO WHERE id_usuario=?) OR EXISTS(SELECT 1 FROM CASA_HABITANTE WHERE id_usuario=?)) vinculado`,[userId,userId]);
+    if (previousRole===roleName && Number(linked.vinculado) && contracts.some(c=>Number(c.id_casa)===Number(houseId)) && contracts.every(c=>c.rol===roleName)) return;
+    throw Object.assign(new Error('Gestiona los cambios de vivienda o relación desde el asistente contractual.'),{status:409,code:'USAR_ASISTENTE_CONTRACTUAL'});
+  }
   if (roleName === "residente") {
     await removeTenantData(connection, userId);
     await assignResidentHouse(connection, userId, houseId);
@@ -385,7 +395,7 @@ async function createUser(payload) {
 }
 
 async function updateUser(id, payload) {
-  await getUserById(id);
+  const originalUser = await getUserById(id);
   const nombre = normalizeString(payload.nombre);
   const correo = normalizeString(payload.correo).toLowerCase();
   const telefono = normalizeString(payload.telefono);
@@ -457,7 +467,7 @@ async function updateUser(id, payload) {
       );
     }
 
-    await syncRoleRelations(connection, id, userType.nombre, house);
+    await syncRoleRelations(connection, id, userType.nombre, house, originalUser.rol);
     await connection.commit();
 
     return getUserById(id);
@@ -475,6 +485,17 @@ async function deleteUser(id) {
 
   try {
     await connection.beginTransaction();
+    const [[references]] = await connection.execute(`SELECT
+      (EXISTS(SELECT 1 FROM CASA_RESPONSABLE_FINANCIERO WHERE id_usuario=?) OR
+       EXISTS(SELECT 1 FROM CASA_HABITANTE WHERE id_usuario=?) OR
+       EXISTS(SELECT 1 FROM CASA_TITULARIDAD WHERE id_usuario=?) OR
+       EXISTS(SELECT 1 FROM CUOTA WHERE id_responsable=?) OR
+       EXISTS(SELECT 1 FROM PAGO WHERE id_actor=?)) historico`,[id,id,id,id,id]);
+    if (Number(references.historico)) {
+      await connection.execute('UPDATE USUARIO SET activo=0 WHERE id_usuario=?',[id]);
+      await connection.commit();
+      return {...user,activo:false};
+    }
 
     // La vivienda NO se borra: queda DISPONIBLE (o se bloquea si tiene inquilinos o
     // historial financiero). Solo se eliminan las relaciones del usuario.

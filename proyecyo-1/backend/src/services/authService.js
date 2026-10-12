@@ -65,6 +65,8 @@ async function loginUser({ email, password }, sessionMetadata = {}) {
     throw error;
   }
 
+  if(['residente','inquilino'].includes(user.role))await require('./contractHouseRelations').syncUserRelations(user.id);
+
   const session = await createActiveSession(user.id, sessionMetadata);
 
   return {
@@ -116,12 +118,8 @@ async function getCurrentSession(userId, token) {
     throw error;
   }
 
-  return {
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    ...(token ? { token } : {}),
-  };
+  if(['residente','inquilino'].includes(user.role))await require('./contractHouseRelations').syncUserRelations(user.id);
+  return {id:user.id,email:user.email,role:user.role,...(token?{token}:{})};
 }
 
 module.exports = {

@@ -84,6 +84,7 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
   app.use(auditRoutes);
   app.use(usersRoutes);
   app.use(housesRoutes);
+  app.use(require('./routes/propertyContractsRoutes'));
   app.use(userTypesRoutes);
   app.use(visitsRoutes);
   app.use(amenitiesReservationsRoutes);
