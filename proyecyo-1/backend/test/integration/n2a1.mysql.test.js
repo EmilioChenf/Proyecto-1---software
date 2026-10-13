@@ -98,6 +98,8 @@ for(const type of ['COMPRA_FINANCIADA','PROPIEDAD_PRIVADA','RENTA_DIRECTA'])test
  await query('UPDATE CASA SET id_residente=? WHERE id_casa=?',[people.pedro.resident,id]);const rows=await adminRows(id);assert.equal(rows.length,1);known(rows[0],p,0);
 });
 test('N2-A1 consistencia Juan en listado, mensual, JSON/PDF, XLSX y detalle personal',async()=>{
+ const compressed=require('node:zlib').deflateSync(Buffer.from('<4a75616e> 69'));assert.equal(compressed.at(-1),13);
+ const trailingCrPdf=Buffer.concat([Buffer.from(`<< /Length ${compressed.length} /Filter /FlateDecode >>\nstream\n`),compressed,Buffer.from('\nendstream')]);assert.equal(receiptPdfText(trailingCrPdf),'Juan');
  const f=await fixture();known((await adminRows(f.id))[0]);const report=await adminPayments.getMonthlyFinancialReport(9,2025);const monthly=report.detalle.find(r=>r.id_casa===f.id);assert.equal(monthly.usuario,people.juan.name);assert.equal(monthly.pendiente,77);
  const json=await http.get(`/residente/pagos/${f.p}/comprobante/datos`).set('Authorization',people.juan.auth).expect(200);assert.equal(json.body.titular_nombre,people.juan.name);assert.equal(json.body.monto_pagado,123);
  const pdf=await http.get(`/residente/pagos/${f.p}/comprobante`).set('Authorization',people.juan.auth).expect(200);assert.equal(pdf.body.subarray(0,4).toString(),'%PDF');assert(receiptPdfText(pdf.body).includes(people.juan.name));
