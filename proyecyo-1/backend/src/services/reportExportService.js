@@ -23,9 +23,7 @@ const REPORTS = {
       CONCAT_WS('-', NULLIF(c.torre, ''), c.numero) unidad,
       cu.saldo_pendiente monto
     FROM (${QUOTA_BALANCES_SQL}) cu JOIN CASA c ON c.id_casa=cu.id_casa
-    LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
-    LEFT JOIN USUARIO u ON u.id_usuario=COALESCE(${quotaActorSql()},
-      CASE WHEN c.relaciones_confirmadas_en IS NULL AND NOT EXISTS(SELECT 1 FROM PAGO p WHERE p.id_cuota=cu.id_cuota) THEN r.id_usuario END)
+    LEFT JOIN USUARIO u ON u.id_usuario=${quotaActorSql()}
     WHERE cu.fecha_limite < ? AND cu.saldo_pendiente > 0` },
   sanciones: { title: "Sanciones", columns: { fecha: "Fecha", hora: "Hora", residente: "Residente", motivo: "Motivo", monto: "Monto (Q)", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d') fecha,

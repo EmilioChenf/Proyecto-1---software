@@ -183,9 +183,7 @@ async function getMonthlyFinancialReport(monthValue, yearValue) {
             DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') AS fecha_limite,
             cu.total_pagado AS pagado, cu.total_reembolsado, cu.recargo
        FROM (${QUOTA_BALANCES_SQL}) cu INNER JOIN CASA c ON c.id_casa = cu.id_casa
-       LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
-       LEFT JOIN USUARIO u ON u.id_usuario=COALESCE(${quotaActorSql()},
-         CASE WHEN c.relaciones_confirmadas_en IS NULL AND NOT EXISTS(SELECT 1 FROM PAGO p WHERE p.id_cuota=cu.id_cuota) THEN r.id_usuario END)
+       LEFT JOIN USUARIO u ON u.id_usuario=${quotaActorSql()}
        INNER JOIN SERVICIO s ON s.id_servicio = cu.id_servicio
       ORDER BY cu.fecha_limite, unidad`,
     [],

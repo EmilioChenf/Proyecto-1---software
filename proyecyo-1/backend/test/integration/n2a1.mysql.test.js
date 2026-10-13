@@ -121,3 +121,12 @@ test('N2-A1 filtros de estado/fecha y SQL injection conservan su contrato',async
  const f=await fixture();const rows=await adminRows(f.id,{estado:'MOROSO',date:'2025-09-10',search:people.juan.name});assert.equal(rows.length,1);known(rows[0]);assert.deepEqual(await adminRows(f.id,{estado:'PAGADO'}),[]);
  await http.get('/admin/pagos?estado=INVALIDO').set('Authorization',people.admin.auth).expect(400);assert.deepEqual(await adminRows(f.id,{search:"'; DROP TABLE USUARIO; --"}),[]);
 });
+test('N2-A1 cuota legada sin abonos conserva incertidumbre en listado/mensual/export',async t=>{
+ const id=await house();await quota(id);const [{numero}]=await query('SELECT numero FROM CASA WHERE id_casa=?',[id]);
+ for(const occupant of [people.maria,people.pedro,null]){
+  await query('UPDATE CASA SET id_residente=? WHERE id_casa=?',[occupant?.resident||null,id]);
+  const monthly=(await adminPayments.getMonthlyFinancialReport(9,2025)).detalle.find(r=>r.id_casa===id),exported=(await reports.rows('morosos')).find(r=>r.unidad===numero),[listed]=await adminRows(id);
+  t.diagnostic(JSON.stringify({case:'unpaid-unknown',occupant:occupant?.id||null,monthly:monthly.usuario,exported:exported.residente,listed:listed.propietario_nombre}));
+  assert.equal(monthly.usuario,UNKNOWN);assert.equal(exported.residente,UNKNOWN);unknown(listed,200);
+ }
+});
