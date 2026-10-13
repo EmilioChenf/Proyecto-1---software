@@ -54,8 +54,8 @@ async function listDelinquentResidents(filters = {}) {
   const params = [];
 
   if (search) {
-    sqlFilters.push("(LOWER(resumen.propietario_nombre) LIKE ? OR LOWER(resumen.unidad) LIKE ?)");
-    params.push(`%${search}%`, `%${search}%`);
+    sqlFilters.push("(LOWER(resumen.propietario_nombre) LIKE ? OR LOWER(resumen.propietario_correo) LIKE ? OR LOWER(resumen.unidad) LIKE ?)");
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
   if (estado) {
@@ -77,9 +77,8 @@ async function listDelinquentResidents(filters = {}) {
             WHEN c.torre IS NOT NULL AND c.torre <> '' THEN CONCAT(c.torre, '-', c.numero)
             ELSE c.numero
           END AS unidad,
-          COALESCE(saldo.responsable_nombre,responsable.nombre,
-            IF(c.relaciones_confirmadas_en IS NULL,propietario.nombre,'Responsable pendiente de confirmar')) AS propietario_nombre,
-          COALESCE(responsable.correo,IF(c.relaciones_confirmadas_en IS NULL,propietario.correo,NULL)) AS propietario_correo,
+          COALESCE(saldo.responsable_nombre,responsable.nombre,'Responsable no confirmado') AS propietario_nombre,
+          COALESCE(saldo.responsable_correo,responsable.correo) AS propietario_correo,
           propietario.nombre propietario_actual,saldo.id_responsable,
           COALESCE(saldo.monto_pendiente, 0) AS monto_pendiente,
           COALESCE(saldo.recargo_aplicado, 0) AS recargo_aplicado,
@@ -97,7 +96,9 @@ async function listDelinquentResidents(filters = {}) {
         LEFT JOIN (
           SELECT
             cu.id_casa,
-            cu.id_responsable,MAX(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre'))) responsable_nombre,
+            cu.id_responsable_historico AS id_responsable,
+            MAX(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre'))) responsable_nombre,
+            MAX(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.correo'))) responsable_correo,
             SUM(cu.capital_pendiente) AS monto_pendiente,
             SUM(cu.recargo) AS recargo_aplicado,
             SUM(cu.recargo_pendiente) AS recargo_pendiente,
@@ -110,8 +111,11 @@ async function listDelinquentResidents(filters = {}) {
                 ELSE 0
               END
             ) AS tiene_mora
-          FROM (${QUOTA_BALANCES_SQL}) cu
-          GROUP BY cu.id_casa,cu.id_responsable
+          FROM (
+            SELECT balances.*,${quotaActorSql('balances')} AS id_responsable_historico
+            FROM (${QUOTA_BALANCES_SQL}) balances
+          ) cu
+          GROUP BY cu.id_casa,cu.id_responsable_historico
         ) saldo ON saldo.id_casa = c.id_casa
         LEFT JOIN USUARIO responsable ON responsable.id_usuario=saldo.id_responsable
       ) resumen
