@@ -4,6 +4,7 @@ const db = require("../database/mysql");
 const { QUOTA_BALANCES_SQL } = require("./financialBalance");
 const accesses = require("./adminAccessesService");
 const { RESPONSIBLE_NAME, RESPONSIBLE_JOIN } = require("./sanctionHistoricalActor");
+const { quotaActorSql } = require('./paymentHistoricalActor');
 const { ensureValidDate } = require("../utils/dateTimeValidation");
 
 const TIMEZONE = "America/Guatemala";
@@ -18,12 +19,13 @@ const REPORTS = {
     JOIN AMENIDAD am ON am.id_amenidad=r.id_amenidad` },
   morosos: { title: "Morosos", columns: { fecha: "Vencimiento", residente: "Residente", unidad: "Unidad", monto: "Saldo pendiente (Q)" }, sql: `
     SELECT DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') fecha,
-      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') residente,
+      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable no confirmado') residente,
       CONCAT_WS('-', NULLIF(c.torre, ''), c.numero) unidad,
       cu.saldo_pendiente monto
     FROM (${QUOTA_BALANCES_SQL}) cu JOIN CASA c ON c.id_casa=cu.id_casa
     LEFT JOIN RESIDENTE r ON r.id_residente=c.id_residente
-    LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
+    LEFT JOIN USUARIO u ON u.id_usuario=COALESCE(${quotaActorSql()},
+      CASE WHEN c.relaciones_confirmadas_en IS NULL AND NOT EXISTS(SELECT 1 FROM PAGO p WHERE p.id_cuota=cu.id_cuota) THEN r.id_usuario END)
     WHERE cu.fecha_limite < ? AND cu.saldo_pendiente > 0` },
   sanciones: { title: "Sanciones", columns: { fecha: "Fecha", hora: "Hora", residente: "Residente", motivo: "Motivo", monto: "Monto (Q)", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d') fecha,

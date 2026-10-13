@@ -3,13 +3,16 @@ const { QUOTA_BALANCES_SQL,calculateBalance,balanceDetails,sumMoney } = require(
 const { getQuotaStatus } = require('./quotaStatus');
 const { guatemalaToday } = require('../utils/guatemalaTime');
 const { __private__:{date} } = require('./propertyContractsService');
+const { paymentActorSql, quotaActorSql, quotaAccessSql } = require('./paymentHistoricalActor');
 
 async function profile(userId) {
   const rows = await query(`SELECT c.id_casa,c.numero,c.torre,c.relaciones_confirmadas_en FROM CASA c WHERE
     EXISTS(SELECT 1 FROM CASA_RESPONSABLE_FINANCIERO r WHERE r.id_casa=c.id_casa AND r.id_usuario=?)
     OR EXISTS(SELECT 1 FROM CASA_HABITANTE h WHERE h.id_casa=c.id_casa AND h.id_usuario=?)
     OR EXISTS(SELECT 1 FROM INQUILINO_CASA ic JOIN INQUILINO i ON i.id_inquilino=ic.id_inquilino WHERE ic.id_casa=c.id_casa AND i.id_usuario=?)
-    OR EXISTS(SELECT 1 FROM CUOTA q WHERE q.id_casa=c.id_casa AND q.id_responsable=?) ORDER BY c.id_casa`, [userId,userId,userId,userId]);
+    OR EXISTS(SELECT 1 FROM CUOTA q WHERE q.id_casa=c.id_casa AND q.id_responsable=?)
+    OR EXISTS(SELECT 1 FROM PAGO p JOIN CUOTA q ON q.id_cuota=p.id_cuota
+      WHERE q.id_casa=c.id_casa AND ${paymentActorSql('p','q')}=?) ORDER BY c.id_casa`, [userId,userId,userId,userId,userId]);
   return rows;
 }
 function mapQuota(row) {
@@ -29,19 +32,20 @@ async function account(userId,role,filters={}) {
     DATE_FORMAT(q.periodo,'%Y-%m-%d') periodo,DATE_FORMAT(q.fecha_limite,'%Y-%m-%d') fecha_limite,
     DATE_FORMAT(b.ultimo_pago,'%Y-%m-%d') ultimo_pago,COALESCE(q.concepto_snapshot,s.nombre) servicio,s.tipo_servicio
     FROM (${QUOTA_BALANCES_SQL}) b JOIN CUOTA q ON q.id_cuota=b.id_cuota JOIN CASA c ON c.id_casa=q.id_casa
-    JOIN SERVICIO s ON s.id_servicio=q.id_servicio WHERE q.id_responsable=? ORDER BY q.fecha_limite,q.id_cuota`, [userId]);
+    JOIN SERVICIO s ON s.id_servicio=q.id_servicio JOIN USUARIO usuario ON usuario.id_usuario=?
+    WHERE ${quotaAccessSql('q','c','NULL','usuario.id_usuario')} ORDER BY q.fecha_limite,q.id_cuota`, [userId]);
   const quotas = rows.map(mapQuota);
   const params=[userId,...(from?[from]:[]),...(to?[to]:[])];
   const payments=await query(`SELECT p.id_pago,p.id_cuota,p.monto_pagado,DATE_FORMAT(p.fecha_pago,'%Y-%m-%d') fecha_pago,
     COALESCE(q.concepto_snapshot,s.nombre) servicio FROM PAGO p JOIN CUOTA q ON q.id_cuota=p.id_cuota JOIN SERVICIO s ON s.id_servicio=q.id_servicio
-    WHERE q.id_responsable=? ${from?'AND p.fecha_pago>=?':''} ${to?'AND p.fecha_pago<=?':''} ORDER BY p.fecha_pago DESC,p.id_pago DESC`,params);
+    WHERE ${paymentActorSql('p','q')}=? ${from?'AND p.fecha_pago>=?':''} ${to?'AND p.fecha_pago<=?':''} ORDER BY p.fecha_pago DESC,p.id_pago DESC`,params);
   const surcharges=await query(`SELECT r.*,COALESCE(q.concepto_snapshot,s.nombre) servicio,DATE_FORMAT(r.fecha_aplicacion,'%Y-%m-%d') fecha_aplicacion
     FROM RECARGO_APLICADO r JOIN CUOTA q ON q.id_cuota=r.id_cuota JOIN SERVICIO s ON s.id_servicio=q.id_servicio
-    WHERE q.id_responsable=? ${from?'AND r.fecha_aplicacion>=?':''} ${to?'AND r.fecha_aplicacion<=?':''} ORDER BY r.fecha_aplicacion DESC`,params);
+    WHERE ${quotaActorSql('q')}=? ${from?'AND r.fecha_aplicacion>=?':''} ${to?'AND r.fecha_aplicacion<=?':''} ORDER BY r.fecha_aplicacion DESC`,params);
   const refunds=await query(`SELECT rr.id_reembolso,tr.id_pago,tr.id_cuota,rr.monto_centavos,DATE_FORMAT(rr.fecha_contable,'%Y-%m-%d') fecha_reembolso,
     COALESCE(q.concepto_snapshot,s.nombre) servicio FROM REEMBOLSO_RECURRENTE rr JOIN TRANSACCION_RECURRENTE tr ON tr.id_transaccion=rr.id_transaccion
-    JOIN CUOTA q ON q.id_cuota=tr.id_cuota JOIN SERVICIO s ON s.id_servicio=q.id_servicio
-    WHERE q.id_responsable=? AND rr.estado='CONFIRMADO' AND rr.aplicado_en IS NOT NULL ${from?'AND rr.fecha_contable>=?':''} ${to?'AND rr.fecha_contable<=?':''}`,params);
+    JOIN CUOTA q ON q.id_cuota=tr.id_cuota JOIN PAGO p ON p.id_pago=tr.id_pago JOIN SERVICIO s ON s.id_servicio=q.id_servicio
+    WHERE ${paymentActorSql('p','q')}=? AND rr.estado='CONFIRMADO' AND rr.aplicado_en IS NOT NULL ${from?'AND rr.fecha_contable>=?':''} ${to?'AND rr.fecha_contable<=?':''}`,params);
   const sum = (field,list=quotas) => sumMoney(list.map(q=>q[field]||0));
   const summary={total_cuotas:quotas.length,cuotas_pagadas:quotas.filter(q=>q.estado==='PAGADA').length,cuotas_pendientes:quotas.filter(q=>q.estado==='PENDIENTE').length,
     cuotas_vencidas:quotas.filter(q=>q.estado==='VENCIDA').length,saldo_pendiente:sum('saldo_pendiente'),total_pagado:sum('monto_pagado'),

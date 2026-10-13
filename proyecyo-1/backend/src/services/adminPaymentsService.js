@@ -1,4 +1,5 @@
 const { query } = require("../database/mysql");
+const { quotaActorSql } = require('./paymentHistoricalActor');
 const { sqlGuatemalaTodayLiteral } = require("../utils/guatemalaTime");
 const { calculateBalance, balanceDetails, sumMoney, toMoney, QUOTA_BALANCES_SQL } = require("./financialBalance");
 
@@ -173,14 +174,14 @@ async function getMonthlyFinancialReport(monthValue, yearValue) {
   const period = normalizePeriod(monthValue, yearValue);
   const rows = await query(
     `SELECT c.id_casa, CONCAT(COALESCE(c.torre, ''), IF(c.torre IS NULL OR c.torre = '', '', '-'), c.numero) AS unidad,
-            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable pendiente de confirmar') AS usuario,
+            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.nombre')),u.nombre,'Responsable no confirmado') AS usuario,
             COALESCE(cu.concepto_snapshot,s.nombre) AS concepto,cu.periodo,cu.id_responsable,cu.monto,
             DATE_FORMAT(cu.fecha_limite, '%Y-%m-%d') AS fecha_limite,
             cu.total_pagado AS pagado, cu.total_reembolsado, cu.recargo
        FROM (${QUOTA_BALANCES_SQL}) cu INNER JOIN CASA c ON c.id_casa = cu.id_casa
        LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
-       LEFT JOIN USUARIO u ON u.id_usuario=cu.id_responsable OR
-         (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
+       LEFT JOIN USUARIO u ON u.id_usuario=COALESCE(${quotaActorSql()},
+         CASE WHEN c.relaciones_confirmadas_en IS NULL AND NOT EXISTS(SELECT 1 FROM PAGO p WHERE p.id_cuota=cu.id_cuota) THEN r.id_usuario END)
        INNER JOIN SERVICIO s ON s.id_servicio = cu.id_servicio
       ORDER BY cu.fecha_limite, unidad`,
     [],

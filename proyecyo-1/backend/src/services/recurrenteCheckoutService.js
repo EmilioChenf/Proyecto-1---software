@@ -7,6 +7,7 @@ const { CheckoutError } = require("./recurrenteCheckoutErrors");
 const { BLOCKING_CHECKOUT_CONDITION } = require("./recurrenteCheckoutGuard");
 const { validateCheckoutUrl } = require("../utils/recurrenteCheckoutUrl");
 const { successReviewSql } = require('./recurrenteReviewGuard');
+const { quotaAccessSql } = require('./paymentHistoricalActor');
 
 async function lockedQuota(connection, userId, quotaId) {
   const [rows] = await connection.execute(`SELECT cu.id_cuota, cu.id_casa, cu.monto,
@@ -16,8 +17,7 @@ async function lockedQuota(connection, userId, quotaId) {
     LEFT JOIN RESIDENTE r ON r.id_usuario = u.id_usuario
     INNER JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario = u.id_tipo_usuario AND LOWER(tu.nombre) IN ('residente','inquilino')
     INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
-    WHERE cu.id_cuota = ? AND (cu.id_responsable=u.id_usuario OR
-      (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND c.id_residente=r.id_residente)) FOR UPDATE`, [userId, quotaId]);
+    WHERE cu.id_cuota = ? AND ${quotaAccessSql('cu','c',"(SELECT current_resident.id_usuario FROM RESIDENTE current_resident WHERE current_resident.id_residente=c.id_residente)",'u.id_usuario')} FOR UPDATE`, [userId, quotaId]);
   if (!rows.length) {
     const [exists] = await connection.execute("SELECT id_cuota FROM CUOTA WHERE id_cuota = ?", [quotaId]);
     throw new CheckoutError(exists.length ? "QUOTA_NOT_OWNED" : "QUOTA_NOT_FOUND");

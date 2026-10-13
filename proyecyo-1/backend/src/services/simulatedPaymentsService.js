@@ -1,5 +1,6 @@
 const { refundBlockingSql, assertRefundUnblocked } = require('./recurrenteRefundGuard');
 const { pool } = require("../database/mysql");
+const { quotaAccessSql } = require('./paymentHistoricalActor');
 const { calculateBalance, assertCollectible, refundedQuotaSql } = require("./financialBalance");
 const { assertNoRecurrenteOperation } = require("./recurrenteCheckoutGuard");
 
@@ -24,8 +25,7 @@ async function payObligation(userId, role, quotaIdValue) {
        FROM CUOTA cu INNER JOIN CASA c ON c.id_casa = cu.id_casa
        INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
        ${ownershipJoin}
-       WHERE cu.id_cuota = ? AND (cu.id_responsable=actor.id_usuario OR
-         (cu.id_responsable IS NULL AND c.relaciones_confirmadas_en IS NULL AND titular.id_residente=c.id_residente)) FOR UPDATE`,
+       WHERE cu.id_cuota = ? AND ${quotaAccessSql('cu','c',"(SELECT current_resident.id_usuario FROM RESIDENTE current_resident WHERE current_resident.id_residente=c.id_residente)",'actor.id_usuario')} FOR UPDATE`,
       [userId, quotaId],
     );
     if (!rows.length) {

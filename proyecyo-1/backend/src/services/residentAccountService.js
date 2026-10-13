@@ -2,6 +2,7 @@ const { query } = require("../database/mysql");
 const { calculateBalance, balanceDetails, toMoney, sumMoney, refundedQuotaSql } = require("./financialBalance");
 const { QUOTA_STATUSES, getQuotaStatus: getSharedQuotaStatus } = require("./quotaStatus");
 const { guatemalaToday } = require("../utils/guatemalaTime");
+const { quotaAccessSql } = require('./paymentHistoricalActor');
 
 const ACCOUNT_STATUSES = QUOTA_STATUSES;
 const getCurrentDateInTimezone = () => guatemalaToday();
@@ -87,15 +88,16 @@ async function listResidentAccountStatement(userId) {
       FROM CUOTA cu
       INNER JOIN CASA c
         ON c.id_casa = cu.id_casa
-      INNER JOIN RESIDENTE r
+      LEFT JOIN RESIDENTE r
         ON r.id_residente = c.id_residente
       INNER JOIN SERVICIO srv
         ON srv.id_servicio = cu.id_servicio
+      JOIN USUARIO usuario ON usuario.id_usuario=?
       LEFT JOIN PAGO p
         ON p.id_cuota = cu.id_cuota
       LEFT JOIN RECARGO_APLICADO rec
         ON rec.id_cuota = cu.id_cuota
-      WHERE r.id_usuario = ? AND c.relaciones_confirmadas_en IS NULL
+      WHERE ${quotaAccessSql('cu','c','r.id_usuario','usuario.id_usuario')}
         AND LOWER(COALESCE(srv.tipo_servicio, '')) <> 'alquiler'
         AND LOWER(srv.nombre) NOT LIKE '%alquiler%'
         AND LOWER(srv.nombre) NOT LIKE '%renta%'

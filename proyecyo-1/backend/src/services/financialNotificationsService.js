@@ -3,6 +3,7 @@ const { calculateBalance, QUOTA_BALANCES_SQL, toCents } = require('./financialBa
 const { BLOCKING_CHECKOUT_CONDITION } = require('./recurrenteCheckoutGuard');
 const { refundBlockingSql } = require('./recurrenteRefundGuard');
 const { successReviewSql } = require('./recurrenteReviewGuard');
+const { quotaAccessSql } = require('./paymentHistoricalActor');
 const { enqueue, currentCycle, DEADLINE_TYPES, money } = require('./financialNotificationOutbox');
 
 function guatemalaDate(now = new Date()) {
@@ -45,8 +46,7 @@ async function recipients(c, quotaId, debt = true) {
     AND LOWER(s.nombre) NOT LIKE '%alquiler%' AND LOWER(s.nombre) NOT LIKE '%renta%'` : '';
   const [rows] = await c.execute(`SELECT u.id_usuario FROM CUOTA q JOIN CASA ca ON ca.id_casa=q.id_casa
     LEFT JOIN RESIDENTE r ON r.id_residente=ca.id_residente
-    JOIN USUARIO u ON u.id_usuario=q.id_responsable OR
-      (q.id_responsable IS NULL AND ca.relaciones_confirmadas_en IS NULL AND u.id_usuario=r.id_usuario)
+    JOIN USUARIO u ON ${quotaAccessSql('q','ca','r.id_usuario','u.id_usuario')}
     JOIN TIPO_USUARIO t ON t.id_tipo_usuario=u.id_tipo_usuario JOIN SERVICIO s ON s.id_servicio=q.id_servicio
     WHERE q.id_cuota=? AND u.activo=TRUE AND LOWER(t.nombre) IN ('residente','inquilino')
       AND (q.id_responsable IS NOT NULL OR (LOWER(t.nombre)='residente' ${ownerVisibility}))`, [quotaId]);

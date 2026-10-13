@@ -2,6 +2,7 @@ const { query } = require("../database/mysql");
 const { calculateBalance, balanceDetails, sumMoney, refundedQuotaSql } = require("./financialBalance");
 const { getQuotaStatus, isPartiallyPaid } = require("./quotaStatus");
 const { guatemalaToday } = require("../utils/guatemalaTime");
+const { paymentActorSql, quotaAccessSql } = require('./paymentHistoricalActor');
 
 function normalizeString(value) {
   return String(value || "").trim();
@@ -62,11 +63,14 @@ async function getResidentHouse(userId) {
              c.numero,
              c.torre
       FROM CASA c
-      INNER JOIN RESIDENTE r ON r.id_residente = c.id_residente
-      WHERE r.id_usuario = ? AND c.relaciones_confirmadas_en IS NULL
+      LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
+      WHERE (r.id_usuario = ? AND c.relaciones_confirmadas_en IS NULL)
+        OR EXISTS(SELECT 1 FROM PAGO pg JOIN CUOTA cu ON cu.id_cuota=pg.id_cuota
+          WHERE cu.id_casa=c.id_casa AND ${paymentActorSql()}=?)
+      ORDER BY (r.id_usuario = ?) DESC, c.id_casa
       LIMIT 1
     `,
-    [userId],
+    [userId,userId,userId],
   );
 
   if (!rows[0]) {
@@ -92,8 +96,8 @@ async function getFinancialDetail(userId, filters = {}) {
   const hasta = normalizeDate(filters.hasta);
   const house = await getResidentHouse(userId);
 
-  const chargeFilters = ["cu.id_casa = ?", OWNER_VISIBLE_SERVICE_SQL];
-  const chargeParams = [house.id_casa];
+  const chargeFilters = [quotaAccessSql('cu','c','titular.id_usuario','usuario.id_usuario'), OWNER_VISIBLE_SERVICE_SQL];
+  const chargeParams = [userId];
 
   const charges = await query(
     `
@@ -107,6 +111,9 @@ async function getFinancialDetail(userId, filters = {}) {
         COALESCE(rec.monto_recargo, 0) AS recargo
       FROM CUOTA cu
       INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
+      JOIN CASA c ON c.id_casa=cu.id_casa
+      LEFT JOIN RESIDENTE titular ON titular.id_residente=c.id_residente
+      JOIN USUARIO usuario ON usuario.id_usuario=?
       LEFT JOIN (
         SELECT id_cuota, SUM(monto_pagado) AS total_pagado
         FROM PAGO
@@ -119,8 +126,8 @@ async function getFinancialDetail(userId, filters = {}) {
     chargeParams,
   );
 
-  const surchargeFilters = ["rec.id_casa = ?", OWNER_VISIBLE_SERVICE_SQL];
-  const surchargeParams = [house.id_casa];
+  const surchargeFilters = [quotaAccessSql('cu','c','titular.id_usuario','usuario.id_usuario'), OWNER_VISIBLE_SERVICE_SQL];
+  const surchargeParams = [userId];
   if (desde) {
     surchargeFilters.push("rec.fecha_aplicacion >= ?");
     surchargeParams.push(desde);
@@ -143,14 +150,17 @@ async function getFinancialDetail(userId, filters = {}) {
       FROM RECARGO_APLICADO rec
       INNER JOIN CUOTA cu ON cu.id_cuota = rec.id_cuota
       INNER JOIN SERVICIO srv ON srv.id_servicio = cu.id_servicio
+      JOIN CASA c ON c.id_casa=cu.id_casa
+      LEFT JOIN RESIDENTE titular ON titular.id_residente=c.id_residente
+      JOIN USUARIO usuario ON usuario.id_usuario=?
       WHERE ${surchargeFilters.join(" AND ")}
       ORDER BY rec.fecha_aplicacion DESC, rec.id_recargo DESC
     `,
     surchargeParams,
   );
 
-  const paymentFilters = ["cu.id_casa = ?", OWNER_VISIBLE_SERVICE_SQL];
-  const paymentParams = [house.id_casa];
+  const paymentFilters = [`${paymentActorSql()}=?`, OWNER_VISIBLE_SERVICE_SQL];
+  const paymentParams = [userId];
   if (desde) {
     paymentFilters.push("pg.fecha_pago >= ?");
     paymentParams.push(desde);
@@ -177,11 +187,11 @@ async function getFinancialDetail(userId, filters = {}) {
     paymentParams,
   );
 
-  const refundWhere=["cu.id_casa=?","rr.estado='CONFIRMADO'","rr.aplicado_en IS NOT NULL",OWNER_VISIBLE_SERVICE_SQL], refundParams=[house.id_casa];
+  const refundWhere=[`${paymentActorSql()}=?`,"rr.estado='CONFIRMADO'","rr.aplicado_en IS NOT NULL",OWNER_VISIBLE_SERVICE_SQL], refundParams=[userId];
   if(desde){refundWhere.push('rr.fecha_contable>=?');refundParams.push(desde);} if(hasta){refundWhere.push('rr.fecha_contable<=?');refundParams.push(hasta);}
   const reembolsos=await query(`SELECT rr.id_reembolso,tr.id_pago,tr.id_cuota,rr.monto_centavos,
     DATE_FORMAT(rr.fecha_contable,'%Y-%m-%d') fecha_reembolso,srv.nombre servicio FROM REEMBOLSO_RECURRENTE rr
-    JOIN TRANSACCION_RECURRENTE tr ON tr.id_transaccion=rr.id_transaccion JOIN CUOTA cu ON cu.id_cuota=tr.id_cuota
+    JOIN TRANSACCION_RECURRENTE tr ON tr.id_transaccion=rr.id_transaccion JOIN PAGO pg ON pg.id_pago=tr.id_pago JOIN CUOTA cu ON cu.id_cuota=tr.id_cuota
     JOIN SERVICIO srv ON srv.id_servicio=cu.id_servicio WHERE ${refundWhere.join(' AND ')} ORDER BY rr.fecha_contable DESC,rr.id_reembolso DESC`,refundParams);
   const today = guatemalaToday();
   const cargos = charges.map((row) => mapCharge(row, today));
