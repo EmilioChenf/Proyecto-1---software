@@ -53,15 +53,16 @@ describe("adminPaymentsService.listDelinquentResidents", () => {
     expect(params).toEqual([]);
   });
 
-  it("agrega el filtro de busqueda sobre nombre y unidad", async () => {
+  it("agrega el filtro de busqueda sobre nombre, correo historico y unidad", async () => {
     query.mockResolvedValueOnce([]);
 
     await listDelinquentResidents({ search: "Perez" });
 
     const [sql, params] = query.mock.calls[0];
     expect(sql).toContain("resumen.propietario_nombre");
+    expect(sql).toContain("resumen.propietario_correo");
     expect(sql).toContain("resumen.unidad");
-    expect(params).toEqual(["%perez%", "%perez%"]);
+    expect(params).toEqual(["%perez%", "%perez%", "%perez%"]);
   });
 
   it("agrega el filtro de estado cuando es valido", async () => {
