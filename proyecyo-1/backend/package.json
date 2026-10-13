@@ -8,6 +8,7 @@
     "test:postaudit:mysql":"node scripts/run-isolated-tests.js postaudit",
     "test:finalaudit:mysql":"node scripts/run-isolated-tests.js finalaudit",
     "test:n1:mysql":"node scripts/run-isolated-tests.js n1",
+    "test:n2:mysql":"node scripts/run-isolated-tests.js n2",
     "migrate:recurrente": "node scripts/migrate-recurrente.js",
     "test:phase0:mysql": "node scripts/run-isolated-tests.js phase0",
     "test:phase0:functional": "node scripts/run-isolated-tests.js functional",

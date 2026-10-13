@@ -27,7 +27,9 @@ if (process.env.RUN_PHASE0_MYSQL_TESTS !== "1") {
     return result.insertId;
   }
   async function payment(id, amount, date = "2025-02-01") {
-    return (await query("INSERT INTO PAGO(id_cuota,monto_pagado,fecha_pago) VALUES(?,?,?)", [id, amount, date])).insertId;
+    // These personal-account cases explicitly model payer 3. Occupancy alone
+    // cannot establish a payer; actorless legacy cases are covered by N2.
+    return (await query("INSERT INTO PAGO(id_cuota,monto_pagado,fecha_pago,id_actor) VALUES(?,?,?,3)", [id, amount, date])).insertId;
   }
   async function balance(id) { return (await query(`SELECT * FROM (${QUOTA_BALANCES_SQL}) balances WHERE id_cuota=?`, [id]))[0]; }
   async function checkout(id, changes = {}) {

@@ -5,7 +5,9 @@ test('destinatarios usan relaciones activas y la unidad del estado de cuenta', a
  const c = {execute:jest.fn().mockResolvedValue([[{id_usuario:10},{id_usuario:20}]])};
  expect(await rules.recipients(c,27)).toEqual([10,20]);
  const [sql,args]=c.execute.mock.calls[0];expect(args).toEqual([27]);
- expect(sql).toContain('u.id_usuario=q.id_responsable');expect(sql).toContain('u.activo=TRUE');expect(sql).toContain('ca.relaciones_confirmadas_en IS NULL');
+ expect(sql).toContain('q.id_responsable=u.id_usuario');expect(sql).toContain('u.activo=TRUE');expect(sql).toContain('ca.relaciones_confirmadas_en IS NULL');
+ expect(sql).toContain('NOT EXISTS(SELECT 1 FROM PAGO historical_payment');
+ expect(sql).toContain('TRANSACCION_SIMULADA');
 });
 test('recordatorio excluye alquiler/renta del propietario sin ampliar permisos',async()=>{
  const c={execute:jest.fn().mockResolvedValue([[]])};await rules.recipients(c,1);
