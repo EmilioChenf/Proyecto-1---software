@@ -26,3 +26,11 @@ it('HU28 informa fallos sin mostrar cifras inventadas', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Servicio temporalmente no disponible');
   expect(screen.queryByText('Ingreso neto')).not.toBeInTheDocument();
 });
+it('HU28 representa un período vacío y presenta deuda por concepto sin alterar el saldo', async () => {
+  vi.mocked(getFinancialDashboard).mockResolvedValue({ ...dashboardFixture,
+    conceptos: [{ concepto: 'RENTA_DIRECTA', cuotas: 2, capital: 75, recargo: 5, pendiente: 80 }] });
+  render(<AdminFinancialDashboardView />);
+  expect(await screen.findByText('Sin movimientos registrados en este período.')).toBeInTheDocument();
+  expect(screen.getByRole('row', { name: /RENTA DIRECTA/ })).toHaveTextContent('80.00');
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+});

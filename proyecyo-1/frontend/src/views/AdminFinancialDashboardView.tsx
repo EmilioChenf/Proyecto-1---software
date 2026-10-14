@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
+import { FinancialCharts } from '@/components/admin/FinancialCharts';
 import { getFinancialDashboard, financialMoney, type FinancialDashboard } from '@/services/financialDashboardService';
 
 export function AdminFinancialDashboardView() {
@@ -55,6 +56,7 @@ export function AdminFinancialDashboardView() {
         {data.saldos.cuotas_sin_responsable > 0 && <p>{data.saldos.cuotas_sin_responsable} cuotas en mora sin responsable confirmado.</p>}
         {(data.saldos.sobrepago > 0 || data.saldos.reembolso_inconsistente > 0) && <p role="alert" className="mt-3 text-amber-800">Hay importes que requieren revisión: sobrepagos {financialMoney(data.saldos.sobrepago)}; devoluciones superiores a cobros {financialMoney(data.saldos.reembolso_inconsistente)}.</p>}
       </section>
+      <FinancialCharts data={data} />
     </div>}
   </AdminLayout>;
 }
