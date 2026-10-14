@@ -2,6 +2,12 @@ const { query } = require('../database/mysql');
 const { paymentAccessSql } = require('./paymentHistoricalActor');
 
 const sources = {
+  sancion: `SELECT CONCAT('sancion:',s.id_sancion) id, 'sancion' tipo,
+    DATE_FORMAT(s.fecha_generacion,'%Y-%m-%d') fecha, TIME_FORMAT(s.fecha_generacion,'%H:%i:%s') hora,
+    s.motivo titulo, s.estado, s.monto, COALESCE(s.detalle,s.codigo_regla) detalle
+    FROM SANCION s JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
+    WHERE COALESCE(cu.id_responsable,
+      CAST(NULLIF(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(cu.responsable_snapshot,'$.id_usuario')),'null'),'') AS UNSIGNED))=?`,
   visita: `SELECT CONCAT('visita:',a.id_acceso) id, 'visita' tipo,
     DATE_FORMAT(a.fecha,'%Y-%m-%d') fecha, TIME_FORMAT(a.hora_inicio,'%H:%i:%s') hora,
     v.nombre titulo, a.estado_acceso estado, NULL monto,

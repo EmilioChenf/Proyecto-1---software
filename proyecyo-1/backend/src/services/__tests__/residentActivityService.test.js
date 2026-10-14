@@ -35,6 +35,16 @@ test('HU30 muestra solo visitas autorizadas por el residente sin credenciales QR
   expect(sql).not.toMatch(/token_qr|\bdpi\b|motivo_excepcion|observaciones/);
   expect(params.every(id => id === 12)).toBe(true);
 });
+
+test('HU30 incorpora sanciones solo con responsable de cuota o snapshot confirmado', async () => {
+  await activity.list(9);
+  const [sql, params] = query.mock.calls[0];
+  expect(sql).toContain('FROM SANCION s JOIN CUOTA cu ON cu.id_cuota=s.id_cuota');
+  expect(sql).toContain('WHERE COALESCE(cu.id_responsable,');
+  expect(sql).toContain("JSON_EXTRACT(cu.responsable_snapshot,'$.id_usuario')");
+  expect(sql).not.toContain('JOIN CASA');
+  expect(params.every(id => id === 9)).toBe(true);
+});
 test.each([null, 0, -1, '3', NaN])('HU30 rechaza identidad de servicio inválida %s', async id => {
   await expect(activity.list(id)).rejects.toMatchObject({ status: 401 });
   expect(query).not.toHaveBeenCalled();
