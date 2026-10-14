@@ -40,3 +40,13 @@ test('HU28 recargos registrados en el período y composición de deuda son métr
   expect(query.mock.calls[2][1]).toEqual(['2026-10-01', '2026-10-13']);
   expect(query.mock.calls[3][1]).toBeUndefined();
 });
+
+test('HU28 serie continua incluye día bisiesto, ceros y devoluciones sin cobros', () => {
+  expect(dashboard.dailySeries({ desde: '2024-02-28', hasta: '2024-03-01' }, [
+    { fecha: '2024-03-01', cobrado: '0.10', devuelto: '0.30' },
+  ])).toEqual([
+    { fecha: '2024-02-28', cobrado: 0, devuelto: 0, neto: 0 },
+    { fecha: '2024-02-29', cobrado: 0, devuelto: 0, neto: 0 },
+    { fecha: '2024-03-01', cobrado: 0.1, devuelto: 0.3, neto: -0.2 },
+  ]);
+});

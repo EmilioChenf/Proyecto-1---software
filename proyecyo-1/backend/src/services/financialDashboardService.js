@@ -25,6 +25,17 @@ function numbers(row = {}) {
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value ?? 0)]));
 }
 
+function dailySeries(range, rows) {
+  const byDate = new Map(rows.map(row => [row.fecha, numbers({ cobrado: row.cobrado, devuelto: row.devuelto })]));
+  const result = [];
+  for (let time = Date.parse(range.desde); time <= Date.parse(range.hasta); time += 86400000) {
+    const fecha = new Date(time).toISOString().slice(0, 10);
+    const amounts = byDate.get(fecha) || { cobrado: 0, devuelto: 0 };
+    result.push({ fecha, ...amounts, neto: (Math.round(amounts.cobrado * 100) - Math.round(amounts.devuelto * 100)) / 100 });
+  }
+  return result;
+}
+
 async function summary(input = {}, now = new Date()) {
   const today = localDate(now);
   const range = period(input, today);
@@ -58,8 +69,19 @@ async function summary(input = {}, now = new Date()) {
     COALESCE(SUM(cu.saldo_pendiente),0) pendiente, COUNT(*) cuotas
     FROM (${QUOTA_BALANCES_SQL}) cu WHERE cu.saldo_pendiente>0
     GROUP BY COALESCE(cu.concepto,'LEGADO') ORDER BY pendiente DESC, concepto`);
-  return { fecha_corte: today, periodo: range, saldos: numbers(balances), movimientos: totals,
+  const daily = await query(`SELECT fecha, SUM(cobrado) cobrado, SUM(devuelto) devuelto FROM (
+    SELECT DATE_FORMAT(fecha_pago,'%Y-%m-%d') fecha, SUM(monto_pagado) cobrado, 0 devuelto
+      FROM PAGO WHERE fecha_pago BETWEEN ? AND ? GROUP BY fecha_pago
+    UNION ALL
+    SELECT DATE_FORMAT(rr.fecha_contable,'%Y-%m-%d') fecha, 0 cobrado, SUM(rr.monto_centavos)/100 devuelto
+      FROM REEMBOLSO_RECURRENTE rr
+      JOIN TRANSACCION_RECURRENTE tr ON tr.id_transaccion=rr.id_transaccion
+      JOIN PAGO_ORIGEN po ON po.id_pago=tr.id_pago AND po.origen='RECURRENTE' AND po.ambiente=rr.ambiente
+      WHERE rr.estado='CONFIRMADO' AND rr.aplicado_en IS NOT NULL
+        AND rr.fecha_contable BETWEEN ? AND ? GROUP BY rr.fecha_contable
+    ) movimientos GROUP BY fecha ORDER BY fecha`, [range.desde, range.hasta, range.desde, range.hasta]);
+  return { fecha_corte: today, periodo: range, saldos: numbers(balances), movimientos: totals, serie: dailySeries(range, daily),
     recargos: numbers(surcharges), conceptos: concepts.map(({ concepto, ...amounts }) => ({ concepto, ...numbers(amounts) })) };
 }
 
-module.exports = { summary, localDate, period };
+module.exports = { summary, localDate, period, dailySeries };
