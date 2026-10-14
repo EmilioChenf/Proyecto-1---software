@@ -29,3 +29,14 @@ test.each([{ desde: ['2026-01-01'] }, { desde: '2026-02-29' }, { desde: '2026-02
   await expect(dashboard.summary(input)).rejects.toMatchObject({ status: 400 });
   expect(query).not.toHaveBeenCalled();
 });
+
+test('HU28 recargos registrados en el período y composición de deuda son métricas distintas', async () => {
+  query.mockResolvedValueOnce([{}]).mockResolvedValueOnce([{ cobrado: 0, devuelto: 0 }])
+    .mockResolvedValueOnce([{ registrado: '25.75', cantidad: 2 }])
+    .mockResolvedValueOnce([{ concepto: 'RENTA', capital: '100.10', recargo: '5.25', pendiente: '105.35', cuotas: 1 }]);
+  const result = await dashboard.summary({ desde: '2026-10-01', hasta: '2026-10-13' });
+  expect(result.recargos).toEqual({ registrado: 25.75, cantidad: 2 });
+  expect(result.conceptos[0]).toEqual({ concepto: 'RENTA', capital: 100.1, recargo: 5.25, pendiente: 105.35, cuotas: 1 });
+  expect(query.mock.calls[2][1]).toEqual(['2026-10-01', '2026-10-13']);
+  expect(query.mock.calls[3][1]).toBeUndefined();
+});

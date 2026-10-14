@@ -51,7 +51,15 @@ async function summary(input = {}, now = new Date()) {
     [range.desde, range.hasta, range.desde, range.hasta, range.desde, range.hasta]);
   const totals = numbers(movements);
   totals.neto = (Math.round(totals.cobrado * 100) - Math.round(totals.devuelto * 100)) / 100;
-  return { fecha_corte: today, periodo: range, saldos: numbers(balances), movimientos: totals };
+  const [surcharges] = await query(`SELECT COALESCE(SUM(monto_recargo),0) registrado, COUNT(*) cantidad
+    FROM RECARGO_APLICADO WHERE fecha_aplicacion BETWEEN ? AND ?`, [range.desde, range.hasta]);
+  const concepts = await query(`SELECT COALESCE(cu.concepto,'LEGADO') concepto,
+    COALESCE(SUM(cu.capital_pendiente),0) capital, COALESCE(SUM(cu.recargo_pendiente),0) recargo,
+    COALESCE(SUM(cu.saldo_pendiente),0) pendiente, COUNT(*) cuotas
+    FROM (${QUOTA_BALANCES_SQL}) cu WHERE cu.saldo_pendiente>0
+    GROUP BY COALESCE(cu.concepto,'LEGADO') ORDER BY pendiente DESC, concepto`);
+  return { fecha_corte: today, periodo: range, saldos: numbers(balances), movimientos: totals,
+    recargos: numbers(surcharges), conceptos: concepts.map(({ concepto, ...amounts }) => ({ concepto, ...numbers(amounts) })) };
 }
 
 module.exports = { summary, localDate, period };
