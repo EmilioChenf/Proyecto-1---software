@@ -53,3 +53,18 @@ test('HU29 filtra pagos por responsable histórico unidad concepto y origen', as
   expect(() => reports.validateFilters({ origen: 'APROBADO' }, 'pagos')).toThrow();
   expect(() => reports.validateFilters({ responsable: 'Anterior' }, 'morosos')).toThrow();
 });
+
+test('HU29 catálogo expone capacidades reales sin SQL y todos sus filtros son aceptados', () => {
+  const catalog = reports.catalog();
+  expect(catalog.map(item => item.id).sort()).toEqual(['accesos', 'morosos', 'pagos', 'reservas', 'sanciones']);
+  expect(catalog.find(item => item.id === 'morosos')).toMatchObject({ usesDates: false, filters: [] });
+  expect(JSON.stringify(catalog)).not.toMatch(/SELECT|column"|titular_snapshot/);
+  for (const item of catalog) {
+    expect(item.columns.length).toBeGreaterThan(0);
+    for (const filter of item.filters) {
+      for (const value of filter.options || ['Prueba']) {
+        expect(reports.validateFilters({ [filter.key]: value }, item.id)[filter.key]).toBe(value);
+      }
+    }
+  }
+});

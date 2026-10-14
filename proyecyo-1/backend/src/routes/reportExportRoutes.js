@@ -2,6 +2,10 @@
 const { requireAdmin } = require("../middlewares/requireAdmin");
 const reports = require("../services/reportExportService");
 
+router.get('/admin/reportes/catalogo', requireAdmin, (_req, res) => {
+  res.set('Cache-Control', 'no-store').json(reports.catalog());
+});
+
 router.get("/admin/reportes/exportar", requireAdmin, async (req, res, next) => {
   try {
     const { type, format } = reports.validate(req.query.reporte, req.query.formato);

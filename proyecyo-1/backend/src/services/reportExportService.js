@@ -66,6 +66,19 @@ function validate(type, format) {
   if (!["pdf", "xlsx"].includes(format)) throw invalid("Formato inválido.");
   return { type, format };
 }
+function catalog() {
+  const accessFilters = {
+    search: { label: 'Nombre o documento' }, house: { label: 'Unidad' }, plate: { label: 'Placa' },
+    type: { label: 'Tipo de acceso', options: ['RESIDENTE', 'VISITANTE', 'PROVEEDOR'] },
+    status: { label: 'Estado de acceso', options: ['APROBADO', 'PENDIENTE', 'RECHAZADO'] },
+  };
+  return Object.entries(REPORTS).map(([id, report]) => ({
+    id, title: report.title, formats: ['pdf', 'xlsx'], maxRows: MAX_ROWS, usesDates: id !== 'morosos',
+    columns: Object.values(report.columns),
+    filters: Object.entries(id === 'accesos' ? accessFilters : MODULE_FILTERS[id] || {})
+      .map(([key, { label, options }]) => ({ key, label, ...(options ? { options } : {}) })),
+  }));
+}
 function validateFilters(input = {}, type) {
   const result = {};
   for (const key of ["desde", "hasta"]) {
@@ -236,4 +249,4 @@ function pdf(type, data, user, filters = {}, now = new Date()) {
     doc.end();
   });
 }
-module.exports = { validate, validateFilters, safe, rows, excel, pdf, localTimestamp, display };
+module.exports = { validate, validateFilters, safe, rows, excel, pdf, localTimestamp, display, catalog };
