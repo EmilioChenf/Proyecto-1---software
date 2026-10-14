@@ -2,6 +2,11 @@ const { query } = require('../database/mysql');
 const { paymentAccessSql } = require('./paymentHistoricalActor');
 
 const sources = {
+  visita: `SELECT CONCAT('visita:',a.id_acceso) id, 'visita' tipo,
+    DATE_FORMAT(a.fecha,'%Y-%m-%d') fecha, TIME_FORMAT(a.hora_inicio,'%H:%i:%s') hora,
+    v.nombre titulo, a.estado_acceso estado, NULL monto,
+    CONCAT(COALESCE(a.tipo_visita,'VISITA'),' · ',COALESCE(a.motivo_servicio,'Visita autorizada')) detalle
+    FROM ACCESO a JOIN VISITANTE v ON v.id_visitante=a.id_visitante WHERE a.id_usuario_autoriza=?`,
   reserva: `SELECT CONCAT('reserva:',r.id_usuario,':',r.id_amenidad,':',r.fecha,':',r.hora_inicio) id,
     'reserva' tipo, DATE_FORMAT(r.fecha,'%Y-%m-%d') fecha, TIME_FORMAT(r.hora_inicio,'%H:%i:%s') hora,
     am.nombre titulo, r.estado, NULL monto,
