@@ -31,3 +31,14 @@ test('HU29 filtra reservas antes del límite usando parámetros y registra filtr
   for (const input of [{ estado: 'APROBADA' }, { amenidad: ['A'] }, { usuario: 'a'.repeat(151) }])
     expect(() => reports.validateFilters(input, 'reservas')).toThrow();
 });
+
+test('HU29 filtra sanciones por estado regla y unidad manteniendo la atribución de cuota', async () => {
+  await reports.rows('sanciones', { estado: 'ANULADA', regla: 'RUIDO', unidad: 'B-2' });
+  const [sql, params] = query.mock.calls[0];
+  expect(params).toEqual(['ANULADA', '%RUIDO%', '%B-2%']);
+  expect(sql).toContain('cu.responsable_snapshot');
+  expect(sql).not.toContain('id_residente');
+  expect(sql).toContain('reporte.regla LIKE ?');
+  expect(() => reports.validateFilters({ estado: 'CONFIRMADA' }, 'sanciones')).toThrow();
+  expect(() => reports.validateFilters({ regla: 'RUIDO' }, 'reservas')).toThrow();
+});

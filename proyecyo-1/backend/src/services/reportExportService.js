@@ -36,13 +36,19 @@ const REPORTS = {
     WHERE cu.fecha_limite < ? AND cu.saldo_pendiente > 0` },
   sanciones: { title: "Sanciones", columns: { fecha: "Fecha", hora: "Hora", residente: "Residente", motivo: "Motivo", monto: "Monto (Q)", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(s.fecha_generacion, '%Y-%m-%d') fecha,
-      DATE_FORMAT(s.fecha_generacion, '%H:%i:%s') hora, ${RESPONSIBLE_NAME} residente, s.motivo, s.monto, s.estado
+      DATE_FORMAT(s.fecha_generacion, '%H:%i:%s') hora, ${RESPONSIBLE_NAME} residente, s.motivo, s.monto, s.estado,
+      s.codigo_regla regla, CONCAT_WS('-',NULLIF(c.torre,''),c.numero) unidad
     FROM SANCION s JOIN CASA c ON c.id_casa=s.id_casa
     LEFT JOIN CUOTA cu ON cu.id_cuota=s.id_cuota
     ${RESPONSIBLE_JOIN}` },
 };
 const invalid = message => Object.assign(new Error(message), { status: 400 });
 const MODULE_FILTERS = {
+  sanciones: {
+    estado: { label: 'Estado de sanción', column: 'estado', options: ['PENDIENTE', 'PAGADA', 'ANULADA'] },
+    regla: { label: 'Regla', column: 'regla' },
+    unidad: { label: 'Unidad', column: 'unidad' },
+  },
   reservas: {
     estado: { label: 'Estado de reserva', column: 'estado', options: ['PENDIENTE', 'CONFIRMADA', 'CANCELADA'] },
     amenidad: { label: 'Amenidad', column: 'amenidad' },
