@@ -42,6 +42,13 @@ const REPORTS = {
     ${RESPONSIBLE_JOIN}` },
 };
 const invalid = message => Object.assign(new Error(message), { status: 400 });
+const MODULE_FILTERS = {
+  reservas: {
+    estado: { label: 'Estado de reserva', column: 'estado', options: ['PENDIENTE', 'CONFIRMADA', 'CANCELADA'] },
+    amenidad: { label: 'Amenidad', column: 'amenidad' },
+    usuario: { label: 'Usuario de reserva', column: 'usuario' },
+  },
+};
 function validate(type, format) {
   if (typeof type !== "string" || !Object.hasOwn(REPORTS, type)) throw invalid("Reporte inválido.");
   if (!["pdf", "xlsx"].includes(format)) throw invalid("Formato inválido.");
@@ -62,6 +69,16 @@ function validateFilters(input = {}, type) {
   }
   for (const [key, allowed] of Object.entries({ type: ["TODOS", "RESIDENTE", "VISITANTE", "PROVEEDOR"], status: ["TODOS", "APROBADO", "PENDIENTE", "RECHAZADO"], vista: ["hoy"] })) {
     if (result[key] && !allowed.includes(result[key])) throw invalid("Filtro de reporte inválido.");
+  }
+  const definitions = MODULE_FILTERS[type] || {};
+  const moduleKeys = new Set(Object.values(MODULE_FILTERS).flatMap(fields => Object.keys(fields)));
+  for (const key of moduleKeys) {
+    if (input[key] == null || input[key] === '') continue;
+    const definition = definitions[key];
+    if (!definition || typeof input[key] !== 'string' || input[key].length > 150) throw invalid('Filtro no válido para este reporte.');
+    const value = input[key].trim();
+    if (value && definition.options && !definition.options.includes(value)) throw invalid('Valor de filtro inválido.');
+    if (value) result[key] = value;
   }
   return result;
 }
@@ -88,6 +105,11 @@ async function rows(type, input = {}, now = new Date()) {
     // hide outstanding quotas or restrict the payments used to calculate their balance.
     if (type !== "morosos" && filters.desde) { clauses.push("reporte.fecha >= ?"); params.push(filters.desde); }
     if (type !== "morosos" && filters.hasta) { clauses.push("reporte.fecha <= ?"); params.push(filters.hasta); }
+    for (const [key, definition] of Object.entries(MODULE_FILTERS[type] || {})) {
+      if (!filters[key]) continue;
+      clauses.push(`reporte.${definition.column} ${definition.options ? '=' : 'LIKE'} ?`);
+      params.push(definition.options ? filters[key] : `%${filters[key]}%`);
+    }
     data = await db.query(`SELECT * FROM (${REPORTS[type].sql}) reporte
       ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
       ORDER BY reporte.fecha DESC LIMIT ${MAX_ROWS + 1}`, params);
@@ -107,6 +129,7 @@ function metadata(type, data, user, filters, now) {
     ? ["Saldo real actual de todas las cuotas vencidas. Las fechas del formulario solo filtran movimientos; no limitan este listado de deuda."]
     : [`Período: ${filters.desde ? display("fecha", filters.desde) : "Sin límite inicial"} a ${filters.hasta ? display("fecha", filters.hasta) : "Sin límite final"}`];
   const labels = { search: "Búsqueda", house: "Unidad", plate: "Placa", type: "Tipo", status: "Estado" };
+  for (const [key, definition] of Object.entries(MODULE_FILTERS[type] || {})) labels[key] = definition.label;
   for (const [key, label] of Object.entries(labels)) if (filters[key] && filters[key] !== "TODOS") details.push(`${label}: ${filters[key]}`);
   return [`NexusResidencial - Reporte de ${REPORTS[type].title}`, `Generado: ${localTimestamp(now)} (${TIMEZONE}) | Usuario: ${user}`, ...details, `Total de registros: ${data.length}`];
 }
