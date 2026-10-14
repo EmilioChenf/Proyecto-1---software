@@ -1,4 +1,5 @@
 jest.mock('../../database/mysql', () => ({ query: jest.fn() }));
+jest.mock('../../database/readSnapshot', () => ({ readSnapshot: read => read(require('../../database/mysql').query) }));
 const { query } = require('../../database/mysql');
 const dashboard = require('../financialDashboardService');
 beforeEach(() => query.mockReset().mockResolvedValue([{ cobrado: 0, devuelto: 0 }]));

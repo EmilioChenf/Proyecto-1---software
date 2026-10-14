@@ -1,4 +1,4 @@
-const { query } = require('../database/mysql');
+const { readSnapshot } = require('../database/readSnapshot');
 const { QUOTA_BALANCES_SQL } = require('./financialBalance');
 const { quotaActorSql } = require('./paymentHistoricalActor');
 const { ensureValidDate } = require('../utils/dateTimeValidation');
@@ -42,6 +42,7 @@ function dailySeries(range, rows) {
 async function summary(input = {}, now = new Date()) {
   const today = localDate(now);
   const range = period(input, today);
+  return readSnapshot(async query => {
   const [balances] = await query(`SELECT
     COALESCE(SUM(cu.saldo_pendiente),0) pendiente,
     COALESCE(SUM(cu.capital_pendiente),0) capital_pendiente,
@@ -85,6 +86,7 @@ async function summary(input = {}, now = new Date()) {
     ) movimientos GROUP BY fecha ORDER BY fecha`, [range.desde, range.hasta, range.desde, range.hasta]);
   return { fecha_corte: today, periodo: range, saldos: numbers(balances), movimientos: totals, serie: dailySeries(range, daily),
     recargos: numbers(surcharges), conceptos: concepts.map(({ concepto, ...amounts }) => ({ concepto, ...numbers(amounts) })) };
+  });
 }
 
 module.exports = { summary, localDate, period, dailySeries };
