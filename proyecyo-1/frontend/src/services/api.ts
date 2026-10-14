@@ -76,11 +76,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   return payload as T;
 }
 
-export async function apiDownload(path: string) {
+export async function apiDownloadResponse(path: string, options: Pick<RequestInit, 'signal'> = {}) {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, { headers: getRequestHeaders() });
-  } catch {
+    response = await fetch(`${API_URL}${path}`, { ...options, headers: getRequestHeaders() });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
     throw new ApiError("No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.", 0);
   }
   if (!response.ok) {
@@ -88,5 +89,9 @@ export async function apiDownload(path: string) {
     if (response.status === 401) window.dispatchEvent(new Event("nexus:session-expired"));
     throw new ApiError(getApiErrorMessage(response.status, payload), response.status, payload, getFieldErrors(payload));
   }
-  return response.blob();
+  return response;
+}
+
+export async function apiDownload(path: string) {
+  return (await apiDownloadResponse(path)).blob();
 }
