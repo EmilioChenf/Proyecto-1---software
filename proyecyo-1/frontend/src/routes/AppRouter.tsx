@@ -40,6 +40,7 @@ import { ResidentePaymentReturnView } from "@/views/ResidentePaymentReturnView";
 import { ResidentePaymentReceiptView } from "@/views/ResidentePaymentReceiptView";
 import { ResidenteVisitsView } from "@/views/ResidenteVisitsView";
 import { ResidentMonthlySummaryView } from "@/views/ResidentMonthlySummaryView";
+import { ResidentActivityView } from '@/views/ResidentActivityView';
 import { ResidenteFinancialDetailView } from "@/views/ResidenteFinancialDetailView";
 import { ResidentNotificationsView } from "@/views/ResidentNotificationsView";
 import { LandingView } from "@/views/LandingView";
@@ -113,6 +114,7 @@ export function AppRouter() {
           <Route path="/residente/amenidades" element={<ResidenteAmenitiesView />} />
           <Route path="/residente/amenidades/disponibilidad-general" element={<ResidenteUnifiedAmenitiesAvailabilityView />} />
           <Route path="/residente/resumen-mensual" element={<ResidentMonthlySummaryView />} />
+          <Route path="/residente/actividad" element={<ResidentActivityView />} />
           <Route path="/residente/detalle-financiero" element={<ResidenteFinancialDetailView />} />
           <Route path="/residente/notificaciones" element={<ResidentNotificationsView />} />
           <Route path="/residente/comunicados" element={<ResidentNotificationsView initialFilter="COMUNICADOS" />} />

@@ -42,6 +42,7 @@ export const residentNavSections: ResidentNavSection[] = [
         badge: "pendingProviders",
       },
       { label: "Resumen mensual", icon: BarChart3, to: "/residente/resumen-mensual" },
+      { label: "Mi actividad", icon: CalendarDays, to: "/residente/actividad" },
     ],
   },
   {
