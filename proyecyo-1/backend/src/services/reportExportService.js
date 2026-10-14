@@ -80,6 +80,11 @@ function catalog() {
   }));
 }
 function validateFilters(input = {}, type) {
+  const supported = new Set(['reporte', 'formato', 'desde', 'hasta', 'search', 'house', 'plate', 'type', 'status', 'vista',
+    ...Object.values(MODULE_FILTERS).flatMap(fields => Object.keys(fields))]);
+  if (Object.keys(input).some(key => !supported.has(key) || typeof input[key] !== 'string')) {
+    throw invalid('Parámetro de reporte no admitido.');
+  }
   const result = {};
   for (const key of ["desde", "hasta"]) {
     if (input[key] != null && typeof input[key] !== "string") throw invalid("Fecha de reporte inválida.");

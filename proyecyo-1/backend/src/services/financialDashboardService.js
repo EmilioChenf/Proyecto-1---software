@@ -4,6 +4,9 @@ const { quotaActorSql } = require('./paymentHistoricalActor');
 const { ensureValidDate } = require('../utils/dateTimeValidation');
 
 function period(input, today) {
+  if (Object.keys(input).some(key => !['desde', 'hasta'].includes(key))) {
+    throw Object.assign(new Error('Filtro financiero no admitido.'), { status: 400 });
+  }
   const result = {};
   for (const key of ['desde', 'hasta']) {
     const value = input[key];
