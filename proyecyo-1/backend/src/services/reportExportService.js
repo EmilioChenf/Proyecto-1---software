@@ -44,6 +44,12 @@ const REPORTS = {
 };
 const invalid = message => Object.assign(new Error(message), { status: 400 });
 const MODULE_FILTERS = {
+  pagos: {
+    responsable: { label: 'Responsable histórico', column: 'residente' },
+    unidad: { label: 'Unidad', column: 'unidad' },
+    concepto: { label: 'Concepto', column: 'concepto' },
+    origen: { label: 'Origen del pago', column: 'origen', options: ['RECURRENTE', 'SIMULADO', 'HISTORICO', 'SIN_CLASIFICAR'] },
+  },
   sanciones: {
     estado: { label: 'Estado de sanción', column: 'estado', options: ['PENDIENTE', 'PAGADA', 'ANULADA'] },
     regla: { label: 'Regla', column: 'regla' },

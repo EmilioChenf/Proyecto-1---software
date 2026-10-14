@@ -42,3 +42,14 @@ test('HU29 filtra sanciones por estado regla y unidad manteniendo la atribución
   expect(() => reports.validateFilters({ estado: 'CONFIRMADA' }, 'sanciones')).toThrow();
   expect(() => reports.validateFilters({ regla: 'RUIDO' }, 'reservas')).toThrow();
 });
+
+test('HU29 filtra pagos por responsable histórico unidad concepto y origen', async () => {
+  await reports.rows('pagos', { responsable: 'Anterior', unidad: 'A-1', concepto: 'Renta', origen: 'RECURRENTE' });
+  const [sql, params] = query.mock.calls[0];
+  expect(params).toEqual(['%Anterior%', '%A-1%', '%Renta%', 'RECURRENTE']);
+  expect(sql).toContain('reporte.residente LIKE ?');
+  expect(sql).toContain('reporte.origen = ?');
+  expect(sql).not.toContain('Anterior');
+  expect(() => reports.validateFilters({ origen: 'APROBADO' }, 'pagos')).toThrow();
+  expect(() => reports.validateFilters({ responsable: 'Anterior' }, 'morosos')).toThrow();
+});
