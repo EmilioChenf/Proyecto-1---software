@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "test:sprint9-finance:mysql": "node scripts/run-isolated-tests.js sprint9-finance",
     "test:property:mysql":"node scripts/run-isolated-tests.js property",
     "test:postaudit:mysql":"node scripts/run-isolated-tests.js postaudit",
     "test:finalaudit:mysql":"node scripts/run-isolated-tests.js finalaudit",
