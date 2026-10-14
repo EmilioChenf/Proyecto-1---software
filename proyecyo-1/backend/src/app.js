@@ -104,6 +104,7 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
   app.use(sanctionHistoryRoutes);
   app.use(residentMonthlySummaryRoutes);
   app.use(reportExportRoutes);
+  app.use(require('./routes/financialDashboardRoutes'));
   app.use(automaticBackupsRoutes);
   app.use(demoRequestsRoutes);
   app.use(adminRemindersRoutes);
