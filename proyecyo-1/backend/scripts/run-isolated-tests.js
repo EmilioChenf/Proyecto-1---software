@@ -5,7 +5,7 @@ const { spawn } = require("node:child_process");
 const { openSuiteDatabase, prepareSuiteDatabase, closeSuiteDatabase } = require("../test/integration/support/suiteIsolation");
 
 const suite = process.argv[2];
-const sprint9Suites = ['sprint9-finance', 'sprint9-history'];
+const sprint9Suites = ['sprint9-finance', 'sprint9-history', 'sprint9-exports'];
 const repeatArg = process.argv.slice(3);
 const repeat = repeatArg.length === 0 ? 1 : repeatArg.length === 1 && repeatArg[0] === "--repeat=2" ? 2 : 0;
 const suites = new Set(["property", "postaudit", "finalaudit", "n1", "n2", "n2a1", "phase0", "hu13", "hu14", "hu15", "hu16", "hu17", "hu18", "hu19", "hu32", "viviendas", "correlation", "precision", "functional", "backend", "tarea5", "integration", "regression"]);
