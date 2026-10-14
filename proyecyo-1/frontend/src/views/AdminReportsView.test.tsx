@@ -23,7 +23,8 @@ it("HU10 exporta el reporte, formato y período elegidos", async () => {
   fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-09-01" } });
   fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-09-07" } });
   fireEvent.click(screen.getByRole("button", { name: "Exportar" }));
-  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith({ reporte: "reservas", formato: "xlsx", desde: "2026-09-01", hasta: "2026-09-07" }));
+  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith({ reporte: "reservas", formato: "xlsx", desde: "2026-09-01", hasta: "2026-09-07" }, expect.any(AbortSignal)));
+  expect(await screen.findByText('Descarga de Reservas iniciada en XLSX.')).toBeInTheDocument();
 });
 
 it("HU10 muestra errores de exportación y permite reintentar", async () => {
@@ -42,12 +43,12 @@ it('HU29 descarga con filtros de módulo y los limpia al cambiar de reporte', as
   fireEvent.change(screen.getByLabelText('Reporte'), { target: { value: 'reservas' } });
   fireEvent.change(screen.getByLabelText('Estado de reserva'), { target: { value: 'CONFIRMADA' } });
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith(expect.objectContaining({ estado: 'CONFIRMADA' })));
+  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith(expect.objectContaining({ estado: 'CONFIRMADA' }), expect.any(AbortSignal)));
   await waitFor(() => expect(screen.getByLabelText('Reporte')).toBeEnabled());
   fireEvent.change(screen.getByLabelText('Reporte'), { target: { value: 'pagos' } });
   fireEvent.change(screen.getByLabelText('Responsable histórico'), { target: { value: 'Ana' } });
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-  await waitFor(() => expect(downloadReport).toHaveBeenLastCalledWith({ reporte: 'pagos', formato: 'pdf', desde: '', hasta: '', responsable: 'Ana' }));
+  await waitFor(() => expect(downloadReport).toHaveBeenLastCalledWith({ reporte: 'pagos', formato: 'pdf', desde: '', hasta: '', responsable: 'Ana' }, expect.any(AbortSignal)));
 });
 
 it('HU29 morosidad explica deuda actual, deshabilita fechas y no envía un período residual', async () => {
@@ -60,5 +61,19 @@ it('HU29 morosidad explica deuda actual, deshabilita fechas y no envía un perí
   expect(screen.getByLabelText('Hasta')).toBeDisabled();
   expect(screen.getByText(/toda la deuda vencida vigente/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
-  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith({ reporte: 'morosos', formato: 'pdf', desde: '', hasta: '' }));
+  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith({ reporte: 'morosos', formato: 'pdf', desde: '', hasta: '' }, expect.any(AbortSignal)));
+});
+
+it('HU29 permite cancelar una descarga y comunica el resultado sin mostrar un error falso', async () => {
+  vi.mocked(downloadReport).mockImplementation((_filters, signal) => new Promise((_resolve, reject) => {
+    signal?.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')));
+  }));
+  render(<AdminReportsView />);
+  await screen.findByRole('option', { name: 'Accesos' });
+  fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Preparando');
+  fireEvent.click(screen.getByRole('button', { name: 'Cancelar exportación' }));
+  expect(await screen.findByText('Exportación cancelada.')).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Exportar' })).toBeEnabled();
 });

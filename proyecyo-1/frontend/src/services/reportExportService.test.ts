@@ -72,4 +72,13 @@ describe("HU10 descarga de reportes", () => {
     vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
     await expect(downloadReport({ reporte: 'pagos', formato: 'pdf' })).rejects.toMatchObject({ status: 0 });
   });
+  it('HU29 cancelar impide la descarga aunque una respuesta tardía ignore el aborto', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch).mockImplementation(async () => {
+      controller.abort();
+      return new Response('%PDF', { headers: { 'Content-Type': 'application/pdf' } });
+    });
+    await expect(downloadReport({ reporte: 'pagos', formato: 'pdf' }, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
 });

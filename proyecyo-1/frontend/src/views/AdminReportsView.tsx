@@ -2,7 +2,7 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { downloadReport } from "@/services/reportExportService";
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getReportCatalog, type ReportCapability } from '@/services/reportCatalogService';
 
 export function AdminReportsView() {
@@ -15,22 +15,29 @@ export function AdminReportsView() {
   const [catalog, setCatalog] = useState<ReportCapability[]>([]);
   const [catalogBusy, setCatalogBusy] = useState(true);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState('');
+  const downloadController = useRef<AbortController | null>(null);
   const selected = catalog.find(item => item.id === report);
   useEffect(() => {
     const controller = new AbortController();
     getReportCatalog(controller.signal).then(items => { if (!controller.signal.aborted) setCatalog(items); })
       .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'No fue posible cargar los reportes.'); })
       .finally(() => { if (!controller.signal.aborted) setCatalogBusy(false); });
-    return () => controller.abort();
+    return () => { controller.abort(); downloadController.current?.abort(); };
   }, []);
   async function download() {
+    const controller = new AbortController();
+    downloadController.current = controller;
     try {
       setBusy(true);
       setError("");
+      setFeedback('');
       if (selected?.usesDates && desde && hasta && desde > hasta) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
-      await downloadReport({ reporte: report, formato: format, desde: selected?.usesDates ? desde : '', hasta: selected?.usesDates ? hasta : '', ...filters });
+      await downloadReport({ reporte: report, formato: format, desde: selected?.usesDates ? desde : '', hasta: selected?.usesDates ? hasta : '', ...filters }, controller.signal);
+      setFeedback(controller.signal.aborted ? 'Exportación cancelada.' : `Descarga de ${selected?.title} iniciada en ${format.toUpperCase()}.`);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "No fue posible exportar.");
+      if (controller.signal.aborted) setFeedback('Exportación cancelada.');
+      else setError(error instanceof Error ? error.message : "No fue posible exportar.");
     } finally {
       setBusy(false);
     }
@@ -60,7 +67,9 @@ export function AdminReportsView() {
         : 'Fechas y horas de Guatemala. El período incluye ambos días; deje las fechas vacías para consultar todo el historial.'}</p>
       <p className="mt-2 text-sm text-slate-600">Máximo {selected?.maxRows.toLocaleString('en-US') || '10,000'} registros por exportación.</p>
       {error && <p role="alert" className="mt-3 text-rose-700">{error}</p>}
+      {(busy || feedback) && <p role="status" className="mt-3 text-slate-700">{busy ? 'Preparando el archivo para descargar…' : feedback}</p>}
       <Button className="mt-5" type="submit" disabled={busy || catalogBusy || !selected}>{busy ? "Generando..." : "Exportar"}</Button>
+      {busy && <Button className="ml-3 mt-5" type="button" variant="outline" onClick={() => downloadController.current?.abort()}>Cancelar exportación</Button>}
     </form>
   </AdminLayout>;
 }
