@@ -4,12 +4,21 @@ const db = require("../database/mysql");
 const { QUOTA_BALANCES_SQL } = require("./financialBalance");
 const accesses = require("./adminAccessesService");
 const { RESPONSIBLE_NAME, RESPONSIBLE_JOIN } = require("./sanctionHistoricalActor");
-const { quotaActorSql } = require('./paymentHistoricalActor');
+const { quotaActorSql, paymentActorSql, paymentNameSql } = require('./paymentHistoricalActor');
 const { ensureValidDate } = require("../utils/dateTimeValidation");
 
 const TIMEZONE = "America/Guatemala";
 const MAX_ROWS = 10000;
 const REPORTS = {
+  pagos: { title: "Pagos aplicados", columns: { fecha: "Fecha", id_pago: "Pago", residente: "Responsable histórico", unidad: "Unidad", concepto: "Concepto", monto: "Monto (Q)", origen: "Origen" }, sql: `
+    SELECT DATE_FORMAT(pg.fecha_pago,'%Y-%m-%d') fecha, pg.id_pago,
+      ${paymentNameSql()} residente, CONCAT_WS('-',NULLIF(c.torre,''),c.numero) unidad,
+      COALESCE(cu.concepto_snapshot,sv.nombre) concepto, pg.monto_pagado monto,
+      COALESCE(po.origen,'SIN_CLASIFICAR') origen
+    FROM PAGO pg JOIN CUOTA cu ON cu.id_cuota=pg.id_cuota
+    JOIN CASA c ON c.id_casa=cu.id_casa JOIN SERVICIO sv ON sv.id_servicio=cu.id_servicio
+    LEFT JOIN USUARIO historico ON historico.id_usuario=${paymentActorSql()}
+    LEFT JOIN PAGO_ORIGEN po ON po.id_pago=pg.id_pago` },
   accesos: { title: "Accesos", columns: { fecha: "Fecha", hora: "Ingreso / inicio", hora_salida: "Salida", nombre: "Nombre", casa_unidad: "Unidad", placa: "Placa", tipo: "Tipo", estado: "Estado", autorizado_por: "Autorizado por" } },
   reservas: { title: "Reservas", columns: { fecha: "Fecha", hora_inicio: "Inicio", hora_fin: "Fin", usuario: "Usuario", amenidad: "Amenidad", estado: "Estado" }, sql: `
     SELECT DATE_FORMAT(r.fecha, '%Y-%m-%d') fecha,
