@@ -45,6 +45,25 @@ test('HU30 incorpora sanciones solo con responsable de cuota o snapshot confirma
   expect(sql).not.toContain('JOIN CASA');
   expect(params.every(id => id === 9)).toBe(true);
 });
+
+test('HU30 filtra antes de paginar, consulta solo el tipo pedido y detecta página siguiente', async () => {
+  query.mockResolvedValue(Array.from({ length: 3 }, (_, index) => ({ id: `pago:${index}`, monto: 1 })));
+  const result = await activity.list(7, { tipo: 'pago', desde: '2026-09-01', hasta: '2026-09-30', page: '2', limit: '2' });
+  expect(result).toMatchObject({ page: 2, limit: 2, hasMore: true });
+  expect(result.items).toHaveLength(2);
+  const [sql, params] = query.mock.calls[0];
+  expect(sql).not.toContain('UNION ALL');
+  expect(sql).toContain('WHERE fecha>=? AND fecha<=?');
+  expect(sql).toContain('LIMIT 3 OFFSET 2');
+  expect(params).toEqual([7, '2026-09-01', '2026-09-30']);
+});
+
+test.each([{ tipo: 'constructor' }, { tipo: ['pago'] }, { desde: '2026-02-29' }, { page: '0' }, { page: '1.5' },
+  { limit: '101' }, { userId: '99' }, { id_usuario: '99' }, { desde: '2026-12-01', hasta: '2026-01-01' }])
+('HU30 rechaza filtros inválidos o identidad externa %j', async input => {
+  await expect(activity.list(7, input)).rejects.toMatchObject({ status: 400 });
+  expect(query).not.toHaveBeenCalled();
+});
 test.each([null, 0, -1, '3', NaN])('HU30 rechaza identidad de servicio inválida %s', async id => {
   await expect(activity.list(id)).rejects.toMatchObject({ status: 401 });
   expect(query).not.toHaveBeenCalled();
