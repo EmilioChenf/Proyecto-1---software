@@ -42,6 +42,7 @@ type AdminMenuItem = {
 };
 
 const adminMenuItems: AdminMenuItem[] = [
+  { label: "Finanzas", icon: Wallet, to: "/admin/finanzas" },
   {
     label: "Dashboard",
     icon: LayoutDashboard,

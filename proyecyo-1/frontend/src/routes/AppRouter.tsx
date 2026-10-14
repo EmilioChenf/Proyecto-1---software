@@ -13,6 +13,7 @@ import { AdminRecurrenteRefundView } from "@/views/AdminRecurrenteRefundView";
 import { AdminRecurrenteReconciliationView } from "@/views/AdminRecurrenteReconciliationView";
 import { AdminRemindersView } from "@/views/AdminRemindersView";
 import { AdminReportsView } from "@/views/AdminReportsView";
+import { AdminFinancialDashboardView } from "@/views/AdminFinancialDashboardView";
 import { AdminMonthlyFinancialReportView } from "@/views/AdminMonthlyFinancialReportView";
 import { AdminProvidersView } from "@/views/AdminProvidersView";
 import { AdminSanctionsView } from "@/views/AdminSanctionsView";
@@ -83,6 +84,7 @@ export function AppRouter() {
           <Route path="/admin/sanciones/historial-completo" element={<AdminSanctionHistoryView />} />
           <Route path="/admin/amenidades" element={<AdminAmenitiesReservationsView />} />
           <Route path="/admin/reportes" element={<AdminReportsView />} />
+          <Route path="/admin/finanzas" element={<AdminFinancialDashboardView />} />
           <Route path="/admin/reportes-financieros" element={<AdminMonthlyFinancialReportView />} />
           <Route path="/admin/configuracion" element={<AdminSettingsView />} />
           <Route path="/admin/solicitudes-demo" element={<AdminDemoRequestsView />} />
