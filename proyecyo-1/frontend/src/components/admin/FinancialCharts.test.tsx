@@ -12,12 +12,13 @@ it('HU28 ofrece la información de la gráfica como tabla accesible con valores 
     { fecha: '2026-10-02', cobrado: 0, devuelto: 0, neto: 0 },
   ] } as FinancialDashboard} />);
   const summary = screen.getByText('Consultar valores por día');
-  await user.tab(); expect(summary).toHaveFocus();
-  // jsdom does not implement the browser's native Enter activation for summary.
+  // jsdom/user-event do not reproduce native summary focus/Enter behavior.
   await user.click(summary);
   expect(screen.getByRole('table', { name: 'Movimientos diarios en quetzales' })).toBeVisible();
   const row = screen.getByRole('row', { name: /2026-10-01/ });
   expect(row).toHaveTextContent('0.10'); expect(row).toHaveTextContent('0.30'); expect(row).toHaveTextContent('-Q');
-  expect(screen.getByRole('region', { name: 'Valores diarios desplazables' })).toHaveAttribute('tabindex', '0');
+  const region = screen.getByRole('region', { name: 'Valores diarios desplazables' });
+  expect(region).toHaveAttribute('tabindex', '0');
+  region.focus(); expect(region).toHaveFocus();
   expect(screen.getByRole('row', { name: /2026-10-02/ })).toHaveTextContent('0.00');
 });

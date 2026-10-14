@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ResidentLayout } from '@/components/residente/ResidentLayout';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { getResidentActivity, activityLabels, type ActivityPage } from '@/services/residentActivityService';
 
 export function ResidentActivityView() {
@@ -33,6 +34,9 @@ export function ResidentActivityView() {
       <label>Desde<input type="date" className="block rounded border p-2" max={draft.hasta || undefined} value={draft.desde} onChange={event => setDraft({ ...draft, desde: event.target.value })} /></label>
       <label>Hasta<input type="date" className="block rounded border p-2" min={draft.desde || undefined} value={draft.hasta} onChange={event => setDraft({ ...draft, hasta: event.target.value })} /></label>
       <Button type="submit" disabled={busy}>Filtrar</Button>
+      <Button type="button" variant="outline" disabled={busy || (!draft.tipo && !draft.desde && !draft.hasta && page === 1)} onClick={() => {
+        const empty = { tipo: '', desde: '', hasta: '' }; setDraft(empty); setFilters(empty); setPage(1);
+      }}>Limpiar filtros</Button>
     </form>
     <p className="mb-4 text-sm text-slate-600">Orden de fecha más reciente a más antigua. Las reservas y visitas muestran su fecha programada; los pagos sin fecha aparecen al final.</p>
     {busy && <p role="status">Cargando actividad…</p>}
@@ -48,6 +52,8 @@ export function ResidentActivityView() {
           <details className="mt-3"><summary className="cursor-pointer text-blue-700">Detalle de {activityLabels[item.tipo].toLowerCase()}</summary>
             <p className="mt-2 break-words text-sm">{item.detalle || 'Sin detalle adicional.'}</p>
             {item.monto !== null && <p className="mt-2">Monto registrado: {new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(item.monto)}</p>}
+            {item.tipo === 'pago' && /^pago:[1-9]\d*$/.test(item.id) && <Link className="mt-3 inline-block rounded text-blue-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+              to={`/residente/pagos/${item.id.slice(5)}/comprobante`}>Ver comprobante del pago #{item.id.slice(5)}</Link>}
           </details>
         </li>)}</ol>}
       <nav aria-label="Paginación de actividad" className="mt-5 flex flex-wrap items-center gap-3">
