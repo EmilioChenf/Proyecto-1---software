@@ -27,8 +27,8 @@ export function AdminReportsView() {
     try {
       setBusy(true);
       setError("");
-      if (desde && hasta && desde > hasta) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
-      await downloadReport({ reporte: report, formato: format, desde, hasta, ...filters });
+      if (selected?.usesDates && desde && hasta && desde > hasta) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
+      await downloadReport({ reporte: report, formato: format, desde: selected?.usesDates ? desde : '', hasta: selected?.usesDates ? hasta : '', ...filters });
     } catch (error) {
       setError(error instanceof Error ? error.message : "No fue posible exportar.");
     } finally {
@@ -45,8 +45,8 @@ export function AdminReportsView() {
         <label className="text-sm">Formato<select className="mt-1 w-full rounded-md border p-3" value={format} onChange={event => setFormat(event.target.value)}>
           <option value="pdf">PDF</option><option value="xlsx">Excel .xlsx</option>
         </select></label>
-        <label className="text-sm">Desde<input className="mt-1 w-full rounded-md border p-2" type="date" max={hasta || undefined} value={desde} onChange={event => setDesde(event.target.value)} /></label>
-        <label className="text-sm">Hasta<input className="mt-1 w-full rounded-md border p-2" type="date" min={desde || undefined} value={hasta} onChange={event => setHasta(event.target.value)} /></label>
+        <label className="text-sm">Desde<input disabled={selected?.usesDates === false} aria-describedby="report-date-help" className="mt-1 w-full rounded-md border p-2 disabled:bg-slate-100" type="date" max={hasta || undefined} value={desde} onChange={event => setDesde(event.target.value)} /></label>
+        <label className="text-sm">Hasta<input disabled={selected?.usesDates === false} aria-describedby="report-date-help" className="mt-1 w-full rounded-md border p-2 disabled:bg-slate-100" type="date" min={desde || undefined} value={hasta} onChange={event => setHasta(event.target.value)} /></label>
         {selected?.filters.map(filter => <label className="text-sm" key={filter.key}>{filter.label}
           {filter.options ? <select className="mt-1 w-full rounded-md border p-3" value={filters[filter.key] || ''}
             onChange={event => setFilters(current => ({ ...current, [filter.key]: event.target.value }))}>
@@ -55,8 +55,10 @@ export function AdminReportsView() {
             onChange={event => setFilters(current => ({ ...current, [filter.key]: event.target.value }))} />}
         </label>)}
       </fieldset>
-      <p className="mt-4 text-sm text-slate-600">Fechas y horas de Guatemala. El período incluye ambos días; deje las fechas vacías para consultar todo el historial. Máximo 10,000 registros por exportación.</p>
-      {report === "morosos" && <p className="mt-2 text-sm text-slate-600">El período filtra la fecha de vencimiento. Se muestran los saldos que siguen pendientes al generar el reporte.</p>}
+      <p id="report-date-help" className="mt-4 text-sm text-slate-600">{selected?.usesDates === false
+        ? 'Morosidad muestra toda la deuda vencida vigente. Las fechas no limitan las cuotas ni los abonos usados para calcular su saldo.'
+        : 'Fechas y horas de Guatemala. El período incluye ambos días; deje las fechas vacías para consultar todo el historial.'}</p>
+      <p className="mt-2 text-sm text-slate-600">Máximo {selected?.maxRows.toLocaleString('en-US') || '10,000'} registros por exportación.</p>
       {error && <p role="alert" className="mt-3 text-rose-700">{error}</p>}
       <Button className="mt-5" type="submit" disabled={busy || catalogBusy || !selected}>{busy ? "Generando..." : "Exportar"}</Button>
     </form>

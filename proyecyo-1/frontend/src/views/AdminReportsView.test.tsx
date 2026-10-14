@@ -49,3 +49,16 @@ it('HU29 descarga con filtros de módulo y los limpia al cambiar de reporte', as
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
   await waitFor(() => expect(downloadReport).toHaveBeenLastCalledWith({ reporte: 'pagos', formato: 'pdf', desde: '', hasta: '', responsable: 'Ana' }));
 });
+
+it('HU29 morosidad explica deuda actual, deshabilita fechas y no envía un período residual', async () => {
+  vi.mocked(downloadReport).mockResolvedValue();
+  render(<AdminReportsView />);
+  await screen.findByRole('option', { name: 'Morosos' });
+  fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2030-01-01' } });
+  fireEvent.change(screen.getByLabelText('Reporte'), { target: { value: 'morosos' } });
+  expect(screen.getByLabelText('Desde')).toBeDisabled();
+  expect(screen.getByLabelText('Hasta')).toBeDisabled();
+  expect(screen.getByText(/toda la deuda vencida vigente/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
+  await waitFor(() => expect(downloadReport).toHaveBeenCalledWith({ reporte: 'morosos', formato: 'pdf', desde: '', hasta: '' }));
+});
