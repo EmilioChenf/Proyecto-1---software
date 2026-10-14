@@ -29,3 +29,11 @@ it('HU30 informa errores de consulta', async () => {
   render(<ResidentActivityView />);
   expect(await screen.findByRole('alert')).toHaveTextContent('Sesión expirada');
 });
+it('HU30 reintenta una página fallida conservando los filtros aplicados', async () => {
+  vi.mocked(getResidentActivity).mockRejectedValueOnce(new Error('Temporal'));
+  render(<ResidentActivityView />);
+  await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar consulta' }));
+  expect(await screen.findByText('No hay actividad para estos filtros.')).toBeInTheDocument();
+  expect(getResidentActivity).toHaveBeenLastCalledWith({ tipo: '', desde: '', hasta: '' }, 1, expect.any(AbortSignal));
+});

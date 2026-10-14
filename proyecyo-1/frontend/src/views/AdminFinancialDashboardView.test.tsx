@@ -26,6 +26,16 @@ it('HU28 informa fallos sin mostrar cifras inventadas', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Servicio temporalmente no disponible');
   expect(screen.queryByText('Ingreso neto')).not.toBeInTheDocument();
 });
+it('HU28 reintenta el mismo período después de un fallo temporal', async () => {
+  vi.mocked(getFinancialDashboard).mockRejectedValueOnce(new Error('Temporal')).mockResolvedValueOnce(dashboardFixture);
+  render(<AdminFinancialDashboardView />);
+  await screen.findByRole('alert');
+  const first = vi.mocked(getFinancialDashboard).mock.calls[0];
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar consulta' }));
+  expect(await screen.findByText('Ingreso neto')).toBeInTheDocument();
+  expect(getFinancialDashboard).toHaveBeenLastCalledWith(first[0], first[1], expect.any(AbortSignal));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
 it('HU28 representa un período vacío y presenta deuda por concepto sin alterar el saldo', async () => {
   vi.mocked(getFinancialDashboard).mockResolvedValue({ ...dashboardFixture,
     conceptos: [{ concepto: 'RENTA_DIRECTA', cuotas: 2, capital: 75, recargo: 5, pendiente: 80 }] });

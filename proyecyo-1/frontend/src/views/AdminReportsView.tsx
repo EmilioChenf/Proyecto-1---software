@@ -14,17 +14,19 @@ export function AdminReportsView() {
   const [error, setError] = useState("");
   const [catalog, setCatalog] = useState<ReportCapability[]>([]);
   const [catalogBusy, setCatalogBusy] = useState(true);
+  const [catalogRetry, setCatalogRetry] = useState(0);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState('');
   const downloadController = useRef<AbortController | null>(null);
   const selected = catalog.find(item => item.id === report);
   useEffect(() => {
     const controller = new AbortController();
+    setCatalogBusy(true); setError('');
     getReportCatalog(controller.signal).then(items => { if (!controller.signal.aborted) setCatalog(items); })
       .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'No fue posible cargar los reportes.'); })
       .finally(() => { if (!controller.signal.aborted) setCatalogBusy(false); });
     return () => { controller.abort(); downloadController.current?.abort(); };
-  }, []);
+  }, [catalogRetry]);
   async function download() {
     const controller = new AbortController();
     downloadController.current = controller;
@@ -67,6 +69,10 @@ export function AdminReportsView() {
         : 'Fechas y horas de Guatemala. El período incluye ambos días; deje las fechas vacías para consultar todo el historial.'}</p>
       <p className="mt-2 text-sm text-slate-600">Máximo {selected?.maxRows.toLocaleString('en-US') || '10,000'} registros por exportación.</p>
       {error && <p role="alert" className="mt-3 text-rose-700">{error}</p>}
+      {!catalogBusy && catalog.length === 0 && <div className="mt-3">
+        {!error && <p role="status">No hay reportes disponibles.</p>}
+        <Button type="button" variant="outline" onClick={() => setCatalogRetry(value => value + 1)}>Reintentar catálogo</Button>
+      </div>}
       {(busy || feedback) && <p role="status" className="mt-3 text-slate-700">{busy ? 'Preparando el archivo para descargar…' : feedback}</p>}
       <Button className="mt-5" type="submit" disabled={busy || catalogBusy || !selected}>{busy ? "Generando..." : "Exportar"}</Button>
       {busy && <Button className="ml-3 mt-5" type="button" variant="outline" onClick={() => downloadController.current?.abort()}>Cancelar exportación</Button>}

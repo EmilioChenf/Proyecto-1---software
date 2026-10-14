@@ -10,6 +10,7 @@ export function ResidentActivityView() {
   const [data, setData] = useState<ActivityPage | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setBusy(true); setError(''); setData(null);
@@ -19,7 +20,7 @@ export function ResidentActivityView() {
       if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'No fue posible consultar tu actividad.');
     }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
-  }, [filters, page]);
+  }, [filters, page, retry]);
   return <ResidentLayout title="Mi actividad" subtitle="Pagos, reservas, visitas y sanciones vinculados a tu cuenta.">
     <form className="mb-5 flex flex-wrap items-end gap-3" onSubmit={event => {
       event.preventDefault();
@@ -35,7 +36,7 @@ export function ResidentActivityView() {
     </form>
     <p className="mb-4 text-sm text-slate-600">Orden de fecha más reciente a más antigua. Las reservas y visitas muestran su fecha programada; los pagos sin fecha aparecen al final.</p>
     {busy && <p role="status">Cargando actividad…</p>}
-    {error && <p role="alert" className="text-rose-700">{error}</p>}
+    {error && <div><p role="alert" className="text-rose-700">{error}</p><Button type="button" variant="outline" className="mt-3" disabled={busy} onClick={() => setRetry(value => value + 1)}>Reintentar consulta</Button></div>}
     {data && <>
       {data.items.length === 0 ? <p role="status">No hay actividad para estos filtros.</p> :
         <ol aria-label="Historial de actividad" className="space-y-3">{data.items.map(item => <li key={item.id} className="rounded-xl border bg-white p-4">

@@ -77,3 +77,13 @@ it('HU29 permite cancelar una descarga y comunica el resultado sin mostrar un er
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Exportar' })).toBeEnabled();
 });
+it('HU29 recupera un catálogo fallido sin recargar la página', async () => {
+  vi.mocked(getReportCatalog).mockRejectedValueOnce(new Error('Temporal'));
+  render(<AdminReportsView />);
+  await screen.findByRole('alert');
+  expect(screen.getByRole('button', { name: 'Exportar' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Reintentar catálogo' }));
+  await screen.findByRole('option', { name: 'Accesos' });
+  expect(screen.getByRole('button', { name: 'Exportar' })).toBeEnabled();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});

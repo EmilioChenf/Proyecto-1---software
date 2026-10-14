@@ -12,6 +12,7 @@ export function AdminFinancialDashboardView() {
   const [data, setData] = useState<FinancialDashboard | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setBusy(true); setError(''); setData(null);
@@ -21,7 +22,7 @@ export function AdminFinancialDashboardView() {
       if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'No fue posible consultar las finanzas.');
     }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
-  }, [range]);
+  }, [range, retry]);
   return <AdminLayout title="Dashboard financiero" subtitle="Cobros del período y saldos actuales del residencial.">
     <form className="mb-6 flex flex-wrap items-end gap-3" onSubmit={event => {
       event.preventDefault();
@@ -33,7 +34,7 @@ export function AdminFinancialDashboardView() {
       <Button type="submit" disabled={busy}>Consultar</Button>
     </form>
     {busy && <p role="status">Consultando finanzas…</p>}
-    {error && <p role="alert" className="text-rose-700">{error}</p>}
+    {error && <div><p role="alert" className="text-rose-700">{error}</p><Button type="button" variant="outline" className="mt-3" disabled={busy} onClick={() => setRetry(value => value + 1)}>Reintentar consulta</Button></div>}
     {data && <div className="space-y-6">
       <section aria-label="Movimientos del período">
         <h2 className="mb-3 text-lg font-semibold">Movimientos: {data.periodo.desde} a {data.periodo.hasta}</h2>
