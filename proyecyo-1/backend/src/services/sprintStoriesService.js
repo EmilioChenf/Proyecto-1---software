@@ -250,11 +250,16 @@ async function listGuardDailyAccessHistory(filters = {}) {
         a.estado_acceso,
         TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_programada,
         TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, '%H:%i') AS hora_ingreso,
-        TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i') AS hora_salida
+        TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i') AS hora_salida,
+        gi.nombre AS guardia_ingreso,
+        gs.nombre AS guardia_salida
       FROM ACCESO a
       INNER JOIN VISITANTE v ON v.id_visitante = a.id_visitante
       INNER JOIN CASA c ON c.id_casa = a.id_casa
       LEFT JOIN REGISTRO_ACCESO ra ON ra.id_acceso = a.id_acceso
+      -- HU-C08: guardia ejecutor de cada entrada/salida (NULL en historicos).
+      LEFT JOIN USUARIO gi ON gi.id_usuario = ra.id_guardia_ingreso
+      LEFT JOIN USUARIO gs ON gs.id_usuario = ra.id_guardia_salida
       WHERE ${sqlFilters.join(" AND ")}
       ORDER BY COALESCE(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, a.hora_inicio) DESC, a.id_acceso DESC
     `,
@@ -271,6 +276,8 @@ async function listGuardDailyAccessHistory(filters = {}) {
     hora_programada: row.hora_programada,
     hora_ingreso: row.hora_ingreso || null,
     hora_salida: row.hora_salida || null,
+    guardia_ingreso: row.guardia_ingreso || null,
+    guardia_salida: row.guardia_salida || null,
   }));
 }
 

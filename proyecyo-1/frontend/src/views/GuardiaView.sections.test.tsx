@@ -112,6 +112,18 @@ describe("HU32 Guardia: estados y errores", () => {
     await waitFor(() => expect(getGuardAccessHistoryRequest).toHaveBeenLastCalledWith(expect.objectContaining({ status: "CANCELADA" })));
   });
 
+  it("HU-C08: el historial muestra qué guardia registró cada entrada y salida", async () => {
+    vi.mocked(getGuardAccessHistoryRequest).mockResolvedValue([
+      { id_acceso: 11, visitante: "Sara Salida", placa: "Sin placa", casa: "B-302", tipo_visita: "VISITA", estado: "SALIDA", hora_programada: "09:00", hora_ingreso: "09:05", hora_salida: "10:40", guardia_ingreso: "Guardia Norte", guardia_salida: "Guardia Sur" },
+      { id_acceso: 12, visitante: "Hugo Historico", placa: "Sin placa", casa: "B-302", tipo_visita: "VISITA", estado: "INGRESO", hora_programada: "08:00", hora_ingreso: "08:02", hora_salida: null, guardia_ingreso: null, guardia_salida: null },
+    ]);
+    renderSection("historial");
+    expect(await screen.findByText("por Guardia Norte")).toBeInTheDocument();
+    expect(screen.getByText("por Guardia Sur")).toBeInTheDocument();
+    // Registros historicos sin ejecutor no inventan autor.
+    expect(screen.getAllByText(/^por /)).toHaveLength(2);
+  });
+
   it("la fecha por defecto del historial es el día de Guatemala", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-05T05:30:00Z")); // 23:30 del 4 en Guatemala

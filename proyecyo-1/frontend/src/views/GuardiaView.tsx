@@ -991,8 +991,14 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
                         <p className="text-xs text-slate-500">{record.placa}</p>
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-500">{record.casa}</td>
-                      <td className="px-4 py-3 text-sm text-slate-500">{record.hora_ingreso || record.hora_programada}</td>
-                      <td className="px-4 py-3 text-sm text-slate-500">{record.hora_salida || "--:--"}</td>
+                      <td className="px-4 py-3 text-sm text-slate-500">
+                        {record.hora_ingreso || record.hora_programada}
+                        {record.guardia_ingreso ? <p className="text-xs text-slate-400">por {record.guardia_ingreso}</p> : null}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-500">
+                        {record.hora_salida || "--:--"}
+                        {record.guardia_salida ? <p className="text-xs text-slate-400">por {record.guardia_salida}</p> : null}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-medium ${

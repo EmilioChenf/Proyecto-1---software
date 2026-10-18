@@ -700,9 +700,11 @@ export function AdminAccessesView() {
                           <Clock3 className="size-4 text-slate-400" />
                           <span>{access.hora}</span>
                         </div>
+                        {access.guardia_ingreso ? <p className="text-xs text-slate-400">por {access.guardia_ingreso}</p> : null}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-500">
                         {access.hora_salida ? access.hora_salida : <span className="text-slate-300">--:--</span>}
+                        {access.guardia_salida ? <p className="text-xs text-slate-400">por {access.guardia_salida}</p> : null}
                       </td>
                       <td className="px-5 py-3">
                         <span

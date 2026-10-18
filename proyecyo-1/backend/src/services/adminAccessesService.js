@@ -121,6 +121,8 @@ function mapAdminAccess(row) {
     autorizado_por: buildAuthorizerLabel(row),
     es_acceso_especial: Boolean(row.es_acceso_especial),
     fuera_horario: Boolean(row.fuera_horario),
+    guardia_ingreso: row.guardia_ingreso || null,
+    guardia_salida: row.guardia_salida || null,
   };
 }
 
@@ -444,7 +446,9 @@ async function listAdminAccesses(filters = {}, reportRange = null) {
         v.placa,
         c.numero,
         c.torre,
-        autorizante.nombre AS autorizado_por
+        autorizante.nombre AS autorizado_por,
+        gi.nombre AS guardia_ingreso,
+        gs.nombre AS guardia_salida
       FROM ACCESO a
       INNER JOIN VISITANTE v
         ON v.id_visitante = a.id_visitante
@@ -454,6 +458,11 @@ async function listAdminAccesses(filters = {}, reportRange = null) {
         ON autorizante.id_usuario = a.id_usuario_autoriza
       LEFT JOIN REGISTRO_ACCESO ra
         ON ra.id_acceso = a.id_acceso
+      -- HU-C08: guardia ejecutor de la entrada/salida (NULL en registros historicos).
+      LEFT JOIN USUARIO gi
+        ON gi.id_usuario = ra.id_guardia_ingreso
+      LEFT JOIN USUARIO gs
+        ON gs.id_usuario = ra.id_guardia_salida
       WHERE ${sqlFilters.join(" AND ")}
       ORDER BY
         a.fecha DESC,

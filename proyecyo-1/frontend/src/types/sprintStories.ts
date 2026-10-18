@@ -44,4 +44,7 @@ export interface GuardAccessHistoryRecord {
   hora_programada: string;
   hora_ingreso: string | null;
   hora_salida: string | null;
+  /** HU-C08: guardia que registro la entrada/salida (null en historicos). */
+  guardia_ingreso?: string | null;
+  guardia_salida?: string | null;
 }

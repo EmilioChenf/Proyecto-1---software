@@ -43,6 +43,9 @@ export interface AdminAccessRecord {
   autorizado_por: string;
   es_acceso_especial?: boolean;
   fuera_horario?: boolean;
+  /** HU-C08: guardia que registro la entrada/salida (null en historicos). */
+  guardia_ingreso?: string | null;
+  guardia_salida?: string | null;
 }
 
 export interface AdminAccessFilters {
