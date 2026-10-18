@@ -1,6 +1,7 @@
 const { pool, query } = require("../database/mysql");
 const { logger } = require("../utils/safeLogger");
 const { assertVisitTimesAllowed } = require("./configurationService");
+const { recordAudit } = require("./auditService");
 const { ensureValidVehiclePlate } = require("../utils/vehiclePlate");
 const { ensureValidDate, ensureValidTime } = require("../utils/dateTimeValidation");
 const crypto = require("crypto");
@@ -1158,7 +1159,17 @@ async function createArrivalNotification(connection, accessId) {
   );
 }
 
-async function registerQrEntry(qrToken, guardUserId = null) {
+// La auditoria se escribe en la misma transaccion que el cambio de estado:
+// si no se puede registrar al guardia ejecutor, el ingreso/salida no ocurre.
+function transactionAudit(connection, entry) {
+  return recordAudit(entry, (sql, params) => connection.execute(sql, params));
+}
+
+// HU-C08: cualquier guardia del residencial puede registrar el ingreso. La
+// concurrencia la resuelve el UPDATE condicional (estado AUTORIZADA): con dos
+// guardias validando el mismo QR, InnoDB serializa la fila y solo uno obtiene
+// affectedRows = 1; el otro recibe QR_ALREADY_USED y su intento queda auditado.
+async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
   const visit = await validateQrVisit(qrToken, guardUserId);
   const normalizedToken = visit.token_qr;
 
@@ -1184,13 +1195,24 @@ async function registerQrEntry(qrToken, guardUserId = null) {
 
     await connection.execute(
       `
-        INSERT INTO REGISTRO_ACCESO (id_acceso, hora_ingreso)
-        VALUES (?, CURTIME())
-        ON DUPLICATE KEY UPDATE hora_ingreso = VALUES(hora_ingreso)
+        INSERT INTO REGISTRO_ACCESO (id_acceso, hora_ingreso, id_guardia_ingreso)
+        VALUES (?, CURTIME(), ?)
+        ON DUPLICATE KEY UPDATE
+          hora_ingreso = VALUES(hora_ingreso),
+          id_guardia_ingreso = VALUES(id_guardia_ingreso)
       `,
-      [visit.id_acceso],
+      [visit.id_acceso, guardUserId],
     );
     await createArrivalNotification(connection, visit.id_acceso);
+    await transactionAudit(connection, {
+      userId: guardUserId,
+      action: "VISIT_ENTRY_REGISTERED",
+      entity: "ACCESO",
+      entityId: visit.id_acceso,
+      previousData: { estado_acceso: "AUTORIZADA" },
+      newData: { estado_acceso: "INGRESO_REGISTRADO", id_guardia_ingreso: guardUserId, casa: visit.casa },
+      metadata,
+    });
     await connection.commit();
 
     return findVisitByQrToken(normalizedToken);
@@ -1241,7 +1263,9 @@ function ensureQrExitCanBeRegistered(visit) {
   return true;
 }
 
-async function registerQrExit(qrToken) {
+// Igual que el ingreso: la salida la puede registrar cualquier guardia y solo
+// una de dos operaciones simultaneas cambia INGRESO_REGISTRADO -> SALIDA_REGISTRADA.
+async function registerQrExit(qrToken, guardUserId = null, metadata = {}) {
   const normalizedToken = normalizeQrToken(qrToken);
   const visit = await findVisitByQrToken(normalizedToken);
 
@@ -1251,23 +1275,25 @@ async function registerQrExit(qrToken) {
 
   try {
     await connection.beginTransaction();
-    await connection.execute(
+    const [stateResult] = await connection.execute(
       `
         UPDATE ACCESO
         SET estado_acceso = 'SALIDA_REGISTRADA'
-        WHERE id_acceso = ?
+        WHERE id_acceso = ? AND estado_acceso = 'INGRESO_REGISTRADO'
       `,
       [visit.id_acceso],
     );
-    const [result] = await connection.execute(
-      `
-        UPDATE REGISTRO_ACCESO
-        SET hora_salida = CURTIME()
-        WHERE id_acceso = ?
-          AND hora_salida IS NULL
-      `,
-      [visit.id_acceso],
-    );
+    const [result] = stateResult.affectedRows === 0
+      ? [stateResult]
+      : await connection.execute(
+          `
+            UPDATE REGISTRO_ACCESO
+            SET hora_salida = CURTIME(), id_guardia_salida = ?
+            WHERE id_acceso = ?
+              AND hora_salida IS NULL
+          `,
+          [guardUserId, visit.id_acceso],
+        );
 
     if (result.affectedRows === 0) {
       const error = new Error("La salida de esta visita ya fue registrada.");
@@ -1275,6 +1301,15 @@ async function registerQrExit(qrToken) {
       throw error;
     }
 
+    await transactionAudit(connection, {
+      userId: guardUserId,
+      action: "VISIT_EXIT_REGISTERED",
+      entity: "ACCESO",
+      entityId: visit.id_acceso,
+      previousData: { estado_acceso: "INGRESO_REGISTRADO" },
+      newData: { estado_acceso: "SALIDA_REGISTRADA", id_guardia_salida: guardUserId, casa: visit.casa },
+      metadata,
+    });
     await connection.commit();
 
     return findVisitByQrToken(normalizedToken);

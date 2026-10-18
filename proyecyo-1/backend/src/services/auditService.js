@@ -22,6 +22,8 @@ const ALLOWED_ACTIONS = [
   "HOUSE_UPDATED",
   "HOUSE_ACTIVATED",
   "HOUSE_DEACTIVATED",
+  "VISIT_ENTRY_REGISTERED",
+  "VISIT_EXIT_REGISTERED",
 ];
 
 function sanitizeAuditData(value, depth = 0) {

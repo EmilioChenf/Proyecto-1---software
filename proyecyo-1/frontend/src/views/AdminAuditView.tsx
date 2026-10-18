@@ -22,6 +22,8 @@ const actions = [
   ["HOUSE_UPDATED", "Vivienda actualizada"],
   ["HOUSE_ACTIVATED", "Vivienda activada"],
   ["HOUSE_DEACTIVATED", "Vivienda desactivada"],
+  ["VISIT_ENTRY_REGISTERED", "Ingreso de visita registrado"],
+  ["VISIT_EXIT_REGISTERED", "Salida de visita registrada"],
 ];
 
 function formatData(value: Record<string, unknown> | null) {

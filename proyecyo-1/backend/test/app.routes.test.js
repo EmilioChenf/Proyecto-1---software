@@ -219,7 +219,10 @@ describe("Rutas reales de NexusResidencial", () => {
 
     assert.equal(response.status, 200);
     assert.deepEqual(response.body, visit);
-    assert.deepEqual(calls.registerQrEntry.mock.calls[0].arguments, ["qr-nexus-73", 3]);
+    // HU-C08: el guardia ejecutor sale de la sesion validada, nunca del cuerpo.
+    const [token, guardId, metadata] = calls.registerQrEntry.mock.calls[0].arguments;
+    assert.deepEqual([token, guardId], ["qr-nexus-73", 3]);
+    assert.equal(typeof metadata, "object");
   });
 
   it("informa un conflicto de horario para una reserva", async () => {

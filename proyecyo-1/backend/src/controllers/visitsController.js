@@ -10,6 +10,7 @@ const {
   registerQrEntry,
   registerQrExit,
 } = require("../services/visitsService");
+const { getRequestMetadata } = require("../services/auditService");
 
 async function getVisits(req, res, next) {
   try {
@@ -85,7 +86,7 @@ async function getGuardVisits(_req, res, next) {
 
 async function postValidateQr(req, res, next) {
   try {
-    const visit = await registerQrEntry((req.body || {}).qrToken, req.authUser.id);
+    const visit = await registerQrEntry((req.body || {}).qrToken, req.authUser.id, getRequestMetadata(req));
     res.status(200).json(visit);
   } catch (error) {
     next(error);
@@ -94,7 +95,7 @@ async function postValidateQr(req, res, next) {
 
 async function postRegisterQrEntry(req, res, next) {
   try {
-    const visit = await registerQrEntry((req.body || {}).qrToken, req.authUser.id);
+    const visit = await registerQrEntry((req.body || {}).qrToken, req.authUser.id, getRequestMetadata(req));
     res.status(200).json(visit);
   } catch (error) {
     next(error);
@@ -103,7 +104,7 @@ async function postRegisterQrEntry(req, res, next) {
 
 async function postRegisterQrExit(req, res, next) {
   try {
-    const visit = await registerQrExit((req.body || {}).qrToken);
+    const visit = await registerQrExit((req.body || {}).qrToken, req.authUser.id, getRequestMetadata(req));
     res.status(200).json(visit);
   } catch (error) {
     next(error);
