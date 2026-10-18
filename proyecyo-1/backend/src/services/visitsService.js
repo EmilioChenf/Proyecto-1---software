@@ -847,9 +847,7 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
   }
 }
 
-async function getGuardShiftVisits() {
-  const rows = await query(
-    `
+const GUARD_VISIT_SELECT = `
       SELECT
         a.id_acceso,
         v.id_visitante,
@@ -879,17 +877,50 @@ async function getGuardShiftVisits() {
       INNER JOIN VISITANTE v
         ON v.id_visitante = a.id_visitante
       INNER JOIN CASA c
-        ON c.id_casa = a.id_casa
+        ON c.id_casa = a.id_casa`;
+
+function compareGuardVisits(left, right) {
+  return (
+    String(right.fecha).localeCompare(String(left.fecha)) ||
+    String(right.hora_inicio || "").localeCompare(String(left.hora_inicio || "")) ||
+    Number(right.id_acceso) - Number(left.id_acceso)
+  );
+}
+
+// HU-C08: la visibilidad del guardia es la del residencial (esta base de datos),
+// nunca la de la cuenta que creo la visita ni la del guardia en turno. Toda
+// visita abierta de cualquier residente o inquilino se lista completa; antes
+// solo se mostraban las 20 mas recientes y las abiertas podian quedar fuera.
+async function getGuardShiftVisits() {
+  const today = guatemalaToday();
+  const [openRows, recentRows] = await Promise.all([
+    query(
+      `${GUARD_VISIT_SELECT}
+      -- Abiertas del turno: pendientes de hoy y visitantes que siguen adentro.
+      WHERE a.fecha <= ?
+        AND (
+          a.estado_acceso = 'INGRESO_REGISTRADO'
+          OR (a.fecha = ? AND a.estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION'))
+        )
+    `,
+      [today, today],
+    ),
+    query(
+      `${GUARD_VISIT_SELECT}
       -- "Visitas recientes": hoy y dias anteriores en Guatemala; las fechas
       -- futuras no se presentan como si ya hubieran ocurrido.
       WHERE a.fecha <= ?
       ORDER BY a.fecha DESC, a.hora_inicio DESC, a.id_acceso DESC
       LIMIT 20
     `,
-    [guatemalaToday()],
-  );
+      [today],
+    ),
+  ]);
 
-  return rows.map(mapVisit);
+  const byAccess = new Map();
+  for (const row of [...openRows, ...recentRows]) byAccess.set(row.id_acceso, row);
+
+  return [...byAccess.values()].sort(compareGuardVisits).map(mapVisit);
 }
 
 async function recordQrValidationAttempt({

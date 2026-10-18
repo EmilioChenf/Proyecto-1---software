@@ -57,11 +57,17 @@ describe("HU32 visitas recientes de garita", () => {
   it("no incluye fechas futuras y usa el dia de Guatemala", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-10-05T05:30:00Z")); // 23:30 del 4 en Guatemala
     try {
-      query.mockResolvedValueOnce([]);
+      query.mockResolvedValue([]);
       await getGuardShiftVisits();
-      expect(query.mock.calls[0][0]).toContain("WHERE a.fecha <= ?");
-      expect(query.mock.calls[0][0]).toContain("LIMIT 20");
-      expect(query.mock.calls[0][1]).toEqual(["2026-10-04"]);
+      // HU-C08: abiertas del turno (sin limite) + ventana de 20 recientes; ninguna futura.
+      expect(query).toHaveBeenCalledTimes(2);
+      for (const [sql, params] of query.mock.calls) {
+        expect(sql).toContain("WHERE a.fecha <= ?");
+        expect(params[0]).toBe("2026-10-04");
+      }
+      expect(query.mock.calls[1][0]).toContain("LIMIT 20");
+      expect(query.mock.calls[0][0]).not.toContain("LIMIT 20");
+      expect(query.mock.calls[0][0]).not.toContain("id_usuario");
     } finally {
       jest.useRealTimers();
     }
