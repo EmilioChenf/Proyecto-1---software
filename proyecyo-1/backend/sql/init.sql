@@ -281,7 +281,11 @@ CREATE TABLE REGISTRO_ACCESO (
     id_acceso INT UNIQUE NOT NULL,
     hora_ingreso TIME,
     hora_salida TIME,
-    FOREIGN KEY (id_acceso) REFERENCES ACCESO(id_acceso)
+    id_guardia_ingreso INT NULL,
+    id_guardia_salida INT NULL,
+    FOREIGN KEY (id_acceso) REFERENCES ACCESO(id_acceso),
+    CONSTRAINT fk_registro_acceso_id_guardia_ingreso FOREIGN KEY (id_guardia_ingreso) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_registro_acceso_id_guardia_salida FOREIGN KEY (id_guardia_salida) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL
 );
 
 CREATE TABLE INTENTO_VALIDACION_QR (

@@ -234,6 +234,29 @@ async function ensureQrValidationAttemptsSchema() {
   `);
 }
 
+// HU-C08: cualquier guardia del residencial registra entradas/salidas, por eso
+// se conserva el guardia ejecutor de cada una. Aditivo: los registros historicos
+// quedan en NULL (ejecutor no registrado) y no se infiere ni se borra nada.
+async function ensureAccessGuardAuditSchema() {
+  for (const column of ["id_guardia_ingreso", "id_guardia_salida"]) {
+    if (!(await columnExists("REGISTRO_ACCESO", column))) {
+      await query(`ALTER TABLE REGISTRO_ACCESO ADD COLUMN ${escapeIdentifier(column)} INT NULL`);
+    }
+    const constraint = `fk_registro_acceso_${column}`;
+    const [existing] = await query(
+      `SELECT 1 AS existe FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'REGISTRO_ACCESO' AND CONSTRAINT_NAME = ?`,
+      [env.DB_NAME, constraint],
+    );
+    if (!existing) {
+      await query(
+        `ALTER TABLE REGISTRO_ACCESO ADD CONSTRAINT ${escapeIdentifier(constraint)}
+          FOREIGN KEY (${escapeIdentifier(column)}) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL`,
+      );
+    }
+  }
+}
+
 async function ensureAmenityReservationsSchema() {
   const amenityColumns = [
     {
@@ -1092,6 +1115,7 @@ module.exports = {
   ensureHousesSchema,
   ensureVisitQrSchema,
   ensureQrValidationAttemptsSchema,
+  ensureAccessGuardAuditSchema,
   ensureAmenityReservationsSchema,
   ensureNotificationsSchema,
   ensureActiveSessionsSchema,

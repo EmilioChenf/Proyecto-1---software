@@ -5,6 +5,7 @@ const { logger } = require("./src/utils/safeLogger");
 const {
   ensureVisitQrSchema,
   ensureQrValidationAttemptsSchema,
+  ensureAccessGuardAuditSchema,
   ensureAmenityReservationsSchema,
   ensureNotificationsSchema,
   ensureActiveSessionsSchema,
@@ -62,6 +63,7 @@ async function startServer() {
   await waitForDatabase();
   await ensureVisitQrSchema();
   await ensureQrValidationAttemptsSchema();
+  await ensureAccessGuardAuditSchema();
   await ensureAmenityReservationsSchema();
   await ensureNotificationsSchema();
   await ensureActiveSessionsSchema();
