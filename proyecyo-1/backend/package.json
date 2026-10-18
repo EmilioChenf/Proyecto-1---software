@@ -30,6 +30,7 @@
     "test:functional": "node --test test/*.functional.test.js",
     "test:hu18:mysql": "node scripts/run-isolated-tests.js hu18",
     "test:hu32:mysql": "node scripts/run-isolated-tests.js hu32",
+    "test:huc08:mysql": "node scripts/run-isolated-tests.js huc08",
     "test:viviendas:mysql": "node scripts/run-isolated-tests.js viviendas",
     "test:correlation:mysql": "node scripts/run-isolated-tests.js correlation",
     "test:hu19:mysql": "node scripts/run-isolated-tests.js hu19",
