@@ -1,0 +1,555 @@
+{
+  "label": "antes",
+  "baseUrl": "http://127.0.0.1:5191",
+  "browser": "msedge.exe",
+  "checkedAt": "2026-10-22T19:14:21.679Z",
+  "cases": 32,
+  "duplicatedCases": 16,
+  "notRenderedCases": 0,
+  "results": [
+    {
+      "role": "admin",
+      "viewport": "movil-375",
+      "cssWidth": 375,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-admin-movil-375.png",
+        "antes-admin-movil-375-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "tablet-768",
+      "cssWidth": 768,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-admin-tablet-768.png",
+        "antes-admin-tablet-768-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "laptop-1024",
+      "cssWidth": 1024,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-admin-laptop-1024.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "desktop-1440",
+      "cssWidth": 1440,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-admin-desktop-1440.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "desktop-1920",
+      "cssWidth": 1920,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-admin-desktop-1920.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "desktop-1440-zoom125",
+      "cssWidth": 1152,
+      "zoom": 1.25,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-admin-desktop-1440-zoom125.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "desktop-1440-zoom150",
+      "cssWidth": 960,
+      "zoom": 1.5,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-admin-desktop-1440-zoom150.png",
+        "antes-admin-desktop-1440-zoom150-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "admin",
+      "viewport": "desktop-1920-zoom200",
+      "cssWidth": 960,
+      "zoom": 2,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-admin-desktop-1920-zoom200.png",
+        "antes-admin-desktop-1920-zoom200-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "movil-375",
+      "cssWidth": 375,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-residente-movil-375.png",
+        "antes-residente-movil-375-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "tablet-768",
+      "cssWidth": 768,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-residente-tablet-768.png",
+        "antes-residente-tablet-768-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "laptop-1024",
+      "cssWidth": 1024,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-residente-laptop-1024.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "desktop-1440",
+      "cssWidth": 1440,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-residente-desktop-1440.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "desktop-1920",
+      "cssWidth": 1920,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-residente-desktop-1920.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "desktop-1440-zoom125",
+      "cssWidth": 1152,
+      "zoom": 1.25,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-residente-desktop-1440-zoom125.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "desktop-1440-zoom150",
+      "cssWidth": 960,
+      "zoom": 1.5,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-residente-desktop-1440-zoom150.png",
+        "antes-residente-desktop-1440-zoom150-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "residente",
+      "viewport": "desktop-1920-zoom200",
+      "cssWidth": 960,
+      "zoom": 2,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-residente-desktop-1920-zoom200.png",
+        "antes-residente-desktop-1920-zoom200-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "movil-375",
+      "cssWidth": 375,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-inquilino-movil-375.png",
+        "antes-inquilino-movil-375-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "tablet-768",
+      "cssWidth": 768,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-inquilino-tablet-768.png",
+        "antes-inquilino-tablet-768-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "laptop-1024",
+      "cssWidth": 1024,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-inquilino-laptop-1024.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "desktop-1440",
+      "cssWidth": 1440,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-inquilino-desktop-1440.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "desktop-1920",
+      "cssWidth": 1920,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-inquilino-desktop-1920.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "desktop-1440-zoom125",
+      "cssWidth": 1152,
+      "zoom": 1.25,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-inquilino-desktop-1440-zoom125.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "desktop-1440-zoom150",
+      "cssWidth": 960,
+      "zoom": 1.5,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-inquilino-desktop-1440-zoom150.png",
+        "antes-inquilino-desktop-1440-zoom150-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "inquilino",
+      "viewport": "desktop-1920-zoom200",
+      "cssWidth": 960,
+      "zoom": 2,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-inquilino-desktop-1920-zoom200.png",
+        "antes-inquilino-desktop-1920-zoom200-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "movil-375",
+      "cssWidth": 375,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-guardia-movil-375.png",
+        "antes-guardia-movil-375-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "tablet-768",
+      "cssWidth": 768,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-guardia-tablet-768.png",
+        "antes-guardia-tablet-768-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "laptop-1024",
+      "cssWidth": 1024,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-guardia-laptop-1024.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "desktop-1440",
+      "cssWidth": 1440,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-guardia-desktop-1440.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "desktop-1920",
+      "cssWidth": 1920,
+      "zoom": 1,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-guardia-desktop-1920.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "desktop-1440-zoom125",
+      "cssWidth": 1152,
+      "zoom": 1.25,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Contraer menú lateral"
+      ],
+      "visibleControlsMenuOpen": null,
+      "duplicated": false,
+      "screenshots": [
+        "antes-guardia-desktop-1440-zoom125.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "desktop-1440-zoom150",
+      "cssWidth": 960,
+      "zoom": 1.5,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-guardia-desktop-1440-zoom150.png",
+        "antes-guardia-desktop-1440-zoom150-menu-abierto.png"
+      ]
+    },
+    {
+      "role": "guardia",
+      "viewport": "desktop-1920-zoom200",
+      "cssWidth": 960,
+      "zoom": 2,
+      "rendered": true,
+      "visibleControlsClosed": [
+        "Abrir menú"
+      ],
+      "visibleControlsMenuOpen": [
+        "Cerrar menú",
+        "Contraer menú lateral"
+      ],
+      "duplicated": true,
+      "screenshots": [
+        "antes-guardia-desktop-1920-zoom200.png",
+        "antes-guardia-desktop-1920-zoom200-menu-abierto.png"
+      ]
+    }
+  ]
+}
