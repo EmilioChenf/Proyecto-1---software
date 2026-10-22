@@ -1,3 +1,7 @@
+/* HU-C02: mismo orden de capas que Tailwind. Este archivo entra al bundle ANTES que
+   styles/index.css (lo importan los layouts), asi que la declaracion fija el orden
+   aunque se cargue primero. */
+@layer theme, base, components, utilities;
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 /* Diseño "NexusResidencial · Dashboard" (port del panel de administración; todo bajo .nd). */
@@ -24,9 +28,6 @@
 .nd-ghost.danger:hover{border-color:#FCA5A5;color:#B91C1C}
 .nd-ghost.danger:hover svg{transform:translateX(3px)}
 .nd-ghost svg{transition:transform .25s;flex:none}
-.nd-collapse{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;color:#64748B;transition:background .2s,transform .3s}
-.nd-collapse:hover{background:#F1F5F9;color:#0F172A}
-.nd-collapse.is-col{transform:rotate(180deg)}
 
 /* botones */
 .nd-primary{all:unset;box-sizing:border-box;cursor:pointer;position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;min-height:46px;padding:0 18px;border-radius:12px;background:var(--nd-accent);color:#FFFFFF;font:700 14px/1 "Plus Jakarta Sans","Segoe UI",system-ui,sans-serif;text-decoration:none;transition:transform .2s,box-shadow .3s,background .3s}
@@ -112,7 +113,6 @@ a.nd-kpi{text-decoration:none;color:inherit;display:block}
 --color-blue-950:color-mix(in srgb,var(--nd-accent) 42%,#000000)}
 
 /* insignias del sidebar */
-.nd-badge{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:22px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--nd-accent) 12%,#FFFFFF);color:color-mix(in srgb,var(--nd-accent) 80%,#000);animation:nd-pop-in .45s cubic-bezier(.3,1.6,.5,1)}
 @keyframes nd-pop-in{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 .nd-nav .nd-ico{position:relative}
 .nd-dot{position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:#EF4444;box-shadow:0 0 0 2px #FFFFFF}
@@ -181,4 +181,17 @@ a.nd-kpi{text-decoration:none;color:inherit;display:block}
 @media (prefers-reduced-motion:reduce){
 .nd *,.nd *::after{animation:none !important;transition:none !important}
 .nd-rise,.nd-row.body{opacity:1}
+}
+
+/* HU-C02: clases de componente que se combinan con utilidades responsive de Tailwind
+   (hidden lg:flex, lg:hidden). Van en @layer components para que esas utilidades
+   decidan la visibilidad: el CSS sin capa gana a CUALQUIER capa, y .nd-collapse
+   (display:flex) mostraba el boton de contraer tambien por debajo de lg, junto al
+   boton de menu movil (control duplicado con zoom o pantallas < 1024 px). Las reglas
+   .nd-content siguen sin capa a proposito: deben imponerse a las utilidades. */
+@layer components{
+.nd-collapse{all:unset;cursor:pointer;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;color:#64748B;transition:background .2s,transform .3s}
+.nd-collapse:hover{background:#F1F5F9;color:#0F172A}
+.nd-collapse.is-col{transform:rotate(180deg)}
+.nd-badge{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:22px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--nd-accent) 12%,#FFFFFF);color:color-mix(in srgb,var(--nd-accent) 80%,#000);animation:nd-pop-in .45s cubic-bezier(.3,1.6,.5,1)}
 }
