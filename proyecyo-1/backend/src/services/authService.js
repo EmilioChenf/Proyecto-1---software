@@ -1,4 +1,4 @@
-const { query } = require("../database/mysql");
+const { pool, query } = require("../database/mysql");
 const { env } = require("../config/env");
 const { createActiveSession } = require("./activeSessionsService");
 
@@ -14,6 +14,45 @@ async function comparePassword(plainPassword, storedPassword) {
 
   const bcrypt = require("bcryptjs");
   return bcrypt.compare(plainPassword, storedPassword);
+}
+
+// HU-C01 (C-1): la contrasena se verifica fuera de cualquier bloqueo (bcrypt es lento),
+// pero la sesion solo se crea si, bajo un bloqueo compartido de la fila del usuario, el
+// valor almacenado sigue siendo exactamente el verificado y la cuenta sigue activa.
+// FOR SHARE es una lectura con bloqueo: espera a cualquier cambio/restablecimiento en
+// curso (que tiene la fila con FOR UPDATE o UPDATE) y lee su valor confirmado, en
+// cualquier nivel de aislamiento. Un INSERT ... SELECT no basta: en READ COMMITTED su
+// SELECT es una lectura consistente sin bloqueo y crearia la sesion con la contrasena
+// anterior. La comparacion es exacta en JS (la de SQL depende de la collation).
+async function createSessionForVerifiedPassword(user, sessionMetadata) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      "SELECT password, activo FROM USUARIO WHERE id_usuario = ? FOR SHARE",
+      [user.id],
+    );
+    const current = rows[0];
+    if (!current || current.password !== user.password) {
+      const error = new Error("Credenciales incorrectas.");
+      error.status = 401;
+      error.code = "INVALID_CREDENTIALS";
+      throw error;
+    }
+    if (Number(current.activo) === 0) {
+      const error = new Error("El usuario esta inactivo.");
+      error.status = 403;
+      throw error;
+    }
+    const session = await createActiveSession(user.id, sessionMetadata, (sql, params) => connection.execute(sql, params));
+    await connection.commit();
+    return session;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 }
 
 async function loginUser({ email, password }, sessionMetadata = {}) {
@@ -69,7 +108,7 @@ async function loginUser({ email, password }, sessionMetadata = {}) {
 
   if(['residente','inquilino'].includes(user.role))await require('./contractHouseRelations').syncUserRelations(user.id);
 
-  const session = await createActiveSession(user.id, sessionMetadata);
+  const session = await createSessionForVerifiedPassword(user, sessionMetadata);
 
   return {
     id: user.id,
