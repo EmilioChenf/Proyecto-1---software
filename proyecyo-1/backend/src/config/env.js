@@ -18,8 +18,16 @@ function getSessionSecret() {
   return "nexus-local-development-secret-change-me";
 }
 
+// Saltos de proxy confiables para req.ip (rate limiting por cliente real detras de
+// un proxy). Solo enteros: "true" confiaria en cualquier X-Forwarded-For falsificado.
+function getTrustProxy(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : false;
+}
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
+  TRUST_PROXY: getTrustProxy(process.env.TRUST_PROXY),
   PORT: getNumber(process.env.PORT, 3000),
   FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
   DB_HOST: process.env.DB_HOST || "localhost",

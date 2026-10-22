@@ -1,12 +1,12 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 
 const { env } = require("./config/env");
 const { mountRecurrenteWebhook } = require("./middlewares/recurrenteRawBody");
 const { createWebhookHandler } = require("./controllers/recurrenteWebhookController");
 const { logger, sanitizeText } = require("./utils/safeLogger");
+const { createSecurityRateLimiters } = require("./middlewares/securityRateLimits");
 const authRoutes = require("./routes/authRoutes");
 const activeSessionsRoutes = require("./routes/activeSessionsRoutes");
 const auditRoutes = require("./routes/auditRoutes");
@@ -42,24 +42,10 @@ const { recurrenteCheckoutRoutes } = require("./routes/recurrenteCheckoutRoutes"
 const { adminRecurrenteReconciliationRoutes } = require("./routes/adminRecurrenteReconciliationRoutes");
 const { adminRecurrenteRefundRoutes } = require("./routes/adminRecurrenteRefundRoutes");
 
-const loginRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Demasiados intentos de inicio de sesion. Intenta de nuevo mas tarde." },
-});
-
-const passwordResetRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: "Demasiadas solicitudes de recuperacion. Intenta de nuevo mas tarde." },
-});
-
 function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurrenteReconciliationService, recurrenteRefundService } = {}) {
   const app = express();
+  // Sin TRUST_PROXY (por defecto) req.ip es la conexion directa, como hasta ahora.
+  app.set("trust proxy", env.TRUST_PROXY);
 
   app.use(helmet());
 
@@ -77,8 +63,12 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
     res.status(200).json({ status: "ok" });
   });
 
-  app.use("/login", loginRateLimiter);
-  app.use("/auth/password/forgot", passwordResetRateLimiter);
+  // HU-C01: rate limiting del servidor para los POST sensibles de autenticacion.
+  const securityLimits = createSecurityRateLimiters();
+  app.post("/login", securityLimits.login);
+  app.post("/auth/password/forgot", securityLimits.passwordForgot);
+  app.post("/auth/password/reset", securityLimits.passwordReset);
+  app.post("/auth/password/change", securityLimits.passwordChange);
   app.use(authRoutes);
   app.use(activeSessionsRoutes);
   app.use(auditRoutes);
