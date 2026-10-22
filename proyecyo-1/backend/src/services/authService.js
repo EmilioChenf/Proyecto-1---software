@@ -125,6 +125,7 @@ async function getCurrentSession(userId, token) {
 }
 
 module.exports = {
+  comparePassword,
   loginUser,
   getCurrentSession,
 };

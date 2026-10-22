@@ -21,11 +21,12 @@ function describeDevice(userAgent) {
   return { userAgent: value, deviceName: `${browser} en ${platform}` };
 }
 
-async function createActiveSession(userId, metadata = {}) {
+// execute permite crear la sesion dentro de una transaccion existente (HU-C01).
+async function createActiveSession(userId, metadata = {}, execute = query) {
   const sessionId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000);
   const { userAgent, deviceName } = describeDevice(metadata.userAgent);
-  await query(
+  await execute(
     `
       INSERT INTO SESION_ACTIVA (
         id_sesion, id_usuario, dispositivo, user_agent, direccion_ip, creada_en, ultima_actividad_en, expira_en

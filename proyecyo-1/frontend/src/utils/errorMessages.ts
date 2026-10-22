@@ -14,6 +14,7 @@ const STATUS_MESSAGES: Record<number, string> = {
   404: "No se encontró la información solicitada.",
   409: "Ya existe un registro con esta información.",
   422: "Algunos datos ingresados no son válidos.",
+  429: "Demasiados intentos. Espera unos minutos e intenta nuevamente.",
   500: "Ocurrió un problema en el servidor. Intenta nuevamente.",
 };
 

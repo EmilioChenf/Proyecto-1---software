@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Clock3, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { ChangePasswordCard } from "@/components/auth/ChangePasswordCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { rolesWithSidebar } from "@/components/layout/roleNavigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,6 +24,8 @@ export function ActiveSessionsView() {
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // Tras cambiar la contrasena las sesiones previas quedan revocadas: se recarga la lista.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -37,7 +40,7 @@ export function ActiveSessionsView() {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, []);
+  }, [reloadKey]);
 
   async function closeSession(session: ActiveSession) {
     try {
@@ -87,6 +90,7 @@ export function ActiveSessionsView() {
           ))}
         </CardContent>
       </Card>
+      <ChangePasswordCard onChanged={() => setReloadKey((current) => current + 1)} />
     </AppShell>
   );
 }

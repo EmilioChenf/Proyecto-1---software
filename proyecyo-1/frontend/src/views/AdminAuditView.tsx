@@ -16,6 +16,7 @@ const actions = [
   ["USER_DELETED", "Usuario eliminado"],
   ["SESSION_REVOKED", "Sesion cerrada"],
   ["PASSWORD_RESET", "Contrasena recuperada"],
+  ["PASSWORD_CHANGED", "Contrasena cambiada por el usuario"],
   ["VISIT_SCHEDULE_UPDATED", "Horario de visitas actualizado"],
   ["GENERAL_CONFIGURATION_UPDATED", "Configuracion general actualizada"],
   ["HOUSE_CREATED", "Vivienda creada"],

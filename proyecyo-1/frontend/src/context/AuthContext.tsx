@@ -1,8 +1,8 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApiError } from "@/services/api";
-import { getSessionRequest, loginRequest, logoutRequest } from "@/services/authService";
-import type { AuthUser, LoginPayload, LoginResponse } from "@/types/auth";
+import { changePasswordRequest, getSessionRequest, loginRequest, logoutRequest } from "@/services/authService";
+import type { AuthUser, ChangePasswordPayload, ChangePasswordResponse, LoginPayload, LoginResponse } from "@/types/auth";
 
 const STORAGE_KEY = "nexus.session";
 
@@ -13,6 +13,7 @@ type AuthContextValue = {
   login: (payload: LoginPayload) => Promise<LoginResponse>;
   logout: () => void;
   refreshSession: () => Promise<void>;
+  changePassword: (payload: ChangePasswordPayload) => Promise<ChangePasswordResponse>;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -120,6 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persistSession],
   );
 
+  // El token anterior queda revocado en el servidor: se guarda el que entrega la respuesta.
+  const changePassword = useCallback(
+    async (payload: ChangePasswordPayload) => {
+      const response = await changePasswordRequest(payload);
+      persistSession({ id: response.id, email: response.email, role: response.role, token: response.token });
+      return response;
+    },
+    [persistSession],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -128,8 +139,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       refreshSession,
+      changePassword,
     }),
-    [isLoading, user, login, logout, refreshSession],
+    [isLoading, user, login, logout, refreshSession, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
