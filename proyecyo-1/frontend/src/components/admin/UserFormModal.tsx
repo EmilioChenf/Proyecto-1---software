@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { HousePicker } from "@/components/houses/HousePicker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { FieldError, invalidControlClassName } from "@/components/ui/field-error";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/services/api";
 import type { HouseRecord, HouseSelectionRole } from "@/types/houses";
@@ -20,6 +21,17 @@ type UserFormModalProps = {
 };
 
 type FormErrors = Partial<Record<keyof UserFormValues, string>>;
+
+// HU-C02: orden visual de los campos y su control enfocable, para llevar al usuario al
+// primer error aunque el modal sea largo (con el mapa de viviendas).
+const FIELD_ORDER: Array<{ field: keyof UserFormValues; controlId: string }> = [
+  { field: "nombre", controlId: "user-name" },
+  { field: "correo", controlId: "user-email" },
+  { field: "password", controlId: "user-password" },
+  { field: "id_tipo_usuario", controlId: "user-role" },
+  { field: "id_casa", controlId: "user-house" },
+];
+const SERVER_FIELDS = new Set<string>(FIELD_ORDER.map((item) => item.field));
 
 const emptyValues: UserFormValues = {
   nombre: "",
@@ -48,6 +60,13 @@ export function UserFormModal({
   const [serverError, setServerError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const titleId = useId();
+  const serverErrorRef = useRef<HTMLDivElement>(null);
+
+  const focusFirstInvalid = useCallback((fieldErrors: FormErrors) => {
+    const first = FIELD_ORDER.find(({ field }) => fieldErrors[field]);
+    if (!first) return;
+    window.requestAnimationFrame(() => document.getElementById(first.controlId)?.focus());
+  }, []);
 
   useEffect(() => {
     setErrors({});
@@ -103,6 +122,7 @@ export function UserFormModal({
     if (!values.id_tipo_usuario) nextErrors.id_tipo_usuario = "Seleccione un rol.";
     if (houseRole && !values.id_casa && !(sameRole && !editingUser?.id_casa)) nextErrors.id_casa = "Selecciona y confirma una vivienda en el mapa.";
     setErrors(nextErrors);
+    focusFirstInvalid(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
@@ -125,11 +145,27 @@ export function UserFormModal({
         id_casa: houseRole ? values.id_casa : null,
       });
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : "No fue posible guardar el usuario.");
+      const message = error instanceof Error ? error.message : "No fue posible guardar el usuario.";
       const code = error instanceof ApiError ? (error.payload as { code?: string } | undefined)?.code : undefined;
+      // HU-C02: el error se muestra junto al campo que lo causa cuando se puede saber cual es.
+      const fieldErrors: FormErrors = {};
+      if (error instanceof ApiError) {
+        for (const item of error.fieldErrors) {
+          if (SERVER_FIELDS.has(item.field)) fieldErrors[item.field as keyof UserFormValues] = item.message;
+        }
+        if (code && HOUSE_CONFLICTS.has(code)) fieldErrors.id_casa = message;
+        else if (error.status === 409 && !code && !Object.keys(fieldErrors).length) fieldErrors.correo = message; // correo ya registrado
+      }
       if (code && HOUSE_CONFLICTS.has(code)) {
         chooseHouse(null);
         setRefreshKey((key) => key + 1);
+      }
+      if (Object.keys(fieldErrors).length) {
+        setErrors(fieldErrors);
+        focusFirstInvalid(fieldErrors);
+      } else {
+        setServerError(message);
+        window.requestAnimationFrame(() => serverErrorRef.current?.scrollIntoView?.({ block: "nearest" }));
       }
     }
   };
@@ -146,31 +182,36 @@ export function UserFormModal({
         </div>
         <form className="space-y-5 p-5" onSubmit={handleSubmit} noValidate>
           {serverError ? (
-            <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{serverError}</AlertDescription>
-            </Alert>
+            <div ref={serverErrorRef}>
+              <Alert variant="destructive" role="alert">
+                <AlertTitle>No se pudo guardar el usuario</AlertTitle>
+                <AlertDescription>{serverError}</AlertDescription>
+              </Alert>
+            </div>
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label htmlFor="user-name" className="mb-2 block text-sm text-slate-700">Nombre</label>
-              <Input id="user-name" value={values.nombre} onChange={(event) => handleChange("nombre", event.target.value)} />
-              {errors.nombre ? <p className="mt-2 text-sm text-red-600">{errors.nombre}</p> : null}
+              <Input id="user-name" value={values.nombre} onChange={(event) => handleChange("nombre", event.target.value)}
+                aria-invalid={Boolean(errors.nombre)} aria-describedby={errors.nombre ? "user-name-error" : undefined} />
+              <FieldError id="user-name-error" message={errors.nombre} />
             </div>
 
             <div>
               <label htmlFor="user-email" className="mb-2 block text-sm text-slate-700">Correo</label>
-              <Input id="user-email" type="email" value={values.correo} onChange={(event) => handleChange("correo", event.target.value)} />
-              {errors.correo ? <p className="mt-2 text-sm text-red-600">{errors.correo}</p> : null}
+              <Input id="user-email" type="email" value={values.correo} onChange={(event) => handleChange("correo", event.target.value)}
+                aria-invalid={Boolean(errors.correo)} aria-describedby={errors.correo ? "user-email-error" : undefined} />
+              <FieldError id="user-email-error" message={errors.correo} />
             </div>
 
             <div>
               <label htmlFor="user-password" className="mb-2 block text-sm text-slate-700">
                 {editingUser ? "Nueva contrasena (opcional)" : "Contrasena"}
               </label>
-              <Input type="password" id="user-password" value={values.password} onChange={(event) => handleChange("password", event.target.value)} />
-              {errors.password ? <p className="mt-2 text-sm text-red-600">{errors.password}</p> : null}
+              <Input type="password" id="user-password" value={values.password} onChange={(event) => handleChange("password", event.target.value)}
+                aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "user-password-error" : undefined} />
+              <FieldError id="user-password-error" message={errors.password} />
             </div>
 
             <div>
@@ -188,18 +229,21 @@ export function UserFormModal({
                   setValues((current) => ({ ...current, id_tipo_usuario: nextRoleId, id_casa: null }));
                   setHouse(null);
                 }}
-                className="flex h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-invalid={Boolean(errors.id_tipo_usuario)}
+                aria-describedby={errors.id_tipo_usuario ? "user-role-error" : undefined}
+                className={`flex h-11 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500 ${invalidControlClassName}`}
               >
                 <option value="">Seleccione un rol</option>
                 {userTypes.map((option) => (
                   <option key={option.id} value={option.id}>{option.nombre}</option>
                 ))}
               </select>
-              {errors.id_tipo_usuario ? <p className="mt-2 text-sm text-red-600">{errors.id_tipo_usuario}</p> : null}
+              <FieldError id="user-role-error" message={errors.id_tipo_usuario} />
             </div>
 
             {houseRole ? (
-              <div className="min-w-0 md:col-span-2">
+              <div id="user-house" tabIndex={-1} aria-describedby={errors.id_casa ? "user-house-error" : undefined}
+                className={`min-w-0 rounded-xl outline-none md:col-span-2 ${errors.id_casa ? "ring-2 ring-red-500/40 ring-offset-4" : ""}`}>
                 {onConfigureContract&&<div className="mb-3 space-y-2 rounded-xl border p-3"><p>Configura la vivienda, el contrato, el responsable financiero y los habitantes desde el asistente.</p><Button type="button" variant="outline" onClick={onConfigureContract}>Abrir asistente de vivienda y contrato</Button></div>}
                 {(!onConfigureContract||editingUser)&&<HousePicker
                   key={houseRole}
@@ -210,7 +254,7 @@ export function UserFormModal({
                   refreshKey={refreshKey}
                   initialHouseId={sameRole ? editingUser?.id_casa ?? null : null}
                 />}
-                {errors.id_casa ? <p className="mt-2 text-sm text-red-600" role="alert">{errors.id_casa}</p> : null}
+                <FieldError id="user-house-error" message={errors.id_casa} />
               </div>
             ) : null}
           </div>

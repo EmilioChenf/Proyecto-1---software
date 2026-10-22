@@ -169,6 +169,10 @@ a.nd-kpi{text-decoration:none;color:inherit;display:block}
 .nd-content :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]){transition:border-color .2s,box-shadow .2s,background .2s}
 .nd-content :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus{border-color:var(--nd-accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--nd-accent) 14%,transparent);outline:none}
 
+/* HU-C02: un campo invalido conserva su marca roja tambien con el foco (la regla de foco
+   anterior impondria el color de acento y ocultaria el estado invalido). */
+.nd-content :is(input,select,textarea)[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.nd-content :is(input,select,textarea)[aria-invalid="true"]:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus{border-color:#DC2626;box-shadow:0 0 0 4px rgba(220,38,38,.14)}
 /* Insignias / pills con aparición. */
 .nd-content [class*="rounded-full"][class*="px-2"][class*="text-"]{animation:nd-pop-in .4s cubic-bezier(.3,1.6,.5,1) both}
 
