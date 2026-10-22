@@ -40,6 +40,7 @@ async function assertActiveSession(userId, sessionId) {
   if (!sessionId) {
     const error = new Error("Sesion invalida.");
     error.status = 401;
+    error.code = "SESSION_REQUIRED";
     throw error;
   }
   const rows = await query(
@@ -57,6 +58,7 @@ async function assertActiveSession(userId, sessionId) {
   if (!rows[0]) {
     const error = new Error("La sesion fue cerrada o expiro.");
     error.status = 401;
+    error.code = "SESSION_REVOKED";
     throw error;
   }
   await query("UPDATE SESION_ACTIVA SET ultima_actividad_en = NOW() WHERE id_sesion = ?", [sessionId]);

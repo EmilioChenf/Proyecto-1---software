@@ -6,6 +6,7 @@ const { verifySessionTokenDetails } = require("../services/sessionTokenService")
 function unauthorized(message = "Sesion invalida.", status = 401) {
   const error = new Error(message);
   error.status = status;
+  if (status === 401) error.code = "SESSION_REQUIRED";
   return error;
 }
 

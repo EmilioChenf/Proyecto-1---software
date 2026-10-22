@@ -137,6 +137,10 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
     res.status(status).json({
       message,
       ...(status < 500 && error.code ? { code: sanitizeText(error.code) } : {}),
+      // Errores por campo (formato que el frontend ya interpreta en getFieldErrors).
+      ...(status < 500 && Array.isArray(error.errores)
+        ? { errores: error.errores.map(({ field, message: fieldMessage }) => ({ field: sanitizeText(field), message: sanitizeText(fieldMessage) })) }
+        : {}),
     });
   });
 

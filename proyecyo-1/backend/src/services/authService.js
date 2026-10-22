@@ -48,6 +48,7 @@ async function loginUser({ email, password }, sessionMetadata = {}) {
   if (!user) {
     const error = new Error("Credenciales incorrectas.");
     error.status = 401;
+    error.code = "INVALID_CREDENTIALS";
     throw error;
   }
 
@@ -56,6 +57,7 @@ async function loginUser({ email, password }, sessionMetadata = {}) {
   if (!passwordMatches) {
     const error = new Error("Credenciales incorrectas.");
     error.status = 401;
+    error.code = "INVALID_CREDENTIALS";
     throw error;
   }
 
