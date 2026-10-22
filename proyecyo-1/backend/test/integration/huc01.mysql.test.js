@@ -225,5 +225,190 @@ else {
       assert.equal(blocked.status, 429);
       assert.equal(blocked.body.code, "RATE_LIMITED");
     });
+
+    // ---------------------------------------------------------------------------
+    // C-1 / M-1: carreras entre login, cambio propio y recuperacion.
+    // Para que sean deterministas, la prueba envuelve bcrypt.compare (el mismo modulo
+    // que usa authService) y detiene UNA comparacion concreta despues de calcular su
+    // resultado: el login ya verifico la contrasena anterior pero aun no creo la sesion.
+    // ---------------------------------------------------------------------------
+    function pauseAfterCompare(matches) {
+      const original = bcrypt.compare;
+      let reached;
+      let release;
+      const reachedPromise = new Promise((resolve) => { reached = resolve; });
+      const released = new Promise((resolve) => { release = resolve; });
+      let used = false;
+      bcrypt.compare = async function pausedCompare(plain, hash, ...rest) {
+        const result = await original.call(this, plain, hash, ...rest);
+        if (!used && matches(plain)) {
+          used = true;
+          reached(result);
+          await released;
+        }
+        return result;
+      };
+      return { reached: reachedPromise, release: () => release(), restore: () => { bcrypt.compare = original; } };
+    }
+
+    const sessionsOf = async (key) => query(
+      "SELECT id_sesion FROM SESION_ACTIVA WHERE id_usuario=? AND revocada_en IS NULL AND expira_en > NOW()", [users[key].id]);
+    const sidOf = (token) => require("../../src/services/sessionTokenService").verifySessionTokenDetails(token).sid;
+
+    test("C-1 A: un login verificado con la contrasena anterior no crea sesion si el cambio se confirma antes", async () => {
+      const app = createApp();
+      await createUser("carreraLogin", "guardia");
+      const previous = await tokenFor(app, "carreraLogin");
+      const gate = pauseAfterCompare((plain) => plain === OLD);
+      try {
+        const lateLogin = login(app, "carreraLogin", OLD, "Login tardio");
+        assert.equal(await gate.reached, true, "el login ya verifico la contrasena anterior");
+
+        const changed = await change(app, previous, valid());
+        assert.equal(changed.status, 200, JSON.stringify(changed.body));
+        gate.release();
+
+        const late = await lateLogin;
+        assert.equal(late.status, 401, "la contrasena verificada ya no es la vigente");
+        assert.equal(late.body.code, "INVALID_CREDENTIALS");
+        assert.equal(late.body.token, undefined);
+
+        const active = (await sessionsOf("carreraLogin")).map((row) => row.id_sesion);
+        assert.deepEqual(active, [sidOf(changed.body.token)], "solo queda la sesion emitida por el cambio");
+        assert.equal((await sessionStatus(app, previous)).status, 401);
+        assert.equal((await login(app, "carreraLogin", OLD)).status, 401);
+        assert.equal((await login(app, "carreraLogin", NEW)).status, 200);
+      } finally {
+        gate.release(); // nunca dejar una peticion detenida si una asercion falla
+        gate.restore();
+      }
+    });
+
+    test("C-1 A': el login espera al cambio en curso (fila bloqueada) y ve el hash confirmado", async () => {
+      const app = createApp();
+      await createUser("carreraBloqueo", "guardia");
+      const gate = pauseAfterCompare((plain) => plain === OLD);
+      const locker = await connect(process.env.PHASE0_TEST_DATABASE);
+      try {
+        const lateLogin = login(app, "carreraBloqueo", OLD);
+        await gate.reached;
+        // Igual que changeOwnPassword/resetPassword: fila bloqueada y hash nuevo sin confirmar.
+        await locker.beginTransaction();
+        await locker.query("SELECT password FROM USUARIO WHERE id_usuario=? FOR UPDATE", [users.carreraBloqueo.id]);
+        await locker.query("UPDATE USUARIO SET password=? WHERE id_usuario=?", [await bcrypt.hash(NEW, 4), users.carreraBloqueo.id]);
+        gate.release();
+        const outcome = await Promise.race([lateLogin.then(() => "terminado"), new Promise((r) => setTimeout(() => r("esperando"), 500))]);
+        assert.equal(outcome, "esperando", "el login no crea la sesion mientras el cambio no se confirma");
+        await locker.query("UPDATE SESION_ACTIVA SET revocada_en=NOW() WHERE id_usuario=? AND revocada_en IS NULL", [users.carreraBloqueo.id]);
+        await locker.commit();
+
+        const late = await lateLogin;
+        assert.equal(late.status, 401);
+        assert.equal((await sessionsOf("carreraBloqueo")).length, 0, "ninguna sesion con la contrasena anterior");
+      } finally {
+        gate.release(); // nunca dejar una peticion detenida si una asercion falla
+        gate.restore();
+        await locker.end();
+      }
+    });
+
+    test("C-1 B: un login verificado con la contrasena anterior no crea sesion si el restablecimiento se confirma antes", async () => {
+      const app = createApp();
+      await createUser("carreraReset", "residente");
+      const { hashResetToken } = require("../../src/services/passwordResetService");
+      const resetToken = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+      await query("INSERT INTO PASSWORD_RESET_TOKEN(id_usuario, token_hash, solicitado_en, expira_en) VALUES(?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 30 MINUTE))",
+        [users.carreraReset.id, hashResetToken(resetToken)]);
+      const gate = pauseAfterCompare((plain) => plain === OLD);
+      try {
+        const lateLogin = login(app, "carreraReset", OLD);
+        assert.equal(await gate.reached, true);
+
+        const reset = await supertest(app).post("/auth/password/reset").send({ token: resetToken, password: NEW });
+        assert.equal(reset.status, 200, JSON.stringify(reset.body));
+        gate.release();
+
+        const late = await lateLogin;
+        assert.equal(late.status, 401);
+        assert.equal(late.body.code, "INVALID_CREDENTIALS");
+        assert.equal((await sessionsOf("carreraReset")).length, 0);
+        assert.equal((await login(app, "carreraReset", OLD)).status, 401);
+        assert.equal((await login(app, "carreraReset", NEW)).status, 200, "la recuperacion normal sigue funcionando");
+      } finally {
+        gate.release(); // nunca dejar una peticion detenida si una asercion falla
+        gate.restore();
+      }
+    });
+
+    test("M-1: un cambio autenticado cuya sesion se revoca antes de completarse no se aplica", async () => {
+      const app = createApp();
+      await createUser("enVuelo", "inquilino");
+      const auth = await tokenFor(app, "enVuelo");
+      const before = await storedPassword("enVuelo");
+      const gate = pauseAfterCompare((plain) => plain === OLD);
+      try {
+        const pending = change(app, auth, valid()).then((response) => response); // supertest envia al llamar then
+        await gate.reached; // ya paso el middleware de sesion y verifico la contrasena actual
+        assert.equal((await supertest(app).post("/auth/logout").set("Authorization", auth)).status, 200);
+        gate.release();
+
+        const response = await pending;
+        assert.equal(response.status, 401);
+        assert.equal(response.body.code, "SESSION_REVOKED");
+        assert.equal(await storedPassword("enVuelo"), before, "la contrasena no cambio");
+        assert.equal((await sessionsOf("enVuelo")).length, 0, "no se emitio sesion nueva");
+      } finally {
+        gate.release(); // nunca dejar una peticion detenida si una asercion falla
+        gate.restore();
+      }
+    });
+
+    test("M-1: si otra via cambia la contrasena durante la verificacion, el cambio responde 409 y no se aplica", async () => {
+      const app = createApp();
+      await createUser("cambioExterno", "admin");
+      const auth = await tokenFor(app, "cambioExterno");
+      const external = await bcrypt.hash("Externa789", 4);
+      const gate = pauseAfterCompare((plain) => plain === OLD);
+      try {
+        const pending = change(app, auth, valid()).then((response) => response); // supertest envia al llamar then
+        await gate.reached;
+        await query("UPDATE USUARIO SET password=? WHERE id_usuario=?", [external, users.cambioExterno.id]);
+        gate.release();
+
+        const response = await pending;
+        assert.equal(response.status, 409);
+        assert.equal(response.body.code, "PASSWORD_CHANGED_CONCURRENTLY");
+        assert.equal(await storedPassword("cambioExterno"), external);
+        assert.equal((await sessionStatus(app, auth)).status, 200, "nada se revoco");
+      } finally {
+        gate.release(); // nunca dejar una peticion detenida si una asercion falla
+        gate.restore();
+      }
+    });
+
+    test("C-1 estres: logins con la contrasena anterior escalonados durante cambios reales nunca dejan sesion", async () => {
+      await createUser("estres", "guardia");
+      const oldHash = await bcrypt.hash(OLD, 10);
+      const offenders = [];
+      for (let round = 0; round < 16; round++) {
+        // App nueva por ronda: el rate limiting (5 cambios / 20 logins) es intencional y no se mide aqui.
+        const app = createApp();
+        await query("UPDATE USUARIO SET password=? WHERE id_usuario=?", [oldHash, users.estres.id]);
+        await query("UPDATE SESION_ACTIVA SET revocada_en=NOW() WHERE id_usuario=? AND revocada_en IS NULL", [users.estres.id]);
+        const auth = await tokenFor(app, "estres");
+        const next = `Ronda${round}x77`;
+        const changing = change(app, auth, valid(OLD, next)).then((response) => response);
+        await new Promise((resolve) => setTimeout(resolve, round * 60));
+        const racing = login(app, "estres", OLD, `Ronda ${round}`);
+        const [changed, raced] = await Promise.all([changing, racing]);
+        assert.equal(changed.status, 200, JSON.stringify(changed.body));
+        const active = (await sessionsOf("estres")).map((row) => row.id_sesion);
+        const leaked = raced.status === 200 && active.includes(sidOf(raced.body.token));
+        if (leaked) offenders.push(round);
+        // Un login anterior al bloqueo queda revocado por el cambio; uno posterior falla.
+        assert.deepEqual(active, [sidOf(changed.body.token)], `ronda ${round}: solo la sesion del cambio`);
+      }
+      assert.deepEqual(offenders, [], "ningun login con la contrasena anterior conserva una sesion activa tras el cambio");
+    });
   });
 }
