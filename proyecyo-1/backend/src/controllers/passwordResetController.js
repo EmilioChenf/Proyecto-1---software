@@ -30,7 +30,7 @@ async function changePassword(req, res, next) {
       error.code = "SESSION_REQUIRED";
       throw error;
     }
-    const result = await changeOwnPassword(req.authUser.id, req.body || {}, getRequestMetadata(req));
+    const result = await changeOwnPassword(req.authUser.id, req.authSessionId, req.body || {}, getRequestMetadata(req));
     res.set("Cache-Control", "no-store").status(200).json(result);
   } catch (error) {
     // Solo una contrasena actual incorrecta cuenta como intento para el rate limit.
