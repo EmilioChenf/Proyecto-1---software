@@ -33,6 +33,7 @@ import {
   validateVisitTimesAgainstSchedule,
 } from "@/utils/visitSchedule";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
+import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
 type VisitFormState = VisitPayload;
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
@@ -334,33 +335,39 @@ export function ResidenteVisitsView() {
   }
 
   async function handleDelete(visit: VisitRecord) {
-    const confirmed = window.confirm(`Deseas eliminar la visita autorizada de ${visit.nombre}?`);
+    const confirmed = await confirmAction({
+      title: "¿Eliminar la visita?",
+      text: `Se eliminará la visita autorizada de ${visit.nombre}.`,
+      confirmText: "Eliminar visita",
+      tone: "danger",
+    });
 
     if (!confirmed) {
       return;
     }
 
     try {
-      setErrorMessage("");
       await deleteVisitRequest(visit.id_acceso);
       setVisits((current) => current.filter((item) => item.id_acceso !== visit.id_acceso));
-      setSuccessMessage("Visita eliminada correctamente.");
+      void notifySuccess("Visita eliminada correctamente.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible eliminar la visita.");
+      void notifyError(error, "No fue posible eliminar la visita.");
     }
   }
 
   async function handleDeleteFrequentVisitor(visitor: FrequentVisitor) {
-    const confirmed = window.confirm(
-      `Deseas eliminar a ${visitor.nombre} de tus visitantes frecuentes? Se eliminaran todas sus visitas asociadas.`,
-    );
+    const confirmed = await confirmAction({
+      title: `¿Eliminar a ${visitor.nombre} de tus visitantes frecuentes?`,
+      text: "También se eliminarán todas sus visitas asociadas.",
+      confirmText: "Eliminar visitante",
+      tone: "danger",
+    });
 
     if (!confirmed) {
       return;
     }
 
     try {
-      setErrorMessage("");
       await deleteFrequentVisitorRequest(visitor.id_visitante);
       setFrequentVisitors((current) =>
         current.filter((item) => item.id_visitante !== visitor.id_visitante),
@@ -368,11 +375,9 @@ export function ResidenteVisitsView() {
       setVisits((current) =>
         current.filter((item) => item.id_visitante !== visitor.id_visitante),
       );
-      setSuccessMessage(`Visitante frecuente ${visitor.nombre} eliminado correctamente.`);
+      void notifySuccess(`Visitante frecuente ${visitor.nombre} eliminado correctamente.`);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "No fue posible eliminar el visitante frecuente.",
-      );
+      void notifyError(error, "No fue posible eliminar el visitante frecuente.");
     }
   }
 

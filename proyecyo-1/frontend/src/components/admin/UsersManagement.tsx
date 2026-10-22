@@ -13,6 +13,7 @@ import {
   updateUserRequest,
 } from "@/services/usersService";
 import type { UserFormValues, UserRecord, UserTypeOption } from "@/types/users";
+import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 import { UserFormModal } from "@/components/admin/UserFormModal";
 import {PropertyContractWizard} from '@/components/houses/PropertyContractWizard';
 
@@ -23,7 +24,6 @@ export function UsersManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [feedback, setFeedback] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [search, setSearch] = useState("");
@@ -79,39 +79,41 @@ export function UsersManagement() {
   };
 
   const handleDelete = async (user: UserRecord) => {
-    const confirmed = window.confirm(`¿Desea eliminar a ${user.nombre}? Esta acción no se puede deshacer.`);
+    const confirmed = await confirmAction({
+      title: `¿Eliminar a ${user.nombre}?`,
+      text: "Esta acción no se puede deshacer.",
+      confirmText: "Eliminar usuario",
+      tone: "danger",
+    });
 
     if (!confirmed) {
       return;
     }
 
-    setError("");
-    setFeedback("");
     setIsSubmitting(true);
 
     try {
       await deleteUserRequest(user.id_usuario);
-      setFeedback("Usuario eliminado correctamente.");
+      void notifySuccess("Usuario eliminado correctamente.");
       await loadData();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "No fue posible eliminar el usuario.");
+      void notifyError(requestError, "No fue posible eliminar el usuario.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Los errores al guardar los muestra el propio modal junto al campo (HU-C02); aqui solo el exito.
   const handleSubmit = async (values: UserFormValues) => {
-    setError("");
-    setFeedback("");
     setIsSubmitting(true);
 
     try {
       if (editingUser) {
         await updateUserRequest(editingUser.id_usuario, values);
-        setFeedback("Usuario actualizado correctamente.");
+        void notifySuccess("Usuario actualizado correctamente.");
       } else {
         await createUserRequest(values);
-        setFeedback("Usuario creado correctamente.");
+        void notifySuccess("Usuario creado correctamente.");
       }
 
       setIsModalOpen(false);
@@ -152,13 +154,6 @@ export function UsersManagement() {
             <Alert variant="destructive">
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {feedback ? (
-            <Alert>
-              <AlertTitle>Operacion completada</AlertTitle>
-              <AlertDescription>{feedback}</AlertDescription>
             </Alert>
           ) : null}
 
@@ -235,7 +230,7 @@ export function UsersManagement() {
         onSubmit={handleSubmit}
         onConfigureContract={()=>{setIsModalOpen(false);setContractOpen(true);}}
       />
-      {contractOpen&&<PropertyContractWizard open onClose={()=>setContractOpen(false)} onSaved={()=>{setFeedback('Configuración contractual guardada.');void loadData();}}/>}
+      {contractOpen&&<PropertyContractWizard open onClose={()=>setContractOpen(false)} onSaved={()=>{void notifySuccess('Configuración contractual guardada.');void loadData();}}/>}
     </>
   );
 }

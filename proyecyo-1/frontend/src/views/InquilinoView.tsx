@@ -53,6 +53,7 @@ import type { AuthorizationRequest, TenantPermission } from "@/types/sprintStori
 import type { FrequentVisitor, VisitPayload, VisitRecord, VisitType } from "@/types/visits";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
+import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
 type VisitFormState = VisitPayload;
 type AccessFilter = "TODOS" | "APROBADO" | "UTILIZADO" | "RECHAZADO" | "PENDIENTE";
@@ -755,19 +756,23 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
   }
 
   async function handleDelete(visit: VisitRecord) {
-    const confirmed = window.confirm(`Deseas eliminar la visita autorizada de ${visit.nombre}?`);
+    const confirmed = await confirmAction({
+      title: "¿Eliminar la visita?",
+      text: `Se eliminará la visita autorizada de ${visit.nombre}.`,
+      confirmText: "Eliminar visita",
+      tone: "danger",
+    });
 
     if (!confirmed) {
       return;
     }
 
     try {
-      setErrorMessage("");
       await deleteVisitRequest(visit.id_acceso);
       setVisits((current) => current.filter((item) => item.id_acceso !== visit.id_acceso));
-      setSuccessMessage("Visita eliminada correctamente.");
+      void notifySuccess("Visita eliminada correctamente.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible eliminar la visita.");
+      void notifyError(error, "No fue posible eliminar la visita.");
     }
   }
 

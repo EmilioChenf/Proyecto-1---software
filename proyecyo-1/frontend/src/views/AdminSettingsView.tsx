@@ -24,6 +24,7 @@ import {
 } from "@/services/restoresService";
 import type { BackupPayload, BackupValidation, RestoreHistoryRecord } from "@/types/restores";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
+import { confirmAction } from "@/utils/feedback";
 
 type ProcessStatus = "idle" | "selected" | "validating" | "valid" | "restoring" | "completed" | "error";
 
@@ -144,9 +145,12 @@ export function AdminSettingsView() {
       return;
     }
 
-    const confirmed = window.confirm(
-      "La restauracion reemplazara informacion de la base de datos. Deseas continuar?",
-    );
+    const confirmed = await confirmAction({
+      title: "¿Restaurar este respaldo?",
+      text: "La restauración reemplazará información de la base de datos.",
+      confirmText: "Restaurar",
+      tone: "danger",
+    });
 
     if (!confirmed) {
       return;

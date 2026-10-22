@@ -21,6 +21,7 @@ import {createTenantCheckoutRequest,redirectToRecurrente} from '@/services/recur
 import type { AccountQuotaStatus } from "@/types/account";
 import { quotaStatusLabels, quotaStatusStyles } from "@/utils/quotaStatus";
 import type { TenantAccountQuota, TenantAccountStatement } from "@/types/tenantAccount";
+import { confirmAction } from "@/utils/feedback";
 
 type TenantAccountFilter = "TODAS" | AccountQuotaStatus;
 
@@ -208,7 +209,12 @@ export function InquilinoAccountView() {
   const [paymentMessage, setPaymentMessage] = useState("");
 
   async function payQuota(quota: TenantAccountQuota) {
-    if (!window.confirm(`${statement.modelo_contractual?'Pago mediante Recurrente.':'Pago simulado para fines académicos.'}\n\n${quota.servicio}\nMonto base: ${formatCurrency(quota.monto_base)}\nRecargos: ${formatCurrency(quota.recargo)}\nTotal: ${formatCurrency(quota.saldo_pendiente)}\n\n¿Confirmar pago?`)) return;
+    const confirmed = await confirmAction({
+      title: `¿Pagar ${quota.servicio}?`,
+      text: `${statement.modelo_contractual ? "Pago mediante Recurrente." : "Pago simulado para fines académicos."} Monto base: ${formatCurrency(quota.monto_base)} · Recargos: ${formatCurrency(quota.recargo)} · Total: ${formatCurrency(quota.saldo_pendiente)}`,
+      confirmText: "Confirmar pago",
+    });
+    if (!confirmed) return;
     try {
       setPayingId(quota.id_cuota); setErrorMessage(""); setPaymentMessage("");
       if(statement.modelo_contractual){const checkout=await createTenantCheckoutRequest(quota.id_cuota);redirectToRecurrente(checkout.checkout_url);return;}
