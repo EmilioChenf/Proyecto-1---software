@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
+import { useMobileDrawer } from "@/components/layout/useMobileDrawer";
 import { BrandIcon } from "@/components/layout/BrandIcon";
 import {
   findActiveNavItem,
@@ -84,7 +85,7 @@ export function RoleSidebarLayout<Badge extends string>({
   const storageKey = `nr-${config.roleNoun}-sidebar-collapsed`;
   const [collapsed, setCollapsed] = useState(() => readCollapsed(storageKey));
   const drawerId = useId();
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const { menuButtonRef, drawerRef, contentRef, closeDrawer } = useMobileDrawer(drawerOpen, setDrawerOpen);
   const activeItem = findActiveNavItem(config.sections, [config.sessionsItem], pathname);
   const sessionsActive = isNavItemActive(config.sessionsItem, pathname);
   const SessionsIcon = config.sessionsItem.icon;
@@ -93,19 +94,6 @@ export function RoleSidebarLayout<Badge extends string>({
     setDrawerOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    if (!drawerOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setDrawerOpen(false);
-        menuButtonRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [drawerOpen]);
-
-  const closeDrawer = () => setDrawerOpen(false);
   const toggleCollapsed = () => {
     setCollapsed((current) => {
       const next = !current;
@@ -124,7 +112,7 @@ export function RoleSidebarLayout<Badge extends string>({
 
   return (
     <div className={cn("nd min-h-screen", config.accent && "nd-tint")} style={accentStyle}>
-      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E6EBF3] bg-white px-4 py-3 lg:hidden">
+      <div className="sticky top-0 z-50 flex h-[69px] items-center justify-between gap-3 border-b border-[#E6EBF3] bg-white px-4 py-3 lg:hidden">
         <div className="flex min-w-0 items-center gap-3">
           <BrandIcon />
           <div className="min-w-0">
@@ -155,21 +143,22 @@ export function RoleSidebarLayout<Badge extends string>({
       ) : null}
 
       <aside
+        ref={drawerRef}
         id={drawerId}
         aria-label={`Navegación del ${config.roleNoun}`}
         className={cn(
-          "nd-side fixed inset-y-0 left-0 z-40 flex w-[272px] max-w-[85vw] flex-col overflow-hidden border-r border-[#E6EBF3] bg-white lg:translate-x-0",
+          "nd-side fixed inset-y-0 top-[69px] left-0 lg:top-0 z-40 flex w-[272px] max-w-[85vw] flex-col overflow-hidden border-r border-[#E6EBF3] bg-white lg:translate-x-0",
           collapsed ? "lg:w-[84px]" : "lg:w-[272px]",
           drawerOpen ? "visible translate-x-0 shadow-xl" : "invisible -translate-x-full lg:visible",
         )}
       >
         <div
           className={cn(
-            "flex shrink-0 items-center justify-between gap-2 px-[18px] pb-[14px] pt-5",
+            "hidden shrink-0 items-center justify-between gap-2 lg:flex px-[18px] pb-[14px] pt-5",
             collapsed && "lg:flex-col lg:px-[22px]",
           )}
         >
-          <Link to={config.homePath} onClick={closeDrawer} className="flex min-w-0 items-center gap-3 rounded-xl no-underline">
+          <Link aria-label="NexusResidencial" to={config.homePath} onClick={closeDrawer} className="flex min-w-0 items-center gap-3 rounded-xl no-underline">
             <BrandIcon />
             <span className={cn("min-w-0", whenExpanded)}>
               <span className="block text-[17px] font-extrabold leading-tight tracking-[-0.02em] text-[color-mix(in_srgb,var(--nd-accent)_85%,#000)]">
@@ -191,7 +180,7 @@ export function RoleSidebarLayout<Badge extends string>({
           </button>
         </div>
 
-        <nav aria-label={`Módulos del ${config.roleNoun}`} className="min-h-0 flex-1 overflow-y-auto px-[14px] pb-3">
+        <nav aria-label={`Módulos del ${config.roleNoun}`} className="min-h-0 flex-1 overflow-y-auto px-[14px] pb-3 pt-3 lg:pt-0">
           {config.sections.map((section, sectionIndex) => (
             <div key={section.title} className="flex flex-col gap-0.5">
               <p className={cn("nd-sec", whenExpanded)}>{section.title}</p>
@@ -206,6 +195,7 @@ export function RoleSidebarLayout<Badge extends string>({
                     to={item.to}
                     onClick={closeDrawer}
                     title={item.label}
+                    aria-label={item.label}
                     aria-current={active ? "page" : undefined}
                     className={cn("nd-nav", active && "is-on", collapsed && "lg:justify-center")}
                   >
@@ -258,7 +248,7 @@ export function RoleSidebarLayout<Badge extends string>({
               <SessionsIcon className="size-4" aria-hidden="true" />
               <span className={whenExpanded}>Sesiones</span>
             </Link>
-            <button type="button" onClick={logout} className="nd-ghost danger" title="Cerrar sesión">
+            <button type="button" onClick={logout} aria-label="Cerrar sesión" className="nd-ghost danger" title="Cerrar sesión">
               <LogOut className="size-4" aria-hidden="true" />
               <span className={whenExpanded}>Cerrar sesión</span>
             </button>
@@ -266,7 +256,7 @@ export function RoleSidebarLayout<Badge extends string>({
         </div>
       </aside>
 
-      <main className={cn("transition-[padding] duration-300", collapsed ? "lg:pl-[84px]" : "lg:pl-[272px]")}>
+      <main ref={contentRef} className={cn("min-w-0", "transition-[padding] duration-300", collapsed ? "lg:pl-[84px]" : "lg:pl-[272px]")}>
         <div className="flex flex-col gap-[22px] px-4 pb-10 pt-5 sm:px-6 lg:px-9 lg:pb-12 lg:pt-7">
           <header className="nd-rise flex flex-wrap items-end justify-between gap-[18px]">
             <div className="flex min-w-0 flex-col gap-1.5">

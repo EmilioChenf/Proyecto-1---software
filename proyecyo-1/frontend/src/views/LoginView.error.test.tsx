@@ -28,6 +28,17 @@ describe("LoginView error state", () => {
     expect(login).toHaveBeenCalledOnce();
   });
 
+  it("enfoca la contraseña si el correo es válido", () => {
+    const login = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({ login } as ReturnType<typeof useAuth>);
+    render(<MemoryRouter><LoginView /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "persona@dominio.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar como administrador" }));
+    expect(screen.getByLabelText("Contraseña")).toHaveFocus();
+    expect(screen.getByLabelText("Contraseña")).toHaveAccessibleDescription("Ingrese su contraseña.");
+    expect(login).not.toHaveBeenCalled();
+  });
+
   it("marca y limpia los errores de validacion al corregir los campos", () => {
     vi.mocked(useAuth).mockReturnValue({ login: vi.fn() } as ReturnType<typeof useAuth>);
     render(<MemoryRouter><LoginView /></MemoryRouter>);
@@ -35,6 +46,7 @@ describe("LoginView error state", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ingresar como administrador" }));
     const email = screen.getByLabelText("Correo electrónico");
     expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(email).toHaveFocus();
     fireEvent.change(email, { target: { value: "usuario@nexus.test" } });
     expect(email).toHaveAttribute("aria-invalid", "false");
   });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import { getErrorMessage } from "@/utils/errorMessages";
 import { rolePaths } from "@/routes/rolePaths";
 import "./loginView.css";
 
@@ -92,6 +93,8 @@ export function LoginView() {
   const [toastIdx, setToastIdx] = useState(0);
   const [toastIn, setToastIn] = useState(true);
   const [serverError, setServerError] = useState("");
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -124,6 +127,7 @@ export function LoginView() {
     if (phase !== "idle") return;
     setServerError("");
     if (v.emailErr || v.passErr) {
+      (v.emailErr ? emailRef : passwordRef).current?.focus();
       setSubmitted(true);
       setShake((s) => s + 1);
       return;
@@ -137,7 +141,7 @@ export function LoginView() {
     } catch (error) {
       setPhase("idle");
       setShake((s) => s + 1);
-      setServerError(error instanceof Error ? error.message : "No fue posible iniciar sesión.");
+      setServerError(getErrorMessage(error, "No fue posible iniciar sesión. Intenta nuevamente."));
     }
   };
 
@@ -257,7 +261,7 @@ export function LoginView() {
             {serverError ? (
               <div role="alert" className="nr-server-err nr-err">
                 <ErrIcon />
-                <span><strong>Acceso denegado.</strong> {serverError}</span>
+                <span><strong>No fue posible iniciar sesión.</strong> {serverError}</span>
               </div>
             ) : null}
 
@@ -266,8 +270,8 @@ export function LoginView() {
               <div className={`nr-field${showEmailErr ? " is-err" : emailOk ? " is-ok" : ""}`}>
                 <svg width="44" height="20" viewBox="-12 0 44 20" fill="none" stroke="#94A3B8" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="1" y="3" width="18" height="14" rx="3" /><path d="M2 5l8 6 8-6" /></svg>
                 <input
-                  id="nr-email" className="nr-input" type="email" autoComplete="email" placeholder="correo@ejemplo.com"
-                  value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setTouchedEmail(true)}
+                  ref={emailRef} disabled={phase !== "idle"} id="nr-email" className="nr-input" type="email" autoComplete="email" placeholder="correo@ejemplo.com"
+                  value={email} onChange={(e) => { setEmail(e.target.value); setServerError(""); }} onBlur={() => setTouchedEmail(true)}
                   aria-invalid={showEmailErr} aria-describedby={showEmailErr ? "nr-email-msg" : undefined}
                 />
                 {emailOk ? (
@@ -284,8 +288,8 @@ export function LoginView() {
               <div className={`nr-field${showPassErr ? " is-err" : ""}`}>
                 <svg width="44" height="20" viewBox="-12 0 44 20" fill="none" stroke="#94A3B8" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="9" width="14" height="10" rx="2.5" /><path d="M6 9V6a4 4 0 0 1 8 0v3" /></svg>
                 <input
-                  id="nr-pass" className="nr-input" type={showPw ? "text" : "password"} autoComplete="current-password" placeholder="Ingrese su contraseña"
-                  value={pass} onChange={(e) => setPass(e.target.value)} onBlur={() => setTouchedPass(true)} onKeyUp={onCaps} onKeyDown={onCaps}
+                  ref={passwordRef} disabled={phase !== "idle"} id="nr-pass" className="nr-input" type={showPw ? "text" : "password"} autoComplete="current-password" placeholder="Ingrese su contraseña"
+                  value={pass} onChange={(e) => { setPass(e.target.value); setServerError(""); }} onBlur={() => setTouchedPass(true)} onKeyUp={onCaps} onKeyDown={onCaps}
                   aria-invalid={showPassErr} aria-describedby={showPassErr ? "nr-pass-msg" : undefined}
                 />
                 <button type="button" className="nr-eye" aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowPw((s) => !s)}>
