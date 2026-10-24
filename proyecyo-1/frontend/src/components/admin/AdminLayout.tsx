@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   BellRing,
   FileText,
@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import { useMobileDrawer } from "@/components/layout/useMobileDrawer";
 import { BrandIcon } from "@/components/layout/BrandIcon";
 import { cn } from "@/components/ui/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -102,7 +101,6 @@ const adminMenuItems: AdminMenuItem[] = [
     label: "Sanciones",
     icon: ShieldAlert,
     to: "/admin/sanciones",
-    end: true,
   },
   {
     label: "Historial sanciones",
@@ -157,7 +155,6 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/accesos-especiales": "Seguridad",
   "/admin/auditoria": "Seguridad",
   "/admin/pagos": "Finanzas",
-  "/admin/finanzas": "Finanzas",
   "/admin/pagos/reembolsos": "Finanzas",
   "/admin/pagos/conciliacion": "Finanzas",
   "/admin/comunicados": "Convivencia",
@@ -248,12 +245,24 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
   // En escritorio el sidebar se puede contraer a solo iconos (preferencia local).
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const menuId = useId();
-  const { menuButtonRef, drawerRef, contentRef, closeDrawer } = useMobileDrawer(menuOpen, setMenuOpen);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const activeItem = findActiveItem(pathname);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [menuOpen]);
 
   const toggleCollapsed = () => {
     setCollapsed((current) => {
@@ -272,7 +281,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
 
   return (
     <div className="nd min-h-screen">
-      <div className="sticky top-0 z-50 flex h-[69px] items-center justify-between gap-3 border-b border-[#E6EBF3] bg-white px-4 py-3 lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E6EBF3] bg-white px-4 py-3 lg:hidden">
         <div className="flex min-w-0 items-center gap-3">
           <BrandIcon />
           <div className="min-w-0">
@@ -297,24 +306,23 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
         <div
           className="fixed inset-0 z-30 bg-slate-950/40 lg:hidden"
           aria-hidden="true"
-          onClick={closeDrawer}
+          onClick={() => setMenuOpen(false)}
           data-testid="admin-drawer-backdrop"
         />
       ) : null}
 
       <aside
-        ref={drawerRef}
         id={menuId}
         aria-label={"Navegación del administrador"}
         className={cn(
-          "nd-side fixed inset-y-0 top-[69px] left-0 lg:top-0 z-40 flex w-[272px] max-w-[85vw] flex-col overflow-hidden border-r border-[#E6EBF3] bg-white lg:translate-x-0",
+          "nd-side fixed inset-y-0 left-0 z-40 flex w-[272px] max-w-[85vw] flex-col overflow-hidden border-r border-[#E6EBF3] bg-white lg:translate-x-0",
           collapsed ? "lg:w-[84px]" : "lg:w-[272px]",
           menuOpen ? "visible translate-x-0 shadow-xl" : "invisible -translate-x-full lg:visible",
         )}
       >
         <div
           className={cn(
-            "hidden shrink-0 items-center justify-between gap-2 lg:flex px-[18px] pb-[14px] pt-5",
+            "flex shrink-0 items-center justify-between gap-2 px-[18px] pb-[14px] pt-5",
             collapsed && "lg:flex-col lg:px-[22px]",
           )}
         >
@@ -340,15 +348,13 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
           </button>
         </div>
 
-        <nav aria-label={"Módulos del administrador"} className="min-h-0 flex-1 overflow-y-auto px-[14px] pb-3 pt-3 lg:pt-0">
+        <nav aria-label={"Módulos del administrador"} className="min-h-0 flex-1 overflow-y-auto px-[14px] pb-3">
           {menuGroups.map(({ group, items }, groupIndex) => (
             <div key={group} className="flex flex-col gap-0.5">
               <p className={cn("nd-sec", whenExpanded)}>{group}</p>
               {collapsed && groupIndex > 0 ? <div className="mx-2 my-2.5 hidden h-px bg-[#EEF2F7] lg:block" /> : null}
               {items.map((item) => (
                 <NavLink
-                  onClick={closeDrawer}
-                  aria-label={item.label}
                   key={item.to}
                   to={item.to}
                   end={item.end}
@@ -377,11 +383,11 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
             </div>
           </div>
           <div className={cn("grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-2", collapsed && "lg:grid-cols-1")}>
-            <NavLink onClick={closeDrawer} to="/cuenta/sesiones" className="nd-ghost" title="Sesiones activas" aria-label="Sesiones activas">
+            <NavLink to="/cuenta/sesiones" className="nd-ghost" title="Sesiones activas" aria-label="Sesiones activas">
               <MonitorSmartphone className="size-4" aria-hidden="true" />
               <span className={whenExpanded}>Sesiones</span>
             </NavLink>
-            <button type="button" onClick={logout} aria-label="Cerrar sesión" className="nd-ghost danger" title={"Cerrar sesión"}>
+            <button type="button" onClick={logout} className="nd-ghost danger" title={"Cerrar sesión"}>
               <LogOut className="size-4" aria-hidden="true" />
               <span className={whenExpanded}>{"Cerrar sesión"}</span>
             </button>
@@ -389,7 +395,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
         </div>
       </aside>
 
-      <main ref={contentRef} className={cn("min-w-0", "transition-[padding] duration-300", collapsed ? "lg:pl-[84px]" : "lg:pl-[272px]")}>
+      <main className={cn("transition-[padding] duration-300", collapsed ? "lg:pl-[84px]" : "lg:pl-[272px]")}>
         <div className="flex flex-col gap-[22px] px-4 pb-10 pt-5 sm:px-6 lg:px-9 lg:pb-12 lg:pt-7">
           <header className="nd-rise flex flex-wrap items-end justify-between gap-[18px]">
             <div className="flex min-w-0 flex-col gap-1.5">

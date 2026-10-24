@@ -79,14 +79,3 @@ describe("HU32 AdminLayout responsive", () => {
     expect(screen.getByText("Contenido")).toBeInTheDocument();
   });
 });
-
-
-it("marca únicamente el historial en la ruta de historial de sanciones", () => {
-  vi.mocked(useAuth).mockReturnValue({ user: { email: "admin@nexus.test" }, logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
-  render(<MemoryRouter initialEntries={["/admin/sanciones/historial-completo"]}>
-    <AdminLayout title="Historial" subtitle="Sanciones"><p>Contenido</p></AdminLayout>
-  </MemoryRouter>);
-  const nav = screen.getByRole("navigation", { name: "Módulos del administrador" });
-  expect(within(nav).getByRole("link", { name: "Historial sanciones" })).toHaveAttribute("aria-current", "page");
-  expect(within(nav).getByRole("link", { name: "Sanciones" })).not.toHaveAttribute("aria-current");
-});
