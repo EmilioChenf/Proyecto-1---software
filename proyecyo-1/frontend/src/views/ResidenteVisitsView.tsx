@@ -223,6 +223,19 @@ export function ResidenteVisitsView() {
         return false;
       }
 
+      if (!form.dpi && !form.placa) {
+        setErrorMessage("Se requiere DPI o placa del vehículo para identificar al visitante.");
+        return false;
+      }
+
+      if (form.dpi) {
+        const digitsOnly = form.dpi.replace(/\s/g, "");
+        if (!/^\d{13}$/.test(digitsOnly)) {
+          setErrorMessage("El DPI debe contener exactamente 13 dígitos numéricos.");
+          return false;
+        }
+      }
+
       const plateError = getVehiclePlateError(form.placa);
       if (plateError) {
         setErrorMessage(plateError);
@@ -555,13 +568,15 @@ export function ResidenteVisitsView() {
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-800">DPI / Documento de Identidad (Opcional)</span>
+                  <span className="text-sm font-medium text-slate-800">DPI / Documento de Identidad <span className="text-slate-400 text-xs">(requerido si no hay placa)</span></span>
                   <Input
                     value={form.dpi}
                     onChange={(event) => updateForm("dpi", event.target.value)}
                     placeholder="1234567890123"
+                    maxLength={13}
                     className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
                   />
+                  <span className="text-xs text-slate-500">13 dígitos numéricos</span>
                 </label>
 
                 <label className="block space-y-2">

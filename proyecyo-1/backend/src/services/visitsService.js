@@ -12,6 +12,21 @@ function normalizeString(value) {
   return String(value || "").trim();
 }
 
+function ensureValidDpi(value) {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    return normalized;
+  }
+  const digitsOnly = normalized.replace(/\s/g, "");
+  if (!/^\d{13}$/.test(digitsOnly)) {
+    const error = new Error("El DPI debe contener exactamente 13 dígitos numéricos.");
+    error.status = 400;
+    error.code = "INVALID_DPI";
+    throw error;
+  }
+  return digitsOnly;
+}
+
 function ensureVisitType(value) {
   const normalized = normalizeString(value).toUpperCase();
   const allowed = ["VISITA", "DELIVERY", "PROVEEDOR"];
@@ -285,7 +300,7 @@ async function listFrequentVisitors(userId, role = "residente") {
 async function createVisit(userId, role = "residente", payload) {
   const house = await getHouseByUserId(userId, role);
   const nombre = normalizeString(payload.nombre);
-  const dpi = normalizeString(payload.dpi);
+  const dpi = ensureValidDpi(payload.dpi);
   const placa = ensureValidVehiclePlate(payload.placa);
   const foto = normalizeString(payload.foto);
   const fecha = ensureValidDate(payload.fecha);
@@ -1338,5 +1353,6 @@ module.exports = {
     ensureQrExitCanBeRegistered,
     getQrStatus,
     normalizeQrToken,
+    ensureValidDpi,
   },
 };
