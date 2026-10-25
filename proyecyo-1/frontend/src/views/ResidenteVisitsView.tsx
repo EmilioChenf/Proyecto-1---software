@@ -389,9 +389,24 @@ export function ResidenteVisitsView() {
   const visitsDisabled = visitSchedule !== null && !visitSchedule.activo;
 
   async function handleQuickAuthorize(visitor: FrequentVisitor) {
-    setAuthorizingVisitorId(visitor.id_visitante);
     const now = new Date();
     const finish = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const fecha = getDateInTimezone(now);
+    const horaInicio = getTimeInTimezone(now);
+    const horaFin = getTimeInTimezone(finish);
+
+    const confirmed = await confirmAction({
+      title: "Confirmar acceso rápido",
+      text: `${visitor.nombre} — ${fecha} de ${horaInicio} a ${horaFin}. ¿Autorizar ingreso inmediato?`,
+      confirmText: "Autorizar",
+      tone: "info",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setAuthorizingVisitorId(visitor.id_visitante);
 
     await createVisit(
       {
@@ -399,9 +414,9 @@ export function ResidenteVisitsView() {
         dpi: visitor.dpi,
         placa: visitor.placa,
         foto: "",
-        fecha: getDateInTimezone(now),
-        hora_inicio: getTimeInTimezone(now),
-        hora_fin: getTimeInTimezone(finish),
+        fecha,
+        hora_inicio: horaInicio,
+        hora_fin: horaFin,
         tipo_visita: "VISITA",
         observaciones: "",
       },
