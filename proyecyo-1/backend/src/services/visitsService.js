@@ -331,17 +331,43 @@ async function createVisit(userId, role = "residente", payload) {
     await connection.beginTransaction();
 
     const [existingVisitors] = await connection.execute(
-      `SELECT id_visitante FROM VISITANTE
+      `SELECT id_visitante, nombre, dpi, placa FROM VISITANTE
        WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
        ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
       [dpi, dpi, placa, placa.replace(/-/g, "")],
     );
     let visitorId = existingVisitors[0]?.id_visitante;
+    const existingVisitor = existingVisitors[0];
+
     if (visitorId) {
-      await connection.execute(
-        "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
-        [nombre, dpi || null, placa || null, visitorId],
-      );
+      const nameChanged = existingVisitor.nombre !== nombre;
+      const dpiChanged = (existingVisitor.dpi || "") !== (dpi || "");
+      const placaChanged = (existingVisitor.placa || "") !== (placa || "");
+      const dataChanged = nameChanged || dpiChanged || placaChanged;
+
+      if (dataChanged && !payload.confirmar_actualizacion) {
+        await connection.rollback();
+        const error = new Error(
+          `Ya existe un visitante registrado con esos datos (${existingVisitor.nombre}). ` +
+          `¿Deseas actualizar sus datos al crear esta visita?`,
+        );
+        error.status = 409;
+        error.code = "VISITOR_DATA_CONFLICT";
+        error.existing = {
+          id_visitante: existingVisitor.id_visitante,
+          nombre: existingVisitor.nombre,
+          dpi: existingVisitor.dpi,
+          placa: existingVisitor.placa,
+        };
+        throw error;
+      }
+
+      if (dataChanged) {
+        await connection.execute(
+          "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
+          [nombre, dpi || null, placa || null, visitorId],
+        );
+      }
     } else {
       const [visitorResult] = await connection.execute(
         "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",

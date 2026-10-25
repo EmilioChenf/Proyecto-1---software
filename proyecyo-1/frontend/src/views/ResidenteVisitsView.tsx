@@ -35,7 +35,7 @@ import {
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
-type VisitFormState = VisitPayload;
+type VisitFormState = VisitPayload & { confirmar_actualizacion?: boolean };
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
 const steps = [
@@ -133,6 +133,8 @@ export function ResidenteVisitsView() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [authorizingVisitorId, setAuthorizingVisitorId] = useState<number | null>(null);
   const [visitSchedule, setVisitSchedule] = useState<VisitScheduleConfig | null>(null);
+  const [conflictVisitor, setConflictVisitor] = useState<{ id_visitante: number; nombre: string; dpi: string; placa: string } | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<VisitPayload | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -285,7 +287,7 @@ export function ResidenteVisitsView() {
     }
   }
 
-  async function createVisit(payload: VisitPayload, message: string) {
+  async function createVisit(payload: VisitPayload & { confirmar_actualizacion?: boolean }, message: string) {
     if (!validateVisitTimes(payload.hora_inicio, payload.hora_fin)) {
       return;
     }
@@ -299,15 +301,36 @@ export function ResidenteVisitsView() {
       });
       setVisits((current) => [createdVisit, ...current]);
       setSuccessMessage(message);
+      setConflictVisitor(null);
+      setPendingPayload(null);
       setForm(createInitialForm());
       setPhotoPreview("");
       setStep(1);
       await refreshFrequentVisitors();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
+    } catch (error: unknown) {
+      const apiError = error as { status?: number; code?: string; message?: string; existing?: { id_visitante: number; nombre: string; dpi: string; placa: string } };
+      if (apiError?.code === "VISITOR_DATA_CONFLICT" && apiError?.existing) {
+        setConflictVisitor(apiError.existing);
+        setPendingPayload(payload);
+        setErrorMessage("");
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
+      }
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleConfirmConflict(confirm: boolean) {
+    if (!pendingPayload) {
+      return;
+    }
+    if (!confirm) {
+      setConflictVisitor(null);
+      setPendingPayload(null);
+      return;
+    }
+    await createVisit({ ...pendingPayload, confirmar_actualizacion: true }, "Visita autorizada correctamente.");
   }
 
   async function handleSubmit() {
@@ -450,6 +473,39 @@ export function ResidenteVisitsView() {
             <AlertTitle>Autorizaciones pausadas</AlertTitle>
             <AlertDescription>
               Las autorizaciones de visita estan temporalmente deshabilitadas por el administrador.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {conflictVisitor ? (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+            <AlertTitle>Visitante existente detectado</AlertTitle>
+            <AlertDescription>
+              <p>
+                Ya existe un visitante registrado con ese DPI o placa:{" "}
+                <strong>{conflictVisitor.nombre}</strong>
+                {conflictVisitor.dpi ? ` (DPI: ${conflictVisitor.dpi})` : ""}
+                {conflictVisitor.placa ? ` — Placa: ${conflictVisitor.placa}` : ""}.
+              </p>
+              <p className="mt-1">¿Deseas actualizar sus datos al crear esta visita?</p>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => handleConfirmConflict(true)}
+                  disabled={isSubmitting}
+                  className="rounded-xl bg-amber-600 px-4 text-sm text-white hover:bg-amber-700"
+                >
+                  Actualizar datos y autorizar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleConfirmConflict(false)}
+                  className="rounded-xl border-amber-300 px-4 text-sm text-amber-800"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         ) : null}
