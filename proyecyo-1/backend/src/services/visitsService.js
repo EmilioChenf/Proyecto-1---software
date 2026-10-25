@@ -1362,6 +1362,59 @@ async function registerQrExit(qrToken, guardUserId = null, metadata = {}) {
   }
 }
 
+async function updateFrequentVisitor(userId, role = "residente", visitorId, payload = {}) {
+  const house = await getHouseByUserId(userId, role);
+  const normalizedVisitorId = Number(visitorId);
+
+  if (!Number.isInteger(normalizedVisitorId) || normalizedVisitorId <= 0) {
+    const error = new Error("El visitante es invalido.");
+    error.status = 400;
+    throw error;
+  }
+
+  const rows = await query(
+    `
+      SELECT v.id_visitante, v.nombre, v.dpi, v.placa
+      FROM VISITANTE v
+      INNER JOIN ACCESO a ON a.id_visitante = v.id_visitante
+      WHERE v.id_visitante = ? AND a.id_casa = ?
+        ${getOwnerFilter(role)}
+      LIMIT 1
+    `,
+    [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
+  );
+
+  const visitor = rows[0];
+
+  if (!visitor) {
+    const error = new Error("Visitante frecuente no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  const nombre = normalizeString(payload.nombre) || visitor.nombre;
+  const dpi = payload.dpi !== undefined ? ensureValidDpi(payload.dpi) : (visitor.dpi || "");
+  const placa = payload.placa !== undefined ? ensureValidVehiclePlate(payload.placa) : (visitor.placa || "");
+
+  if (!nombre) {
+    const error = new Error("El nombre del visitante es obligatorio.");
+    error.status = 400;
+    throw error;
+  }
+
+  await query(
+    "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
+    [nombre, dpi || null, placa || null, normalizedVisitorId],
+  );
+
+  return {
+    id_visitante: normalizedVisitorId,
+    nombre,
+    dpi: dpi || null,
+    placa: placa || null,
+  };
+}
+
 module.exports = {
   listResidentVisits,
   listFrequentVisitors,
@@ -1370,6 +1423,7 @@ module.exports = {
   deleteVisit,
   cancelVisit,
   deleteFrequentVisitor,
+  updateFrequentVisitor,
   getGuardShiftVisits,
   validateQrVisit,
   registerQrEntry,

@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Pencil,
   ShieldCheck,
   Trash2,
   UserRoundPlus,
@@ -24,6 +25,7 @@ import {
   deleteVisitRequest,
   getFrequentVisitorsRequest,
   getVisitsRequest,
+  updateFrequentVisitorRequest,
 } from "@/services/visitsService";
 import { getVisitScheduleConfigRequest } from "@/services/configurationService";
 import type { FrequentVisitor, VisitPayload, VisitRecord, VisitType } from "@/types/visits";
@@ -36,6 +38,13 @@ import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlat
 import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
 type VisitFormState = VisitPayload & { confirmar_actualizacion?: boolean };
+
+interface EditVisitorForm {
+  nombre: string;
+  dpi: string;
+  placa: string;
+}
+
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
 const steps = [
@@ -135,6 +144,9 @@ export function ResidenteVisitsView() {
   const [visitSchedule, setVisitSchedule] = useState<VisitScheduleConfig | null>(null);
   const [conflictVisitor, setConflictVisitor] = useState<{ id_visitante: number; nombre: string; dpi: string; placa: string } | null>(null);
   const [pendingPayload, setPendingPayload] = useState<VisitPayload | null>(null);
+  const [editingVisitor, setEditingVisitor] = useState<FrequentVisitor | null>(null);
+  const [editForm, setEditForm] = useState<EditVisitorForm>({ nombre: "", dpi: "", placa: "" });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -318,6 +330,34 @@ export function ResidenteVisitsView() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  function openEditVisitor(visitor: FrequentVisitor) {
+    setEditingVisitor(visitor);
+    setEditForm({ nombre: visitor.nombre, dpi: visitor.dpi || "", placa: visitor.placa || "" });
+  }
+
+  async function handleEditVisitorSubmit() {
+    if (!editingVisitor) {
+      return;
+    }
+    try {
+      setIsEditSubmitting(true);
+      const updated = await updateFrequentVisitorRequest(editingVisitor.id_visitante, editForm);
+      setFrequentVisitors((current) =>
+        current.map((v) =>
+          v.id_visitante === updated.id_visitante
+            ? { ...v, nombre: updated.nombre, dpi: updated.dpi || "", placa: updated.placa || "" }
+            : v,
+        ),
+      );
+      setEditingVisitor(null);
+      void notifySuccess("Datos del visitante actualizados correctamente.");
+    } catch (error) {
+      void notifyError(error, "No fue posible actualizar los datos del visitante.");
+    } finally {
+      setIsEditSubmitting(false);
     }
   }
 
@@ -510,6 +550,72 @@ export function ResidenteVisitsView() {
           </Alert>
         ) : null}
 
+        {editingVisitor ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-slate-900">Editar visitante frecuente</h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingVisitor(null)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100"
+                  aria-label="Cerrar"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium text-slate-700">Nombre *</span>
+                  <Input
+                    value={editForm.nombre}
+                    onChange={(e) => setEditForm((f) => ({ ...f, nombre: e.target.value }))}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium text-slate-700">DPI</span>
+                  <Input
+                    value={editForm.dpi}
+                    onChange={(e) => setEditForm((f) => ({ ...f, dpi: e.target.value }))}
+                    placeholder="1234567890123"
+                    maxLength={13}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium text-slate-700">Placa</span>
+                  <Input
+                    value={editForm.placa}
+                    onChange={(e) => setEditForm((f) => ({ ...f, placa: e.target.value.toUpperCase() }))}
+                    placeholder="P-123ABC"
+                    maxLength={14}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50"
+                  />
+                </label>
+              </div>
+              <div className="mt-5 flex gap-3">
+                <Button
+                  type="button"
+                  onClick={handleEditVisitorSubmit}
+                  disabled={isEditSubmitting}
+                  className="flex-1 rounded-xl bg-[linear-gradient(90deg,#a855f7_0%,#9333ea_100%)] text-white hover:opacity-95"
+                >
+                  {isEditSubmitting ? "Guardando..." : "Guardar cambios"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingVisitor(null)}
+                  className="rounded-xl border-slate-200"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <Card className="overflow-hidden border-0 shadow-[0_18px_40px_rgba(30,41,59,0.12)]">
           <div className="bg-[linear-gradient(90deg,#a855f7_0%,#9333ea_45%,#9d00ff_100%)] px-5 py-6 text-white">
             <div className="flex items-center gap-3">
@@ -569,6 +675,14 @@ export function ResidenteVisitsView() {
                         </>
                       )}
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => openEditVisitor(visitor)}
+                      className="rounded-2xl p-3 text-purple-500 transition hover:bg-purple-50"
+                      aria-label={`Editar visitante frecuente ${visitor.nombre}`}
+                    >
+                      <Pencil className="size-5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteFrequentVisitor(visitor)}
