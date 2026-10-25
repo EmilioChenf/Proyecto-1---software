@@ -377,6 +377,21 @@ async function createVisit(userId, role = "residente", payload) {
       visitorId = visitorResult.insertId;
     }
 
+    const [dupRows] = await connection.execute(
+      `SELECT id_acceso FROM ACCESO
+       WHERE id_visitante = ? AND id_casa = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
+         AND estado_acceso <> 'CANCELADA'
+       LIMIT 1`,
+      [visitorId, house.id_casa, fecha, horaInicio, horaFin],
+    );
+    if (dupRows.length > 0) {
+      await connection.rollback();
+      const error = new Error("Ya existe una visita autorizada para este visitante en la misma fecha y horario.");
+      error.status = 409;
+      error.code = "DUPLICATE_VISIT";
+      throw error;
+    }
+
     const [accessResult] = await connection.execute(
       `
         INSERT INTO ACCESO (id_visitante, id_casa, id_usuario_autoriza, fecha, hora_inicio, hora_fin, tipo_visita, motivo_servicio, observaciones, token_qr, estado_acceso)

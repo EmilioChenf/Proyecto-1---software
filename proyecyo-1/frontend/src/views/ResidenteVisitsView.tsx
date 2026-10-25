@@ -325,6 +325,8 @@ export function ResidenteVisitsView() {
         setConflictVisitor(apiError.existing);
         setPendingPayload(payload);
         setErrorMessage("");
+      } else if (apiError?.code === "DUPLICATE_VISIT") {
+        setErrorMessage("Ya existe una visita autorizada para este visitante en la misma fecha y horario. Por favor elige un horario diferente.");
       } else {
         setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
       }
