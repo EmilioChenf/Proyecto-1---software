@@ -267,7 +267,7 @@ async function listFrequentVisitors(userId, role = "residente") {
   const rows = await query(
     `
       SELECT
-        MAX(v.id_visitante) AS id_visitante,
+        v.id_visitante,
         v.nombre,
         v.dpi,
         v.placa,
@@ -277,8 +277,9 @@ async function listFrequentVisitors(userId, role = "residente") {
       INNER JOIN VISITANTE v
         ON v.id_visitante = a.id_visitante
       WHERE a.id_casa = ?
+        AND v.activo = TRUE
         ${getOwnerFilter(role)}
-      GROUP BY v.nombre, v.dpi, v.placa
+      GROUP BY v.id_visitante, v.nombre, v.dpi, v.placa
       ORDER BY total_visitas DESC, ultima_fecha DESC, v.nombre ASC
       LIMIT 5
     `,
@@ -370,7 +371,7 @@ async function createVisit(userId, role = "residente", payload) {
       }
     } else {
       const [visitorResult] = await connection.execute(
-        "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
+        "INSERT INTO VISITANTE (nombre, dpi, placa, activo) VALUES (?, ?, ?, TRUE)",
         [nombre, dpi || null, placa || null],
       );
       visitorId = visitorResult.insertId;
@@ -851,36 +852,36 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
     throw error;
   }
 
+  const historyRows = await query(
+    `SELECT COUNT(*) AS total FROM REGISTRO_ACCESO ra
+     INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
+     WHERE a.id_visitante = ? AND a.id_casa = ?`,
+    [normalizedVisitorId, house.id_casa],
+  );
+  const hasHistory = Number(historyRows[0]?.total) > 0;
+
+  if (hasHistory) {
+    await query(
+      "UPDATE VISITANTE SET activo = FALSE WHERE id_visitante = ?",
+      [normalizedVisitorId],
+    );
+    return { id_visitante: normalizedVisitorId, nombre: visitor.nombre, desactivado: true };
+  }
+
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
     await connection.execute(
-      `
-        DELETE ra FROM REGISTRO_ACCESO ra
-        INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
-        WHERE a.id_visitante = ? AND a.id_casa = ?
-          ${getOwnerFilter(role)}
-      `,
-      [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
-    );
-    await connection.execute(
       `DELETE FROM ACCESO WHERE id_visitante = ? AND id_casa = ? ${getOwnerFilter(role)}`,
       [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
     );
     await connection.execute(
-      `
-        DELETE FROM VISITANTE
-        WHERE id_visitante = ?
-          AND NOT EXISTS (
-            SELECT 1 FROM ACCESO WHERE id_visitante = ?
-          )
-      `,
+      `DELETE FROM VISITANTE WHERE id_visitante = ? AND NOT EXISTS (SELECT 1 FROM ACCESO WHERE id_visitante = ?)`,
       [normalizedVisitorId, normalizedVisitorId],
     );
     await connection.commit();
-
-    return { id_visitante: normalizedVisitorId, nombre: visitor.nombre };
+    return { id_visitante: normalizedVisitorId, nombre: visitor.nombre, desactivado: false };
   } catch (error) {
     await connection.rollback();
     throw error;
