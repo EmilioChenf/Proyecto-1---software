@@ -405,54 +405,53 @@ async function deleteVisit(userId, role = "residente", accessId) {
     throw error;
   }
 
-  const rows = await query(
-    `
-      SELECT
-        a.id_acceso,
-        a.id_visitante,
-        v.nombre,
-        v.dpi,
-        v.placa,
-        DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
-        TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
-        TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
-        (
-          SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i')
-          FROM REGISTRO_ACCESO ra
-          WHERE ra.id_acceso = a.id_acceso
-          LIMIT 1
-        ) AS hora_salida,
-        a.tipo_visita,
-        a.motivo_servicio,
-        a.observaciones,
-        a.token_qr,
-        a.estado_acceso,
-        CONCAT(COALESCE(c.torre, ''), CASE WHEN c.torre IS NOT NULL AND c.torre <> '' THEN '-' ELSE '' END, c.numero) AS casa
-      FROM ACCESO a
-      INNER JOIN VISITANTE v
-        ON v.id_visitante = a.id_visitante
-      INNER JOIN CASA c
-        ON c.id_casa = a.id_casa
-      WHERE a.id_acceso = ? AND a.id_casa = ?
-        ${getOwnerFilter(role)}
-      LIMIT 1
-    `,
-    [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
-  );
-
-  const visit = rows[0];
-
-  if (!visit) {
-    const error = new Error("Visita no encontrada.");
-    error.status = 404;
-    throw error;
-  }
-
   const connection = await pool.getConnection();
-
   try {
     await connection.beginTransaction();
-    await connection.execute("DELETE FROM REGISTRO_ACCESO WHERE id_acceso = ?", [normalizedAccessId]);
+    const [rows] = await connection.execute(
+      `
+        SELECT
+          a.id_acceso,
+          a.id_visitante,
+          v.nombre,
+          v.dpi,
+          v.placa,
+          DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
+          TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
+          TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
+          (
+            SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i')
+            FROM REGISTRO_ACCESO ra
+            WHERE ra.id_acceso = a.id_acceso
+            LIMIT 1
+          ) AS hora_salida,
+          a.tipo_visita,
+          a.motivo_servicio,
+          a.observaciones,
+          a.token_qr,
+          a.estado_acceso,
+          CONCAT(COALESCE(c.torre, ''), CASE WHEN c.torre IS NOT NULL AND c.torre <> '' THEN '-' ELSE '' END, c.numero) AS casa
+        FROM ACCESO a
+        INNER JOIN VISITANTE v
+          ON v.id_visitante = a.id_visitante
+        INNER JOIN CASA c
+          ON c.id_casa = a.id_casa
+        WHERE a.id_acceso = ? AND a.id_casa = ?
+          ${getOwnerFilter(role)}
+        LIMIT 1 FOR UPDATE
+      `,
+      [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
+    );
+
+    const visit = rows[0];
+
+    if (!visit) {
+      const error = new Error("Visita no encontrada.");
+      error.status = 404;
+      throw error;
+    }
+
+    await assertVisitsHaveNoHistory(connection, [visit]);
     await connection.execute("DELETE FROM ACCESO WHERE id_acceso = ?", [normalizedAccessId]);
     await connection.execute(
       `
@@ -814,15 +813,13 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
 
   try {
     await connection.beginTransaction();
-    await connection.execute(
-      `
-        DELETE ra FROM REGISTRO_ACCESO ra
-        INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
-        WHERE a.id_visitante = ? AND a.id_casa = ?
-          ${getOwnerFilter(role)}
-      `,
+    const [accesses] = await connection.execute(
+      `SELECT a.id_acceso, a.estado_acceso FROM ACCESO a
+       WHERE a.id_visitante = ? AND a.id_casa = ? ${getOwnerFilter(role)}
+       ORDER BY a.id_acceso FOR UPDATE`,
       [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
     );
+    await assertVisitsHaveNoHistory(connection, accesses);
     await connection.execute(
       `DELETE FROM ACCESO WHERE id_visitante = ? AND id_casa = ? ${getOwnerFilter(role)}`,
       [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
@@ -845,6 +842,23 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
     throw error;
   } finally {
     connection.release();
+  }
+}
+
+// El bloqueo de ACCESO serializa estas eliminaciones con ingreso, salida y cancelacion.
+// Incluso un estado inconsistente debe conservar cualquier REGISTRO_ACCESO existente.
+async function assertVisitsHaveNoHistory(connection, visits) {
+  for (const visit of visits) {
+    const [records] = await connection.execute(
+      "SELECT id_registro FROM REGISTRO_ACCESO WHERE id_acceso = ? LIMIT 1 FOR UPDATE",
+      [visit.id_acceso],
+    );
+    if (records.length || ["INGRESO_REGISTRADO", "SALIDA_REGISTRADA"].includes(visit.estado_acceso)) {
+      const error = new Error("La visita tiene historial de acceso y no puede eliminarse. Cancele la visita para conservar sus movimientos.");
+      error.status = 409;
+      error.code = "VISIT_HAS_HISTORY";
+      throw error;
+    }
   }
 }
 
