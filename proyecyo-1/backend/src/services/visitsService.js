@@ -12,6 +12,21 @@ function normalizeString(value) {
   return String(value || "").trim();
 }
 
+function ensureValidDpi(value) {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    return normalized;
+  }
+  const digitsOnly = normalized.replace(/\s/g, "");
+  if (!/^\d{13}$/.test(digitsOnly)) {
+    const error = new Error("El DPI debe contener exactamente 13 dígitos numéricos.");
+    error.status = 400;
+    error.code = "INVALID_DPI";
+    throw error;
+  }
+  return digitsOnly;
+}
+
 function ensureVisitType(value) {
   const normalized = normalizeString(value).toUpperCase();
   const allowed = ["VISITA", "DELIVERY", "PROVEEDOR"];
@@ -252,7 +267,7 @@ async function listFrequentVisitors(userId, role = "residente") {
   const rows = await query(
     `
       SELECT
-        MAX(v.id_visitante) AS id_visitante,
+        v.id_visitante,
         v.nombre,
         v.dpi,
         v.placa,
@@ -262,8 +277,9 @@ async function listFrequentVisitors(userId, role = "residente") {
       INNER JOIN VISITANTE v
         ON v.id_visitante = a.id_visitante
       WHERE a.id_casa = ?
+        AND v.activo = TRUE
         ${getOwnerFilter(role)}
-      GROUP BY v.nombre, v.dpi, v.placa
+      GROUP BY v.id_visitante, v.nombre, v.dpi, v.placa
       ORDER BY total_visitas DESC, ultima_fecha DESC, v.nombre ASC
       LIMIT 5
     `,
@@ -285,7 +301,7 @@ async function listFrequentVisitors(userId, role = "residente") {
 async function createVisit(userId, role = "residente", payload) {
   const house = await getHouseByUserId(userId, role);
   const nombre = normalizeString(payload.nombre);
-  const dpi = normalizeString(payload.dpi);
+  const dpi = ensureValidDpi(payload.dpi);
   const placa = ensureValidVehiclePlate(payload.placa);
   const foto = normalizeString(payload.foto);
   const fecha = ensureValidDate(payload.fecha);
@@ -316,23 +332,64 @@ async function createVisit(userId, role = "residente", payload) {
     await connection.beginTransaction();
 
     const [existingVisitors] = await connection.execute(
-      `SELECT id_visitante FROM VISITANTE
+      `SELECT id_visitante, nombre, dpi, placa FROM VISITANTE
        WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
        ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
       [dpi, dpi, placa, placa.replace(/-/g, "")],
     );
     let visitorId = existingVisitors[0]?.id_visitante;
+    const existingVisitor = existingVisitors[0];
+
     if (visitorId) {
-      await connection.execute(
-        "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
-        [nombre, dpi || null, placa || null, visitorId],
-      );
+      const nameChanged = existingVisitor.nombre !== nombre;
+      const dpiChanged = (existingVisitor.dpi || "") !== (dpi || "");
+      const placaChanged = (existingVisitor.placa || "") !== (placa || "");
+      const dataChanged = nameChanged || dpiChanged || placaChanged;
+
+      if (dataChanged && !payload.confirmar_actualizacion) {
+        await connection.rollback();
+        const error = new Error(
+          `Ya existe un visitante registrado con esos datos (${existingVisitor.nombre}). ` +
+          `¿Deseas actualizar sus datos al crear esta visita?`,
+        );
+        error.status = 409;
+        error.code = "VISITOR_DATA_CONFLICT";
+        error.existing = {
+          id_visitante: existingVisitor.id_visitante,
+          nombre: existingVisitor.nombre,
+          dpi: existingVisitor.dpi,
+          placa: existingVisitor.placa,
+        };
+        throw error;
+      }
+
+      if (dataChanged) {
+        await connection.execute(
+          "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
+          [nombre, dpi || null, placa || null, visitorId],
+        );
+      }
     } else {
       const [visitorResult] = await connection.execute(
-        "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
+        "INSERT INTO VISITANTE (nombre, dpi, placa, activo) VALUES (?, ?, ?, TRUE)",
         [nombre, dpi || null, placa || null],
       );
       visitorId = visitorResult.insertId;
+    }
+
+    const [dupRows] = await connection.execute(
+      `SELECT id_acceso FROM ACCESO
+       WHERE id_visitante = ? AND id_casa = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
+         AND estado_acceso <> 'CANCELADA'
+       LIMIT 1`,
+      [visitorId, house.id_casa, fecha, horaInicio, horaFin],
+    );
+    if (dupRows.length > 0) {
+      await connection.rollback();
+      const error = new Error("Ya existe una visita autorizada para este visitante en la misma fecha y horario.");
+      error.status = 409;
+      error.code = "DUPLICATE_VISIT";
+      throw error;
     }
 
     const [accessResult] = await connection.execute(
@@ -810,36 +867,36 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
     throw error;
   }
 
+  const historyRows = await query(
+    `SELECT COUNT(*) AS total FROM REGISTRO_ACCESO ra
+     INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
+     WHERE a.id_visitante = ? AND a.id_casa = ?`,
+    [normalizedVisitorId, house.id_casa],
+  );
+  const hasHistory = Number(historyRows[0]?.total) > 0;
+
+  if (hasHistory) {
+    await query(
+      "UPDATE VISITANTE SET activo = FALSE WHERE id_visitante = ?",
+      [normalizedVisitorId],
+    );
+    return { id_visitante: normalizedVisitorId, nombre: visitor.nombre, desactivado: true };
+  }
+
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
     await connection.execute(
-      `
-        DELETE ra FROM REGISTRO_ACCESO ra
-        INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
-        WHERE a.id_visitante = ? AND a.id_casa = ?
-          ${getOwnerFilter(role)}
-      `,
-      [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
-    );
-    await connection.execute(
       `DELETE FROM ACCESO WHERE id_visitante = ? AND id_casa = ? ${getOwnerFilter(role)}`,
       [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
     );
     await connection.execute(
-      `
-        DELETE FROM VISITANTE
-        WHERE id_visitante = ?
-          AND NOT EXISTS (
-            SELECT 1 FROM ACCESO WHERE id_visitante = ?
-          )
-      `,
+      `DELETE FROM VISITANTE WHERE id_visitante = ? AND NOT EXISTS (SELECT 1 FROM ACCESO WHERE id_visitante = ?)`,
       [normalizedVisitorId, normalizedVisitorId],
     );
     await connection.commit();
-
-    return { id_visitante: normalizedVisitorId, nombre: visitor.nombre };
+    return { id_visitante: normalizedVisitorId, nombre: visitor.nombre, desactivado: false };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -1321,6 +1378,59 @@ async function registerQrExit(qrToken, guardUserId = null, metadata = {}) {
   }
 }
 
+async function updateFrequentVisitor(userId, role = "residente", visitorId, payload = {}) {
+  const house = await getHouseByUserId(userId, role);
+  const normalizedVisitorId = Number(visitorId);
+
+  if (!Number.isInteger(normalizedVisitorId) || normalizedVisitorId <= 0) {
+    const error = new Error("El visitante es invalido.");
+    error.status = 400;
+    throw error;
+  }
+
+  const rows = await query(
+    `
+      SELECT v.id_visitante, v.nombre, v.dpi, v.placa
+      FROM VISITANTE v
+      INNER JOIN ACCESO a ON a.id_visitante = v.id_visitante
+      WHERE v.id_visitante = ? AND a.id_casa = ?
+        ${getOwnerFilter(role)}
+      LIMIT 1
+    `,
+    [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
+  );
+
+  const visitor = rows[0];
+
+  if (!visitor) {
+    const error = new Error("Visitante frecuente no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  const nombre = normalizeString(payload.nombre) || visitor.nombre;
+  const dpi = payload.dpi !== undefined ? ensureValidDpi(payload.dpi) : (visitor.dpi || "");
+  const placa = payload.placa !== undefined ? ensureValidVehiclePlate(payload.placa) : (visitor.placa || "");
+
+  if (!nombre) {
+    const error = new Error("El nombre del visitante es obligatorio.");
+    error.status = 400;
+    throw error;
+  }
+
+  await query(
+    "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
+    [nombre, dpi || null, placa || null, normalizedVisitorId],
+  );
+
+  return {
+    id_visitante: normalizedVisitorId,
+    nombre,
+    dpi: dpi || null,
+    placa: placa || null,
+  };
+}
+
 module.exports = {
   listResidentVisits,
   listFrequentVisitors,
@@ -1329,6 +1439,7 @@ module.exports = {
   deleteVisit,
   cancelVisit,
   deleteFrequentVisitor,
+  updateFrequentVisitor,
   getGuardShiftVisits,
   validateQrVisit,
   registerQrEntry,
@@ -1338,5 +1449,6 @@ module.exports = {
     ensureQrExitCanBeRegistered,
     getQrStatus,
     normalizeQrToken,
+    ensureValidDpi,
   },
 };

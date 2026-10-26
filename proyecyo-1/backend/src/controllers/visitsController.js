@@ -6,6 +6,7 @@ const {
   deleteVisit,
   cancelVisit,
   deleteFrequentVisitor,
+  updateFrequentVisitor,
   getGuardShiftVisits,
   registerQrEntry,
   registerQrExit,
@@ -75,6 +76,15 @@ async function removeFrequentVisitor(req, res, next) {
   }
 }
 
+async function patchFrequentVisitor(req, res, next) {
+  try {
+    const result = await updateFrequentVisitor(req.authUser.id, req.authUser.role, Number(req.params.id), req.body || {});
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function getGuardVisits(_req, res, next) {
   try {
     const visits = await getGuardShiftVisits();
@@ -119,6 +129,7 @@ module.exports = {
   removeVisit,
   patchCancelVisit,
   removeFrequentVisitor,
+  patchFrequentVisitor,
   getGuardVisits,
   postValidateQr,
   postRegisterQrEntry,

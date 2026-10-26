@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  Pencil,
   ShieldCheck,
   Trash2,
   UserRoundPlus,
@@ -24,6 +25,7 @@ import {
   deleteVisitRequest,
   getFrequentVisitorsRequest,
   getVisitsRequest,
+  updateFrequentVisitorRequest,
 } from "@/services/visitsService";
 import { getVisitScheduleConfigRequest } from "@/services/configurationService";
 import type { FrequentVisitor, VisitPayload, VisitRecord, VisitType } from "@/types/visits";
@@ -35,7 +37,14 @@ import {
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
-type VisitFormState = VisitPayload;
+type VisitFormState = VisitPayload & { confirmar_actualizacion?: boolean };
+
+interface EditVisitorForm {
+  nombre: string;
+  dpi: string;
+  placa: string;
+}
+
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
 const steps = [
@@ -133,6 +142,11 @@ export function ResidenteVisitsView() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [authorizingVisitorId, setAuthorizingVisitorId] = useState<number | null>(null);
   const [visitSchedule, setVisitSchedule] = useState<VisitScheduleConfig | null>(null);
+  const [conflictVisitor, setConflictVisitor] = useState<{ id_visitante: number; nombre: string; dpi: string; placa: string } | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<VisitPayload | null>(null);
+  const [editingVisitor, setEditingVisitor] = useState<FrequentVisitor | null>(null);
+  const [editForm, setEditForm] = useState<EditVisitorForm>({ nombre: "", dpi: "", placa: "" });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -223,6 +237,19 @@ export function ResidenteVisitsView() {
         return false;
       }
 
+      if (!form.dpi && !form.placa) {
+        setErrorMessage("Se requiere DPI o placa del vehículo para identificar al visitante.");
+        return false;
+      }
+
+      if (form.dpi) {
+        const digitsOnly = form.dpi.replace(/\s/g, "");
+        if (!/^\d{13}$/.test(digitsOnly)) {
+          setErrorMessage("El DPI debe contener exactamente 13 dígitos numéricos.");
+          return false;
+        }
+      }
+
       const plateError = getVehiclePlateError(form.placa);
       if (plateError) {
         setErrorMessage(plateError);
@@ -272,7 +299,7 @@ export function ResidenteVisitsView() {
     }
   }
 
-  async function createVisit(payload: VisitPayload, message: string) {
+  async function createVisit(payload: VisitPayload & { confirmar_actualizacion?: boolean }, message: string) {
     if (!validateVisitTimes(payload.hora_inicio, payload.hora_fin)) {
       return;
     }
@@ -286,15 +313,66 @@ export function ResidenteVisitsView() {
       });
       setVisits((current) => [createdVisit, ...current]);
       setSuccessMessage(message);
+      setConflictVisitor(null);
+      setPendingPayload(null);
       setForm(createInitialForm());
       setPhotoPreview("");
       setStep(1);
       await refreshFrequentVisitors();
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
+    } catch (error: unknown) {
+      const apiError = error as { status?: number; code?: string; message?: string; existing?: { id_visitante: number; nombre: string; dpi: string; placa: string } };
+      if (apiError?.code === "VISITOR_DATA_CONFLICT" && apiError?.existing) {
+        setConflictVisitor(apiError.existing);
+        setPendingPayload(payload);
+        setErrorMessage("");
+      } else if (apiError?.code === "DUPLICATE_VISIT") {
+        setErrorMessage("Ya existe una visita autorizada para este visitante en la misma fecha y horario. Por favor elige un horario diferente.");
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
+      }
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function openEditVisitor(visitor: FrequentVisitor) {
+    setEditingVisitor(visitor);
+    setEditForm({ nombre: visitor.nombre, dpi: visitor.dpi || "", placa: visitor.placa || "" });
+  }
+
+  async function handleEditVisitorSubmit() {
+    if (!editingVisitor) {
+      return;
+    }
+    try {
+      setIsEditSubmitting(true);
+      const updated = await updateFrequentVisitorRequest(editingVisitor.id_visitante, editForm);
+      setFrequentVisitors((current) =>
+        current.map((v) =>
+          v.id_visitante === updated.id_visitante
+            ? { ...v, nombre: updated.nombre, dpi: updated.dpi || "", placa: updated.placa || "" }
+            : v,
+        ),
+      );
+      setEditingVisitor(null);
+      void notifySuccess("Datos del visitante actualizados correctamente.");
+    } catch (error) {
+      void notifyError(error, "No fue posible actualizar los datos del visitante.");
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  }
+
+  async function handleConfirmConflict(confirm: boolean) {
+    if (!pendingPayload) {
+      return;
+    }
+    if (!confirm) {
+      setConflictVisitor(null);
+      setPendingPayload(null);
+      return;
+    }
+    await createVisit({ ...pendingPayload, confirmar_actualizacion: true }, "Visita autorizada correctamente.");
   }
 
   async function handleSubmit() {
@@ -313,9 +391,24 @@ export function ResidenteVisitsView() {
   const visitsDisabled = visitSchedule !== null && !visitSchedule.activo;
 
   async function handleQuickAuthorize(visitor: FrequentVisitor) {
-    setAuthorizingVisitorId(visitor.id_visitante);
     const now = new Date();
     const finish = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const fecha = getDateInTimezone(now);
+    const horaInicio = getTimeInTimezone(now);
+    const horaFin = getTimeInTimezone(finish);
+
+    const confirmed = await confirmAction({
+      title: "Confirmar acceso rápido",
+      text: `${visitor.nombre} — ${fecha} de ${horaInicio} a ${horaFin}. ¿Autorizar ingreso inmediato?`,
+      confirmText: "Autorizar",
+      tone: "info",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setAuthorizingVisitorId(visitor.id_visitante);
 
     await createVisit(
       {
@@ -323,9 +416,9 @@ export function ResidenteVisitsView() {
         dpi: visitor.dpi,
         placa: visitor.placa,
         foto: "",
-        fecha: getDateInTimezone(now),
-        hora_inicio: getTimeInTimezone(now),
-        hora_fin: getTimeInTimezone(finish),
+        fecha,
+        hora_inicio: horaInicio,
+        hora_fin: horaFin,
         tipo_visita: "VISITA",
         observaciones: "",
       },
@@ -441,6 +534,105 @@ export function ResidenteVisitsView() {
           </Alert>
         ) : null}
 
+        {conflictVisitor ? (
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800">
+            <AlertTitle>Visitante existente detectado</AlertTitle>
+            <AlertDescription>
+              <p>
+                Ya existe un visitante registrado con ese DPI o placa:{" "}
+                <strong>{conflictVisitor.nombre}</strong>
+                {conflictVisitor.dpi ? ` (DPI: ${conflictVisitor.dpi})` : ""}
+                {conflictVisitor.placa ? ` — Placa: ${conflictVisitor.placa}` : ""}.
+              </p>
+              <p className="mt-1">¿Deseas actualizar sus datos al crear esta visita?</p>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => handleConfirmConflict(true)}
+                  disabled={isSubmitting}
+                  className="rounded-xl bg-amber-600 px-4 text-sm text-white hover:bg-amber-700"
+                >
+                  Actualizar datos y autorizar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleConfirmConflict(false)}
+                  className="rounded-xl border-amber-300 px-4 text-sm text-amber-800"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {editingVisitor ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-slate-900">Editar visitante frecuente</h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingVisitor(null)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100"
+                  aria-label="Cerrar"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium text-slate-700">Nombre *</span>
+                  <Input
+                    value={editForm.nombre}
+                    onChange={(e) => setEditForm((f) => ({ ...f, nombre: e.target.value }))}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium text-slate-700">DPI</span>
+                  <Input
+                    value={editForm.dpi}
+                    onChange={(e) => setEditForm((f) => ({ ...f, dpi: e.target.value }))}
+                    placeholder="1234567890123"
+                    maxLength={13}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-medium text-slate-700">Placa</span>
+                  <Input
+                    value={editForm.placa}
+                    onChange={(e) => setEditForm((f) => ({ ...f, placa: e.target.value.toUpperCase() }))}
+                    placeholder="P-123ABC"
+                    maxLength={14}
+                    className="h-12 rounded-xl border-slate-100 bg-slate-50"
+                  />
+                </label>
+              </div>
+              <div className="mt-5 flex gap-3">
+                <Button
+                  type="button"
+                  onClick={handleEditVisitorSubmit}
+                  disabled={isEditSubmitting}
+                  className="flex-1 rounded-xl bg-[linear-gradient(90deg,#a855f7_0%,#9333ea_100%)] text-white hover:opacity-95"
+                >
+                  {isEditSubmitting ? "Guardando..." : "Guardar cambios"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingVisitor(null)}
+                  className="rounded-xl border-slate-200"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <Card className="overflow-hidden border-0 shadow-[0_18px_40px_rgba(30,41,59,0.12)]">
           <div className="bg-[linear-gradient(90deg,#a855f7_0%,#9333ea_45%,#9d00ff_100%)] px-5 py-6 text-white">
             <div className="flex items-center gap-3">
@@ -502,6 +694,14 @@ export function ResidenteVisitsView() {
                     </Button>
                     <button
                       type="button"
+                      onClick={() => openEditVisitor(visitor)}
+                      className="rounded-2xl p-3 text-purple-500 transition hover:bg-purple-50"
+                      aria-label={`Editar visitante frecuente ${visitor.nombre}`}
+                    >
+                      <Pencil className="size-5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDeleteFrequentVisitor(visitor)}
                       className="rounded-2xl p-3 text-rose-500 transition hover:bg-rose-50"
                       aria-label={`Eliminar visitante frecuente ${visitor.nombre}`}
@@ -555,13 +755,15 @@ export function ResidenteVisitsView() {
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-800">DPI / Documento de Identidad (Opcional)</span>
+                  <span className="text-sm font-medium text-slate-800">DPI / Documento de Identidad <span className="text-slate-400 text-xs">(requerido si no hay placa)</span></span>
                   <Input
                     value={form.dpi}
                     onChange={(event) => updateForm("dpi", event.target.value)}
                     placeholder="1234567890123"
+                    maxLength={13}
                     className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
                   />
+                  <span className="text-xs text-slate-500">13 dígitos numéricos</span>
                 </label>
 
                 <label className="block space-y-2">

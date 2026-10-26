@@ -250,7 +250,9 @@ CREATE TABLE VISITANTE (
     id_visitante INT PRIMARY KEY AUTO_INCREMENT,
     nombre VARCHAR(100) NOT NULL,
     dpi VARCHAR(20),
-    placa VARCHAR(20)
+    placa VARCHAR(20),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    INDEX idx_visitante_activo (activo)
 );
 
 CREATE TABLE ACCESO (

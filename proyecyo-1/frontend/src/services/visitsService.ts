@@ -50,8 +50,15 @@ export async function cancelVisitRequest(id: number) {
 }
 
 export function deleteFrequentVisitorRequest(id: number) {
-  return apiRequest<{ id_visitante: number; nombre: string }>(`/visitantes-frecuentes/${id}`, {
+  return apiRequest<{ id_visitante: number; nombre: string; desactivado?: boolean }>(`/visitantes-frecuentes/${id}`, {
     method: "DELETE",
+  });
+}
+
+export function updateFrequentVisitorRequest(id: number, payload: { nombre?: string; dpi?: string; placa?: string }) {
+  return apiRequest<{ id_visitante: number; nombre: string; dpi: string | null; placa: string | null }>(`/visitantes-frecuentes/${id}`, {
+    method: "PATCH",
+    body: payload,
   });
 }
 
