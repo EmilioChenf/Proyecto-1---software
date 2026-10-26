@@ -3,6 +3,11 @@ const crypto = require("crypto");
 const { pool, query } = require("../database/mysql");
 const { ensureValidVehiclePlate } = require("../utils/vehiclePlate");
 const { ensureValidDate, ensureValidTime } = require("../utils/dateTimeValidation");
+const { ensureValidDpi } = require("../utils/identityDocument");
+const {
+  describeProviderEntryMode,
+  ensureProviderIdentifiers,
+} = require("../utils/providerAccessValidation");
 
 const DEFAULT_SCHEDULE = { inicio: "06:00", fin: "22:00" };
 
@@ -12,6 +17,35 @@ function normalizeString(value) {
 
 function generateQrToken() {
   return crypto.randomBytes(18).toString("hex");
+}
+
+const SPECIAL_ACCESS_TYPES = ["VISITA", "DELIVERY", "PROVEEDOR"];
+
+function ensureSpecialAccessType(value) {
+  const normalized = normalizeString(value).toUpperCase() || "VISITA";
+  if (!SPECIAL_ACCESS_TYPES.includes(normalized)) {
+    const error = new Error("El tipo de acceso es invalido.");
+    error.status = 400;
+    throw error;
+  }
+  return normalized;
+}
+
+// HU-C06: el administrador tambien registra proveedores. Para ellos rige la regla de
+// identificador por medio de ingreso; las demas visitas siguen exigiendo DPI.
+function ensureSpecialAccessIdentifiers(payload, tipoVisita) {
+  if (tipoVisita === "PROVEEDOR") {
+    const { placa, dpi } = ensureProviderIdentifiers(payload);
+    return { placa, dpi };
+  }
+
+  const dpi = ensureValidDpi(payload.dpi);
+  if (!dpi) {
+    const error = new Error("El nombre y DPI del visitante son obligatorios.");
+    error.status = 400;
+    throw error;
+  }
+  return { dpi, placa: ensureValidVehiclePlate(payload.placa) };
 }
 
 function toMinutes(timeValue) {
@@ -59,6 +93,8 @@ function mapSpecialAccess(row) {
     casa: row.casa,
     id_casa: row.id_casa,
     tipo_visita: row.tipo_visita,
+    medio_ingreso: row.tipo_visita === "PROVEEDOR" ? describeProviderEntryMode(row.placa) : null,
+    motivo_servicio: row.motivo_servicio || "",
     motivo_excepcion: row.motivo_excepcion || "",
     es_acceso_especial: Boolean(row.es_acceso_especial),
     estado_acceso: row.estado_acceso,
@@ -120,6 +156,7 @@ async function listPendingSpecialAccesses() {
         v.placa,
         a.id_casa,
         a.tipo_visita,
+        a.motivo_servicio,
         a.motivo_excepcion,
         a.es_acceso_especial,
         a.estado_acceso,
@@ -197,16 +234,28 @@ async function notifyGuards(connection, accessId, titulo, mensaje) {
 
 async function createSpecialAccess(adminUserId, payload = {}) {
   const nombre = normalizeString(payload.nombre);
-  const dpi = normalizeString(payload.dpi);
-  const placa = ensureValidVehiclePlate(payload.placa);
+  const tipoVisita = ensureSpecialAccessType(payload.tipo_visita);
+
+  if (!nombre) {
+    const error = new Error(
+      tipoVisita === "PROVEEDOR"
+        ? "El nombre del proveedor es obligatorio."
+        : "El nombre y DPI del visitante son obligatorios.",
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  const { dpi, placa } = ensureSpecialAccessIdentifiers(payload, tipoVisita);
   const fecha = ensureValidDate(payload.fecha);
   const horaInicio = ensureValidTime(payload.hora_inicio, "hora de inicio");
   const horaFin = ensureValidTime(payload.hora_fin, "hora de fin");
   const motivo = normalizeString(payload.motivo_excepcion);
+  const motivoServicio = normalizeString(payload.motivo_servicio).slice(0, 120);
   const idCasa = Number(payload.id_casa);
 
-  if (!nombre || !dpi) {
-    const error = new Error("El nombre y DPI del visitante son obligatorios.");
+  if (tipoVisita === "PROVEEDOR" && !motivoServicio) {
+    const error = new Error("Indica el servicio que realizara el proveedor.");
     error.status = 400;
     throw error;
   }
@@ -251,21 +300,21 @@ async function createSpecialAccess(adminUserId, payload = {}) {
 
       const [existingVisitorRows] = await connection.execute(
         `SELECT id_visitante FROM VISITANTE
-         WHERE dpi = ? OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
+         WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
          ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
-        [dpi, placa, placa.replace(/-/g, "")],
+        [dpi, dpi, placa, placa.replace(/-/g, "")],
       );
 
     if (existingVisitorRows[0]) {
       visitorId = existingVisitorRows[0].id_visitante;
       await connection.execute(
-        "UPDATE VISITANTE SET nombre = ?, placa = ? WHERE id_visitante = ?",
-        [nombre, placa || null, visitorId],
+        "UPDATE VISITANTE SET nombre = ?, dpi = COALESCE(?, dpi), placa = ? WHERE id_visitante = ?",
+        [nombre, dpi || null, placa || null, visitorId],
       );
     } else {
       const [visitorResult] = await connection.execute(
         "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
-        [nombre, dpi, placa || null],
+        [nombre, dpi || null, placa || null],
       );
       visitorId = visitorResult.insertId;
     }
@@ -280,13 +329,14 @@ async function createSpecialAccess(adminUserId, payload = {}) {
           hora_inicio,
           hora_fin,
           tipo_visita,
+          motivo_servicio,
           motivo_excepcion,
           token_qr,
           estado_acceso,
           es_acceso_especial,
           fuera_horario
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'VISITA', ?, ?, ?, TRUE, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
       `,
       [
         visitorId,
@@ -295,6 +345,8 @@ async function createSpecialAccess(adminUserId, payload = {}) {
         fecha,
         horaInicio,
         horaFin,
+        tipoVisita,
+        motivoServicio || null,
         motivo,
         tokenQr,
         estadoAcceso,
@@ -366,6 +418,7 @@ async function createSpecialAccess(adminUserId, payload = {}) {
           v.placa,
           a.id_casa,
           a.tipo_visita,
+          a.motivo_servicio,
           a.motivo_excepcion,
           a.es_acceso_especial,
           a.estado_acceso,
@@ -502,6 +555,7 @@ async function approveSpecialAccess(adminUserId, accessId) {
           v.placa,
           a.id_casa,
           a.tipo_visita,
+          a.motivo_servicio,
           a.motivo_excepcion,
           a.es_acceso_especial,
           a.estado_acceso,

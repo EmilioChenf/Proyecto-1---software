@@ -4,6 +4,11 @@ const { assertVisitTimesAllowed } = require("./configurationService");
 const { recordAudit } = require("./auditService");
 const { ensureValidVehiclePlate } = require("../utils/vehiclePlate");
 const { ensureValidDate, ensureValidTime } = require("../utils/dateTimeValidation");
+const { ensureValidDpi } = require("../utils/identityDocument");
+const {
+  describeProviderEntryMode,
+  ensureProviderIdentifiers,
+} = require("../utils/providerAccessValidation");
 const crypto = require("crypto");
 const { guatemalaToday, sqlUtcTimeToGuatemala } = require("../utils/guatemalaTime");
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
@@ -12,19 +17,19 @@ function normalizeString(value) {
   return String(value || "").trim();
 }
 
-function ensureValidDpi(value) {
-  const normalized = normalizeString(value);
-  if (!normalized) {
-    return normalized;
+// HU-C06: los proveedores siempre quedan identificados segun su medio de ingreso
+// (placa si llegan en vehiculo, DPI si llegan a pie); el resto de visitas conserva
+// la validacion de formato de HU-C03.
+function ensureVisitIdentifiers(payload, tipoVisita) {
+  if (tipoVisita === "PROVEEDOR") {
+    const { placa, dpi } = ensureProviderIdentifiers(payload);
+    return { placa, dpi };
   }
-  const digitsOnly = normalized.replace(/\s/g, "");
-  if (!/^\d{13}$/.test(digitsOnly)) {
-    const error = new Error("El DPI debe contener exactamente 13 dígitos numéricos.");
-    error.status = 400;
-    error.code = "INVALID_DPI";
-    throw error;
-  }
-  return digitsOnly;
+
+  return {
+    dpi: ensureValidDpi(payload.dpi),
+    placa: ensureValidVehiclePlate(payload.placa),
+  };
 }
 
 function ensureVisitType(value) {
@@ -113,6 +118,7 @@ function mapVisit(row) {
     hora_fin: row.hora_fin,
     hora_salida: row.hora_salida || null,
     tipo_visita: row.tipo_visita,
+    medio_ingreso: row.tipo_visita === "PROVEEDOR" ? describeProviderEntryMode(row.placa) : null,
     motivo_servicio: row.motivo_servicio || "",
     observaciones: row.observaciones || "",
     token_qr: row.token_qr,
@@ -301,13 +307,12 @@ async function listFrequentVisitors(userId, role = "residente") {
 async function createVisit(userId, role = "residente", payload) {
   const house = await getHouseByUserId(userId, role);
   const nombre = normalizeString(payload.nombre);
-  const dpi = ensureValidDpi(payload.dpi);
-  const placa = ensureValidVehiclePlate(payload.placa);
+  const tipoVisita = ensureVisitType(payload.tipo_visita);
+  const { dpi, placa } = ensureVisitIdentifiers(payload, tipoVisita);
   const foto = normalizeString(payload.foto);
   const fecha = ensureValidDate(payload.fecha);
   const horaInicio = ensureValidTime(payload.hora_inicio, "hora de inicio");
   const horaFin = ensureValidTime(payload.hora_fin, "hora de fin");
-  const tipoVisita = ensureVisitType(payload.tipo_visita);
   const motivoServicio = ensureMaxLength(payload.motivo_servicio, 120, "El motivo del servicio");
   const observaciones = ensureMaxLength(payload.observaciones, 255, "Las observaciones");
   const qrToken = generateQrToken();
@@ -597,12 +602,11 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
   }
 
   const nombre = normalizeString(payload.nombre);
-  const dpi = normalizeString(payload.dpi);
-  const placa = ensureValidVehiclePlate(payload.placa);
+  const tipoVisita = ensureVisitType(payload.tipo_visita);
+  const { dpi, placa } = ensureVisitIdentifiers(payload, tipoVisita);
   const fecha = ensureValidDate(payload.fecha);
   const horaInicio = ensureValidTime(payload.hora_inicio, "hora de inicio");
   const horaFin = ensureValidTime(payload.hora_fin, "hora de fin");
-  const tipoVisita = ensureVisitType(payload.tipo_visita);
   const motivoServicio = ensureMaxLength(payload.motivo_servicio, 120, "El motivo del servicio");
   const observaciones = ensureMaxLength(payload.observaciones, 255, "Las observaciones");
 
@@ -630,7 +634,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
         SET nombre = ?, dpi = ?, placa = ?
         WHERE id_visitante = ?
       `,
-      [nombre, dpi, placa, visit.id_visitante],
+      [nombre, dpi || null, placa || null, visit.id_visitante],
     );
     await connection.execute(
       `
@@ -1450,5 +1454,6 @@ module.exports = {
     getQrStatus,
     normalizeQrToken,
     ensureValidDpi,
+    ensureVisitIdentifiers,
   },
 };
