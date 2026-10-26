@@ -244,9 +244,10 @@ async function ensureAccessGuardAuditSchema() {
     }
     const constraint = `fk_registro_acceso_${column}`;
     const [existing] = await query(
-      `SELECT 1 AS existe FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'REGISTRO_ACCESO' AND CONSTRAINT_NAME = ?`,
-      [env.DB_NAME, constraint],
+      `SELECT 1 AS existe FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'REGISTRO_ACCESO' AND COLUMN_NAME = ?
+          AND REFERENCED_TABLE_NAME = 'USUARIO' AND REFERENCED_COLUMN_NAME = 'id_usuario'`,
+      [env.DB_NAME, column],
     );
     if (!existing) {
       await query(
@@ -283,7 +284,9 @@ async function ensureVisitHistoryRelations() {
       ["RESTRICT", "NO ACTION"].includes(constraint.delete_rule) &&
       ["RESTRICT", "NO ACTION"].includes(constraint.update_rule))) continue;
 
-    const name = constraints[0]?.name || `fk_huc04_${table.toLowerCase()}_${column}`;
+    // MySQL no permite reutilizar el mismo nombre al quitar y agregar una FK en un ALTER.
+    const baseName = `fk_huc04_${table.toLowerCase()}_${column}`;
+    const name = constraints.some((constraint) => constraint.name === baseName) ? `${baseName}_restrict` : baseName;
     const drops = constraints.map((constraint) => `DROP FOREIGN KEY ${escapeIdentifier(constraint.name)}, `).join("");
     await query(
       `ALTER TABLE ${escapeIdentifier(table)} ${drops}ADD CONSTRAINT ${escapeIdentifier(name)}

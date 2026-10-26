@@ -18,7 +18,7 @@ describe("HU-C04.6 relaciones de evidencia historica", () => {
     const alters = pool.execute.mock.calls.filter(([sql]) => sql.startsWith("ALTER"));
     expect(alters).toHaveLength(6);
     for (const [sql] of alters) {
-      expect(sql).toContain("DROP FOREIGN KEY `old_fk`, ADD CONSTRAINT `old_fk`");
+      expect(sql).toContain("DROP FOREIGN KEY `old_fk`, ADD CONSTRAINT `fk_huc04_");
       expect(sql).toContain("ON DELETE RESTRICT ON UPDATE RESTRICT");
       expect(sql).not.toMatch(/DELETE FROM|DROP TABLE|TRUNCATE/);
     }
