@@ -71,6 +71,53 @@ describe("HU-C04.3 identidad historica", () => {
 });
 afterEach(() => jest.useRealTimers());
 
+describe("HU-C04.4 QR cancelado o vencido", () => {
+  it.each([null, "13:00"])("la cancelacion prevalece sobre una salida historica %s", (hora_salida) => {
+    expect(visits.__private__.getQrStatus({ ...visit, estado_acceso: "CANCELADA", hora_salida })).toBe("CANCELLED");
+  });
+
+  it.each([
+    ["CANCELADA", "2026-10-26", "ACCESS_CANCELLED"],
+    ["AUTORIZADA", "2000-01-01", "QR_EXPIRED"],
+  ])("rechaza validar y registrar ingreso de %s / %s", async (estado_acceso, fecha, code) => {
+    query.mockReset().mockResolvedValueOnce([{ ...visit, estado_acceso, fecha, hora_salida: "13:00" }])
+      .mockResolvedValue([]);
+    // Para vencimiento, un movimiento anterior se representa con su estado registrado.
+    if (code === "QR_EXPIRED") {
+      query.mockReset().mockResolvedValueOnce([{ ...visit, estado_acceso, fecha }]).mockResolvedValue([]);
+    }
+    await expect(visits.registerQrEntry(visit.token_qr, 5)).rejects.toMatchObject({ code, status: 410 });
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["CANCELADA", "2026-10-26", "ACCESS_CANCELLED"],
+    ["AUTORIZADA", "2000-01-01", "QR_EXPIRED"],
+    ["INGRESO_REGISTRADO", "2026-10-26", "QR_ALREADY_USED"],
+  ])("revisa %s bajo bloqueo aunque el QR se valido antes", async (estado_acceso, fecha, code) => {
+    query.mockReset().mockResolvedValueOnce([visit]).mockResolvedValue([]);
+    connection.execute.mockResolvedValueOnce([[{ ...visit, estado_acceso, fecha }]]);
+    await expect(visits.registerQrEntry(visit.token_qr, 5)).rejects.toMatchObject({ code });
+    expect(connection.execute.mock.calls[0][0]).toContain("FOR UPDATE");
+    expect(connection.execute.mock.calls.some(([sql]) => /INSERT INTO REGISTRO_ACCESO/i.test(sql))).toBe(false);
+    expect(connection.rollback).toHaveBeenCalled();
+  });
+
+  it("un registro preexistente nunca se sobrescribe por un estado inconsistente", async () => {
+    query.mockReset().mockResolvedValueOnce([visit]).mockResolvedValue([]);
+    connection.execute.mockResolvedValueOnce([[visit]]).mockResolvedValueOnce([{ affectedRows: 0 }]);
+    await expect(visits.registerQrEntry(visit.token_qr, 5)).rejects.toMatchObject({ code: "QR_ALREADY_USED" });
+    expect(connection.execute.mock.calls[1][0]).toContain("NOT EXISTS");
+    expect(connection.execute.mock.calls.some(([sql]) => /INSERT INTO REGISTRO_ACCESO/i.test(sql))).toBe(false);
+  });
+
+  it("una visita cancelada con ingreso previo tampoco permite registrar salida", async () => {
+    query.mockReset().mockResolvedValueOnce([{ ...visit, estado_acceso: "CANCELADA" }]);
+    await expect(visits.registerQrExit(visit.token_qr, 5)).rejects.toMatchObject({ status: 410 });
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+});
+
 describe("HU-C04.1 eliminacion fisica", () => {
   it.each(["AUTORIZADA", "INGRESO_REGISTRADO", "SALIDA_REGISTRADA", "CANCELADA"])(
     "conserva registros incluso cuando el estado es %s", async (estado_acceso) => {

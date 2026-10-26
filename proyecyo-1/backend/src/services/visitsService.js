@@ -141,16 +141,17 @@ function normalizeQrTime(value, fallback) {
 }
 
 function getQrStatus(visit) {
+  // La cancelacion es el estado actual, aunque existan movimientos anteriores.
+  if (visit.estado_acceso === "CANCELADA" || visit.estado_acceso === "RECHAZADA") {
+    return "CANCELLED";
+  }
+
   if (visit.estado_acceso === "SALIDA_REGISTRADA" || visit.hora_salida) {
     return "EXIT_REGISTERED";
   }
 
   if (visit.estado_acceso === "INGRESO_REGISTRADO") {
     return "USED";
-  }
-
-  if (visit.estado_acceso === "CANCELADA" || visit.estado_acceso === "RECHAZADA") {
-    return "CANCELLED";
   }
 
   if (visit.estado_acceso === "PENDIENTE_APROBACION" || !visit.token_qr) {
@@ -1208,11 +1209,34 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
 
   try {
     await connection.beginTransaction();
+    const [currentRows] = await connection.execute(
+      `SELECT a.estado_acceso, a.token_qr,
+              DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha, a.hora_inicio, a.hora_fin
+       FROM ACCESO a WHERE a.id_acceso = ? FOR UPDATE`,
+      [visit.id_acceso],
+    );
+    const currentStatus = currentRows[0] ? getQrStatus(currentRows[0]) : "CANCELLED";
+    if (currentStatus !== "VALID") {
+      const reason = {
+        CANCELLED: ["Acceso cancelado. No autorizar el ingreso.", 410, "ACCESS_CANCELLED"],
+        EXPIRED: ["QR expirado.", 410, "QR_EXPIRED"],
+        NOT_YET_VALID: ["Este QR aun no esta vigente.", 409, "QR_NOT_YET_VALID"],
+        PENDING_APPROVAL: ["Este acceso aun no ha sido aprobado.", 409, "QR_PENDING_APPROVAL"],
+      }[currentStatus] || ["Este QR ya fue utilizado.", 409, "QR_ALREADY_USED"];
+      const error = new Error(reason[0]);
+      error.status = reason[1];
+      error.code = reason[2];
+      throw error;
+    }
     const [updateResult] = await connection.execute(
       `
         UPDATE ACCESO
         SET estado_acceso = 'INGRESO_REGISTRADO'
         WHERE id_acceso = ? AND estado_acceso = 'AUTORIZADA'
+          AND NOT EXISTS (SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = ACCESO.id_acceso)
+          AND CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-06:00')
+              BETWEEN TIMESTAMP(fecha, COALESCE(hora_inicio, '00:00:00'))
+                  AND TIMESTAMP(fecha, COALESCE(hora_fin, '23:59:59'))
       `,
       [visit.id_acceso],
     );
@@ -1228,9 +1252,6 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
       `
         INSERT INTO REGISTRO_ACCESO (id_acceso, hora_ingreso, id_guardia_ingreso)
         VALUES (?, CURTIME(), ?)
-        ON DUPLICATE KEY UPDATE
-          hora_ingreso = VALUES(hora_ingreso),
-          id_guardia_ingreso = VALUES(id_guardia_ingreso)
       `,
       [visit.id_acceso, guardUserId],
     );
@@ -1249,12 +1270,16 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
     return findVisitByQrToken(normalizedToken);
   } catch (error) {
     await connection.rollback();
-    if (error.code === "QR_ALREADY_USED") {
+    const rejectionResult = {
+      QR_ALREADY_USED: "REUTILIZADO", ACCESS_CANCELLED: "CANCELADO", QR_EXPIRED: "EXPIRADO",
+      QR_NOT_YET_VALID: "AUN_NO_VIGENTE", QR_PENDING_APPROVAL: "PENDIENTE_APROBACION",
+    }[error.code];
+    if (rejectionResult) {
       await recordQrValidationAttempt({
         accessId: visit.id_acceso,
         tokenQr: normalizedToken,
         guardUserId,
-        result: "REUTILIZADO",
+        result: rejectionResult,
         detail: error.message,
       });
     }
