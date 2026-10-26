@@ -3,6 +3,9 @@ import type {
   AdminProviderFilters,
   AdminProviderHistoryRecord,
   AdminProviderRecord,
+  ProviderRegistrationPayload,
+  ProviderRegistrationResult,
+  ProviderRegistrationRole,
   TenantProvider,
   TenantProviderFilters,
   TenantProviderHistoryFilters,
@@ -24,12 +27,15 @@ export function getTenantProviderHistoryRequest(filters: TenantProviderHistoryFi
   return apiRequest<TenantProviderHistoryRecord[]>(url);
 }
 
-export function createTenantProviderRequest(payload: {
-  nombre: string;
-  tipo_servicio: string;
-  descripcion?: string;
-}) {
-  return apiRequest<TenantProvider>("/inquilino/proveedores", {
+// HU-C06.2: cada rol registra en su propia ruta, con los mismos permisos que el backend.
+const providerRegistrationPaths: Record<ProviderRegistrationRole, string> = {
+  admin: "/admin/proveedores",
+  residente: "/residente/proveedores",
+  inquilino: "/inquilino/proveedores",
+};
+
+export function registerProviderRequest(role: ProviderRegistrationRole, payload: ProviderRegistrationPayload) {
+  return apiRequest<ProviderRegistrationResult>(providerRegistrationPaths[role], {
     method: "POST",
     body: payload,
   });

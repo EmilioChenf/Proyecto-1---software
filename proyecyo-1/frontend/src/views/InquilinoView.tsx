@@ -24,6 +24,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ProviderRegistrationForm } from "@/components/providers/ProviderRegistrationForm";
 import { QrCodeCard } from "@/components/visits/QrCodeCard";
 import {
   cancelVisitRequest,
@@ -34,7 +35,6 @@ import {
   updateVisitRequest,
 } from "@/services/visitsService";
 import {
-  createTenantProviderRequest,
   getTenantProviderHistoryRequest,
   getTenantProvidersRequest,
   updateTenantProviderRequest,
@@ -45,6 +45,7 @@ import {
   getTenantPermissionsRequest,
 } from "@/services/sprintStoriesService";
 import type {
+  ProviderRegistrationResult,
   TenantProvider,
   TenantProviderHistoryRecord,
   TenantProviderStatus,
@@ -135,13 +136,6 @@ function createInitialForm(): VisitFormState {
   };
 }
 
-function createInitialProviderForm(): VisitFormState {
-  return {
-    ...createInitialForm(),
-    tipo_visita: "PROVEEDOR",
-  };
-}
-
 function formatDate(date: string) {
   return new Intl.DateTimeFormat("es-GT", {
     day: "numeric",
@@ -211,7 +205,6 @@ const sectionHeadings: Record<InquilinoSection, { title: string; subtitle: strin
 export function InquilinoView({ section }: { section: InquilinoSection }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<VisitFormState>(createInitialForm);
-  const [providerForm, setProviderForm] = useState<VisitFormState>(createInitialProviderForm);
   const [editingVisit, setEditingVisit] = useState<VisitRecord | null>(null);
   const [editForm, setEditForm] = useState<VisitFormState>(createInitialForm);
   const [visits, setVisits] = useState<VisitRecord[]>([]);
@@ -234,7 +227,6 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
   // Errores de cargas secundarias: se muestran en su seccion en lugar de un falso estado vacio.
   const [loadErrors, setLoadErrors] = useState<Partial<Record<"frequent" | "providers" | "providerHistory" | "permissions" | "authorizations", string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRegisteringProvider, setIsRegisteringProvider] = useState(false);
   const [isUpdatingAccess, setIsUpdatingAccess] = useState(false);
   const [isLoadingProviderHistory, setIsLoadingProviderHistory] = useState(false);
   const [updatingProviderId, setUpdatingProviderId] = useState<number | null>(null);
@@ -315,28 +307,6 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
     };
   }, []);
 
-  useEffect(() => {
-    const savedDraft = window.localStorage.getItem(PROVIDER_FORM_STORAGE_KEY);
-
-    if (!savedDraft) {
-      return;
-    }
-
-    try {
-      const parsedDraft = JSON.parse(savedDraft) as Partial<VisitFormState>;
-      setProviderForm((current) => ({
-        ...current,
-        ...parsedDraft,
-        tipo_visita: "PROVEEDOR",
-      }));
-    } catch {
-      window.localStorage.removeItem(PROVIDER_FORM_STORAGE_KEY);
-    }
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(PROVIDER_FORM_STORAGE_KEY, JSON.stringify(providerForm));
-  }, [providerForm]);
 
   const activeProvidersCount = useMemo(() => countActiveProviders(providers), [providers]);
   const filteredVisits = useMemo(
@@ -512,47 +482,22 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
     }
   }
 
-  async function handleProviderSubmit() {
-    if (!validateVisitPayload(providerForm, "El nombre del proveedor es obligatorio.")) {
-      return;
-    }
-
-    try {
-      setIsRegisteringProvider(true);
-      setErrorMessage("");
-      const [registeredProvider, createdProviderAccess] = await Promise.all([
-        createTenantProviderRequest({
-          nombre: providerForm.nombre,
-          tipo_servicio: providerForm.motivo_servicio || "General",
-          descripcion: providerForm.observaciones,
-        }),
-        createVisitRequest({
-          ...providerForm,
-          tipo_visita: "PROVEEDOR",
-          foto: null,
-        }),
-      ]);
-      setVisits((current) => [createdProviderAccess, ...current]);
+  // HU-C06: el registro crea el vinculo y el acceso con QR en una sola operacion.
+  async function handleProviderRegistered(result: ProviderRegistrationResult) {
+    const registeredProvider = result.proveedor;
+    setVisits((current) => [result.acceso, ...current]);
+    if (registeredProvider) {
       setProviders((current) => {
         const exists = current.some((provider) => provider.id_servicio === registeredProvider.id_servicio);
         return exists
           ? current.map((provider) =>
               provider.id_servicio === registeredProvider.id_servicio ? registeredProvider : provider,
             )
-          : [...current, registeredProvider].sort((first, second) =>
-              first.nombre.localeCompare(second.nombre),
-            );
+          : [...current, registeredProvider].sort((first, second) => first.nombre.localeCompare(second.nombre));
       });
-      setProviderForm(createInitialProviderForm());
-      window.localStorage.removeItem(PROVIDER_FORM_STORAGE_KEY);
-      await refreshProviderHistory();
-      setSelectedStatus("TODOS");
-      setSuccessMessage("Proveedor registrado correctamente. Ya aparece en gestion y en tus accesos.");
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible registrar el proveedor.");
-    } finally {
-      setIsRegisteringProvider(false);
     }
+    setSelectedStatus("TODOS");
+    await refreshProviderHistory();
   }
 
   async function handleAuthorizationSubmit() {
@@ -686,13 +631,6 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
     } finally {
       setUpdatingProviderId(null);
     }
-  }
-
-  function updateProviderForm<K extends keyof VisitFormState>(field: K, value: VisitFormState[K]) {
-    setProviderForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
   }
 
   function updateEditForm<K extends keyof VisitFormState>(field: K, value: VisitFormState[K]) {
@@ -1018,122 +956,13 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl text-slate-900">
-            <BriefcaseBusiness className="size-6 text-blue-600" />
-            Registrar proveedor
-          </CardTitle>
-          <CardDescription className="mt-2">
-            Autoriza un proveedor para ingresar a tu unidad con fecha y horario definidos.
-            El formulario guarda cambios automaticamente mientras avanzas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid gap-5 md:grid-cols-2">
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Nombre del proveedor *</span>
-              <Input
-                value={providerForm.nombre}
-                onChange={(event) => updateProviderForm("nombre", event.target.value)}
-                placeholder="Ej. Mantenimiento Lopez"
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Servicio que realizara *</span>
-              <Input
-                value={providerForm.motivo_servicio || ""}
-                onChange={(event) => updateProviderForm("motivo_servicio", event.target.value)}
-                placeholder="Ej. Reparacion electrica"
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Fecha *</span>
-              <Input
-                type="date"
-                value={providerForm.fecha}
-                onChange={(event) => updateProviderForm("fecha", event.target.value)}
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Casa / unidad</span>
-              <Input
-                value={tenantHouseLabel}
-                readOnly
-                className="h-14 rounded-2xl border-slate-100 bg-slate-100 px-4 text-slate-500"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Hora de inicio *</span>
-              <Input
-                type="time"
-                value={providerForm.hora_inicio}
-                onChange={(event) => updateProviderForm("hora_inicio", event.target.value)}
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Hora de fin *</span>
-              <Input
-                type="time"
-                value={providerForm.hora_fin}
-                onChange={(event) => updateProviderForm("hora_fin", event.target.value)}
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Placa si aplica</span>
-              <Input
-                value={providerForm.placa}
-                onChange={(event) => updateProviderForm("placa", event.target.value.toUpperCase())}
-                onBlur={() => updateProviderForm("placa", normalizeVehiclePlate(providerForm.placa))}
-                placeholder="P-123ABC"
-                maxLength={14}
-                aria-invalid={Boolean(getVehiclePlateError(providerForm.placa))}
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-              {getVehiclePlateError(providerForm.placa) ? (
-                <span className="text-xs text-rose-600">{getVehiclePlateError(providerForm.placa)}</span>
-              ) : null}
-            </label>
-
-            <label className="block space-y-2">
-              <span className="text-sm font-medium text-slate-800">Observaciones</span>
-              <Input
-                value={providerForm.observaciones || ""}
-                onChange={(event) => updateProviderForm("observaciones", event.target.value)}
-                placeholder="Ej. Trae herramientas grandes"
-                className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
-              />
-            </label>
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              onClick={handleProviderSubmit}
-              disabled={isRegisteringProvider}
-              className="h-12 rounded-2xl bg-blue-600 px-6 text-white hover:bg-blue-700"
-            >
-              {isRegisteringProvider ? (
-                <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                <BriefcaseBusiness className="size-4" />
-              )}
-              Registrar proveedor
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <ProviderRegistrationForm
+        role="inquilino"
+        fixedHouseLabel={tenantHouseLabel}
+        storageKey={PROVIDER_FORM_STORAGE_KEY}
+        description="Autoriza un proveedor para ingresar a tu unidad con fecha y horario definidos. El formulario guarda cambios automaticamente mientras avanzas."
+        onRegistered={handleProviderRegistered}
+      />
 
       <Card className="border-0 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
         <CardHeader>

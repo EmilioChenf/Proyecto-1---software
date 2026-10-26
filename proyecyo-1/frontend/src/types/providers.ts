@@ -1,3 +1,6 @@
+import type { ProviderEntryMode } from "@/utils/providerAccess";
+import type { VisitRecord } from "@/types/visits";
+
 export type TenantProviderStatus = "VALIDADO" | "PENDIENTE";
 
 export interface TenantProvider {
@@ -74,4 +77,26 @@ export interface AdminProviderFilters {
   date?: string;
   status?: TenantProviderStatus | "TODOS";
   activity?: AdminProviderActivityFilter;
+}
+
+// HU-C06: registro de proveedor (vinculo con la casa + acceso con QR) por rol.
+export type ProviderRegistrationRole = "admin" | "residente" | "inquilino";
+
+export interface ProviderRegistrationPayload {
+  nombre: string;
+  motivo_servicio: string;
+  medio_ingreso: ProviderEntryMode;
+  placa: string;
+  dpi: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  observaciones?: string;
+  id_casa?: number;
+  confirmar_actualizacion?: boolean;
+}
+
+export interface ProviderRegistrationResult {
+  proveedor: AdminProviderRecord | null;
+  acceso: VisitRecord;
 }

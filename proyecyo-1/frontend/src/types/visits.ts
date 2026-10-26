@@ -1,3 +1,5 @@
+import type { ProviderEntryMode } from "@/utils/providerAccess";
+
 export type VisitType = "VISITA" | "DELIVERY" | "PROVEEDOR";
 
 export interface VisitRecord {
@@ -12,6 +14,7 @@ export interface VisitRecord {
   hora_fin: string;
   hora_salida?: string | null;
   tipo_visita: VisitType;
+  medio_ingreso?: ProviderEntryMode | null;
   motivo_servicio?: string;
   observaciones?: string;
   token_qr?: string | null;
@@ -42,6 +45,7 @@ export interface VisitPayload {
   hora_inicio: string;
   hora_fin: string;
   tipo_visita: VisitType;
+  medio_ingreso?: ProviderEntryMode;
   motivo_servicio?: string;
   observaciones?: string;
 }
