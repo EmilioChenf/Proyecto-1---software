@@ -15,6 +15,7 @@ import {
 
 import { AppShell } from "@/components/layout/AppShell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { ProviderEntryModeField } from "@/components/providers/ProviderEntryModeField";
 import { QrCodeCard } from "@/components/visits/QrCodeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,7 @@ import {
   validateVisitTimesAgainstSchedule,
 } from "@/utils/visitSchedule";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
+import { getVisitAccessRuleError, providerEntryModeLabels } from "@/utils/providerAccess";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
 type VisitFormState = VisitPayload & { confirmar_actualizacion?: boolean };
@@ -75,8 +77,17 @@ function createInitialForm(): VisitFormState {
     hora_inicio: startTime,
     hora_fin: finishTime,
     tipo_visita: "VISITA",
+    medio_ingreso: "VEHICULO",
+    motivo_servicio: "",
     observaciones: "",
   };
+}
+
+/** Solo los accesos de proveedor envian medio de ingreso (HU-C06). */
+function toVisitRequest(payload: VisitFormState): VisitFormState {
+  if (payload.tipo_visita === "PROVEEDOR") return payload;
+  const { medio_ingreso: _medioIngreso, ...rest } = payload;
+  return rest;
 }
 
 function getDateInTimezone(date: Date) {
@@ -267,6 +278,17 @@ export function ResidenteVisitsView() {
         return false;
       }
 
+      // HU-C06: proveedor identificado segun su medio de ingreso y sin horarios pasados.
+      const accessRuleError = getVisitAccessRuleError(form);
+      if (accessRuleError) {
+        setErrorMessage(
+          form.tipo_visita === "PROVEEDOR" && /placa|DPI/.test(accessRuleError)
+            ? `${accessRuleError} Regresa al paso 1 para completarlo.`
+            : accessRuleError,
+        );
+        return false;
+      }
+
       if ((form.observaciones || "").length > 255) {
         setErrorMessage("Las observaciones no pueden superar 255 caracteres.");
         return false;
@@ -308,7 +330,7 @@ export function ResidenteVisitsView() {
       setIsSubmitting(true);
       setErrorMessage("");
       const createdVisit = await createVisitRequest({
-        ...payload,
+        ...toVisitRequest(payload),
         foto: null,
       });
       setVisits((current) => [createdVisit, ...current]);
@@ -837,6 +859,7 @@ export function ResidenteVisitsView() {
                     <Input
                       type="date"
                       value={form.fecha}
+                      min={getDateInTimezone(new Date())}
                       onChange={(event) => updateForm("fecha", event.target.value)}
                       className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
                     />
@@ -855,6 +878,25 @@ export function ResidenteVisitsView() {
                     </select>
                   </label>
                 </div>
+
+                {form.tipo_visita === "PROVEEDOR" ? (
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <ProviderEntryModeField
+                      value={form.medio_ingreso ?? "VEHICULO"}
+                      onChange={(value) => updateForm("medio_ingreso", value)}
+                    />
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-slate-800">Servicio que realizara</span>
+                      <Input
+                        value={form.motivo_servicio || ""}
+                        onChange={(event) => updateForm("motivo_servicio", event.target.value)}
+                        maxLength={120}
+                        placeholder="Ej. Reparacion electrica"
+                        className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
+                      />
+                    </label>
+                  </div>
+                ) : null}
 
                 <div className="grid gap-5 md:grid-cols-2">
                   <label className="block space-y-2">
@@ -909,6 +951,9 @@ export function ResidenteVisitsView() {
                   { label: "Fecha", value: form.fecha ? formatDate(form.fecha) : "No definida" },
                   { label: "Hora", value: `${form.hora_inicio || "--:--"} - ${form.hora_fin || "--:--"}` },
                   { label: "Tipo", value: visitTypeLabels[form.tipo_visita] },
+                  ...(form.tipo_visita === "PROVEEDOR"
+                    ? [{ label: "Medio de ingreso", value: providerEntryModeLabels[form.medio_ingreso ?? "VEHICULO"] }]
+                    : []),
                   { label: "Observaciones", value: form.observaciones || "Sin informacion adicional" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-3xl bg-slate-50 p-5">
@@ -999,6 +1044,9 @@ export function ResidenteVisitsView() {
                           Hora: {visit.hora_inicio} - {visit.hora_fin}
                         </p>
                         <p>Tipo de acceso: {visitTypeLabels[visit.tipo_visita]}</p>
+                        {visit.tipo_visita === "PROVEEDOR" && visit.medio_ingreso ? (
+                          <p>Medio de ingreso: {providerEntryModeLabels[visit.medio_ingreso]}</p>
+                        ) : null}
                         {visit.observaciones ? (
                           <p>Observaciones: {visit.observaciones}</p>
                         ) : null}
@@ -1017,6 +1065,10 @@ export function ResidenteVisitsView() {
                       title={`QR ${visit.nombre}`}
                       description={`Casa ${visit.casa} • ${visit.fecha} • ${visit.hora_inicio}`}
                     />
+                  ) : visit.qr_status === "EXPIRED" ? (
+                    <p className="self-center rounded-2xl bg-slate-50 p-4 text-sm text-slate-500" role="note">
+                      QR no disponible: la vigencia de este acceso ya venció.
+                    </p>
                   ) : null}
                 </CardContent>
               </Card>

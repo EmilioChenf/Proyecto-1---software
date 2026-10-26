@@ -60,6 +60,9 @@ export interface SpecialAccessPayload {
   hora_fin: string;
   id_casa: number;
   motivo_excepcion: string;
+  tipo_visita?: "VISITA" | "DELIVERY" | "PROVEEDOR";
+  medio_ingreso?: "VEHICULO" | "PEATONAL";
+  motivo_servicio?: string;
 }
 
 export interface SpecialAccessExceptionRecord {

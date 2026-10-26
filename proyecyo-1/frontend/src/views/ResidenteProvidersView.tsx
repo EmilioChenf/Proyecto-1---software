@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Clock3, Search, ShieldCheck } from "lucide-react";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { ProviderRegistrationForm } from "@/components/providers/ProviderRegistrationForm";
 import { notifyResidentBadgesChanged } from "@/components/residente/residentBadges";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export function ResidenteProvidersView() {
     <AppShell
       role="residente"
       title="Proveedores"
-      subtitle="Proveedores registrados por inquilinos de su unidad que requieren su aprobación."
+      subtitle="Registre sus proveedores y apruebe los que registran los inquilinos de su unidad."
     >
       {error ? (
         <Alert variant="destructive">
@@ -92,6 +93,16 @@ export function ResidenteProvidersView() {
           <AlertDescription className="text-emerald-700">{success}</AlertDescription>
         </Alert>
       ) : null}
+
+      {/* HU-C06.1: el propietario tambien registra proveedores; quedan validados de inmediato. */}
+      <ProviderRegistrationForm
+        role="residente"
+        description="Autoriza un proveedor para tu unidad con fecha y horario. Queda aprobado y con su QR listo."
+        onRegistered={async () => {
+          await load({ search, status });
+          notifyResidentBadgesChanged();
+        }}
+      />
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="Validación de proveedores">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-5 md:flex-row md:items-center md:justify-between">

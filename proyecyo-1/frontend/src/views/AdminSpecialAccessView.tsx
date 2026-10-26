@@ -28,7 +28,9 @@ import type {
   SpecialAccessRecord,
   VisitScheduleConfig,
 } from "@/types/announcements";
+import { ProviderEntryModeField } from "@/components/providers/ProviderEntryModeField";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
+import { getDpiError, getVisitAccessRuleError, type ProviderEntryMode } from "@/utils/providerAccess";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
 
 function createInitialForm() {
@@ -48,6 +50,9 @@ function createInitialForm() {
     hora_fin: "23:30",
     id_casa: 0,
     motivo_excepcion: "",
+    tipo_visita: "VISITA" as "VISITA" | "DELIVERY" | "PROVEEDOR",
+    medio_ingreso: "VEHICULO" as ProviderEntryMode,
+    motivo_servicio: "",
   };
 }
 
@@ -124,11 +129,37 @@ export function AdminSpecialAccessView() {
       return;
     }
 
+    const isProvider = form.tipo_visita === "PROVEEDOR";
+    if (!isProvider && !form.dpi.trim()) {
+      setErrorMessage("El nombre y DPI del visitante son obligatorios.");
+      return;
+    }
+    const dpiError = getDpiError(form.dpi);
+    if (dpiError) {
+      setErrorMessage(dpiError);
+      return;
+    }
+    if (isProvider && !form.motivo_servicio.trim()) {
+      setErrorMessage("Indica el servicio que realizara el proveedor.");
+      return;
+    }
+    // HU-C06: identificador del proveedor y vigencia no pasada.
+    const accessRuleError = getVisitAccessRuleError(form);
+    if (accessRuleError) {
+      setErrorMessage(accessRuleError);
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      const created = await createSpecialAccessRequest({ ...form, id_casa: Number(form.id_casa) });
+      const { medio_ingreso: medioIngreso, motivo_servicio: motivoServicio, ...base } = form;
+      const created = await createSpecialAccessRequest({
+        ...base,
+        id_casa: Number(form.id_casa),
+        ...(form.tipo_visita === "PROVEEDOR" ? { medio_ingreso: medioIngreso, motivo_servicio: motivoServicio } : {}),
+      });
       if (created.requiere_aprobacion) {
         setPendingAccesses((current) => [created, ...current]);
         setSuccessMessage(
@@ -220,16 +251,44 @@ export function AdminSpecialAccessView() {
             ) : null}
 
             <div className="grid gap-4 md:grid-cols-2">
+              <select
+                value={form.tipo_visita}
+                onChange={(e) => setForm((c) => ({ ...c, tipo_visita: e.target.value as typeof c.tipo_visita }))}
+                aria-label="Tipo de acceso"
+                className="h-11 rounded-xl border border-slate-200 px-4 outline-none focus:border-blue-300 md:col-span-2"
+              >
+                <option value="VISITA">Visita</option>
+                <option value="DELIVERY">Delivery</option>
+                <option value="PROVEEDOR">Proveedor</option>
+              </select>
+              {form.tipo_visita === "PROVEEDOR" ? (
+                <>
+                  <ProviderEntryModeField
+                    value={form.medio_ingreso}
+                    onChange={(value) => setForm((c) => ({ ...c, medio_ingreso: value }))}
+                    className="h-11 w-full rounded-xl border border-slate-200 px-4 outline-none focus:border-blue-300"
+                  />
+                  <input
+                    value={form.motivo_servicio}
+                    onChange={(e) => setForm((c) => ({ ...c, motivo_servicio: e.target.value }))}
+                    placeholder="Servicio que realizara"
+                    aria-label="Servicio que realizara"
+                    maxLength={120}
+                    className="h-11 self-end rounded-xl border border-slate-200 px-4 outline-none focus:border-blue-300"
+                  />
+                </>
+              ) : null}
               <input
                 value={form.nombre}
                 onChange={(e) => setForm((c) => ({ ...c, nombre: e.target.value }))}
-                placeholder="Nombre visitante"
+                placeholder={form.tipo_visita === "PROVEEDOR" ? "Nombre del proveedor" : "Nombre visitante"}
                 className="h-11 rounded-xl border border-slate-200 px-4 outline-none focus:border-blue-300"
               />
               <input
                 value={form.dpi}
                 onChange={(e) => setForm((c) => ({ ...c, dpi: e.target.value }))}
-                placeholder="DPI"
+                placeholder={form.tipo_visita === "PROVEEDOR" && form.medio_ingreso === "VEHICULO" ? "DPI (opcional)" : "DPI"}
+                aria-label="DPI"
                 className="h-11 rounded-xl border border-slate-200 px-4 outline-none focus:border-blue-300"
               />
               <input
@@ -259,6 +318,7 @@ export function AdminSpecialAccessView() {
               <input
                 type="date"
                 value={form.fecha}
+                min={createInitialForm().fecha}
                 onChange={(e) => setForm((c) => ({ ...c, fecha: e.target.value }))}
                 className="h-11 rounded-xl border border-slate-200 px-4 outline-none focus:border-blue-300"
               />

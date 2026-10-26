@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ProviderRegistrationForm } from "@/components/providers/ProviderRegistrationForm";
+import { ProviderEntryModeField } from "@/components/providers/ProviderEntryModeField";
 import { QrCodeCard } from "@/components/visits/QrCodeCard";
 import {
   cancelVisitRequest,
@@ -53,6 +54,7 @@ import type {
 import type { AuthorizationRequest, TenantPermission } from "@/types/sprintStories";
 import type { FrequentVisitor, VisitPayload, VisitRecord, VisitType } from "@/types/visits";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
+import { getVisitAccessRuleError, providerEntryModeLabels } from "@/utils/providerAccess";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
@@ -131,9 +133,17 @@ function createInitialForm(): VisitFormState {
     hora_inicio: getTimeInTimezone(now),
     hora_fin: getTimeInTimezone(finish),
     tipo_visita: "VISITA",
+    medio_ingreso: "VEHICULO",
     motivo_servicio: "",
     observaciones: "",
   };
+}
+
+/** Solo los accesos de proveedor envian medio de ingreso (HU-C06). */
+function toVisitRequest<T extends VisitFormState>(payload: T): T {
+  if (payload.tipo_visita === "PROVEEDOR") return payload;
+  const { medio_ingreso: _medioIngreso, ...rest } = payload;
+  return rest as T;
 }
 
 function formatDate(date: string) {
@@ -383,6 +393,17 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
         setErrorMessage("La hora de fin debe ser mayor a la hora de inicio.");
         return false;
       }
+
+      // HU-C06: proveedor identificado segun su medio de ingreso y sin horarios pasados.
+      const accessRuleError = getVisitAccessRuleError(form);
+      if (accessRuleError) {
+        setErrorMessage(
+          form.tipo_visita === "PROVEEDOR" && /placa|DPI/.test(accessRuleError)
+            ? `${accessRuleError} Regresa al paso 1 para completarlo.`
+            : accessRuleError,
+        );
+        return false;
+      }
     }
 
     setErrorMessage("");
@@ -413,6 +434,17 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
 
     if (payload.tipo_visita === "PROVEEDOR" && !payload.motivo_servicio?.trim()) {
       setErrorMessage("Indica el servicio que realizara el proveedor.");
+      return false;
+    }
+
+    // Al editar, un acceso que ya empezo puede conservar su hora de inicio.
+    const keepsStart =
+      editingVisit !== null &&
+      payload.fecha === editingVisit.fecha &&
+      payload.hora_inicio === editingVisit.hora_inicio;
+    const accessRuleError = getVisitAccessRuleError(payload, { allowStartedWindow: keepsStart });
+    if (accessRuleError) {
+      setErrorMessage(accessRuleError);
       return false;
     }
 
@@ -466,7 +498,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
       setIsSubmitting(true);
       setErrorMessage("");
       const createdVisit = await createVisitRequest({
-        ...payload,
+        ...toVisitRequest(payload),
         foto: null,
       });
       setVisits((current) => [createdVisit, ...current]);
@@ -537,6 +569,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
       hora_inicio: visit.hora_inicio,
       hora_fin: visit.hora_fin,
       tipo_visita: visit.tipo_visita,
+      medio_ingreso: visit.medio_ingreso ?? (visit.placa ? "VEHICULO" : "PEATONAL"),
       motivo_servicio: visit.motivo_servicio || "",
       observaciones: visit.observaciones || "",
     });
@@ -556,7 +589,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
       setIsUpdatingAccess(true);
       setErrorMessage("");
       const updatedVisit = await updateVisitRequest(editingVisit.id_acceso, {
-        ...editForm,
+        ...toVisitRequest(editForm),
         foto: null,
       });
       setVisits((current) =>
@@ -1184,6 +1217,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                   <Input
                     type="date"
                     value={form.fecha}
+                    min={getDateInTimezone(new Date())}
                     onChange={(event) => updateForm("fecha", event.target.value)}
                     className="h-14 rounded-2xl border-slate-100 bg-slate-50 px-4"
                   />
@@ -1202,6 +1236,15 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                   </select>
                 </label>
               </div>
+
+              {form.tipo_visita === "PROVEEDOR" ? (
+                <div className="grid gap-5 md:grid-cols-2">
+                  <ProviderEntryModeField
+                    value={form.medio_ingreso ?? "VEHICULO"}
+                    onChange={(value) => updateForm("medio_ingreso", value)}
+                  />
+                </div>
+              ) : null}
 
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="block space-y-2">
@@ -1236,6 +1279,9 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                 { label: "Fecha", value: form.fecha ? formatDate(form.fecha) : "No definida" },
                 { label: "Hora", value: `${form.hora_inicio || "--:--"} - ${form.hora_fin || "--:--"}` },
                 { label: "Tipo", value: visitTypeLabels[form.tipo_visita] },
+                ...(form.tipo_visita === "PROVEEDOR"
+                  ? [{ label: "Medio de ingreso", value: providerEntryModeLabels[form.medio_ingreso ?? "VEHICULO"] }]
+                  : []),
               ].map((item) => (
                 <div key={item.label} className="rounded-3xl bg-slate-50 p-5">
                   <p className="text-sm text-slate-500">{item.label}</p>
@@ -1409,6 +1455,10 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                         title={`QR ${visit.nombre}`}
                         description={`Casa ${visit.casa} | ${visit.fecha} | ${visit.hora_inicio}`}
                       />
+                    ) : visit.qr_status === "EXPIRED" ? (
+                      <p className="self-center rounded-2xl bg-slate-50 p-4 text-sm text-slate-500" role="note">
+                        QR no disponible: la vigencia de este acceso ya venció.
+                      </p>
                     ) : null}
                   </div>
                 </article>
@@ -1475,6 +1525,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                 <Input
                   type="date"
                   value={editForm.fecha}
+                  min={getDateInTimezone(new Date())}
                   onChange={(event) => updateEditForm("fecha", event.target.value)}
                   className="h-12 rounded-2xl border-slate-100 bg-slate-50 px-4"
                 />
@@ -1494,6 +1545,14 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                   <span className="text-xs text-rose-600">{getVehiclePlateError(editForm.placa)}</span>
                 ) : null}
               </label>
+
+              {editForm.tipo_visita === "PROVEEDOR" ? (
+                <ProviderEntryModeField
+                  value={editForm.medio_ingreso ?? "VEHICULO"}
+                  onChange={(value) => updateEditForm("medio_ingreso", value)}
+                  className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm outline-none focus:border-blue-300"
+                />
+              ) : null}
 
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-slate-800">Hora de inicio *</span>

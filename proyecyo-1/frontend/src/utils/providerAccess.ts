@@ -108,3 +108,34 @@ export function getPastVisitWindowError(...args: Parameters<typeof getPastVisitW
   const errors = getPastVisitWindowErrors(...args);
   return errors.fecha || errors.hora_inicio || errors.hora_fin || "";
 }
+
+export interface VisitScheduleInput {
+  tipo_visita: string;
+  medio_ingreso?: ProviderEntryMode;
+  placa: string;
+  dpi: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+}
+
+/**
+ * Primer error de HU-C06 para un acceso del asistente de visitas: identificador del
+ * proveedor segun su medio de ingreso y fecha/horario no pasados.
+ */
+export function getVisitAccessRuleError(
+  payload: VisitScheduleInput,
+  options: { now?: Date; allowStartedWindow?: boolean } = {},
+) {
+  if (payload.tipo_visita === "PROVEEDOR") {
+    const errors = getProviderIdentifierErrors({
+      medio_ingreso: payload.medio_ingreso ?? (payload.placa.trim() ? "VEHICULO" : "PEATONAL"),
+      placa: payload.placa,
+      dpi: payload.dpi,
+    });
+    const identifierError = errors.placa || errors.dpi;
+    if (identifierError) return identifierError;
+  }
+
+  return getPastVisitWindowError(payload.fecha, payload.hora_inicio, payload.hora_fin, options);
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Clock3, Power, RefreshCw, Search } from "lucide-react";
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { ProviderRegistrationForm, type ProviderHouseOption } from "@/components/providers/ProviderRegistrationForm";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +10,7 @@ import {
   getAdminProvidersRequest,
   updateAdminProviderRequest,
 } from "@/services/providersService";
+import { getHousesRequest } from "@/services/specialAccessesService";
 import type {
   AdminProviderActivityFilter,
   AdminProviderHistoryRecord,
@@ -71,6 +73,7 @@ export function AdminProvidersView() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [updatingProviderKey, setUpdatingProviderKey] = useState("");
+  const [houseOptions, setHouseOptions] = useState<ProviderHouseOption[]>([]);
 
   async function loadData(options: { silent?: boolean } = {}) {
     const { silent = false } = options;
@@ -103,6 +106,23 @@ export function AdminProvidersView() {
   useEffect(() => {
     void loadData();
   }, [search, house, actor, date, status, activity]);
+
+  // HU-C06.1: el administrador registra proveedores para cualquier casa.
+  useEffect(() => {
+    let active = true;
+    getHousesRequest()
+      .then((houses) => {
+        if (active) {
+          setHouseOptions(houses.map((item) => ({ id_casa: item.id_casa, etiqueta: `${item.etiqueta} • ${item.propietario}` })));
+        }
+      })
+      .catch(() => {
+        if (active) setHouseOptions([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const frequentProviders = useMemo(
     () => providers.filter((provider) => provider.frecuencia_cambios >= 2),
@@ -154,7 +174,7 @@ export function AdminProvidersView() {
   return (
     <AdminLayout
       title="Proveedores e Historial"
-      subtitle="Validacion administrativa de proveedores frecuentes y revision de cambios"
+      subtitle="Registro y validacion administrativa de proveedores, con revision de cambios"
       actions={
         <button
           type="button"
@@ -167,6 +187,13 @@ export function AdminProvidersView() {
         </button>
       }
     >
+      <ProviderRegistrationForm
+        role="admin"
+        houses={houseOptions}
+        description="Registra un proveedor para cualquier casa. Queda validado y con su QR listo para el guardia."
+        onRegistered={() => loadData({ silent: true })}
+      />
+
       <section className="grid gap-3 lg:grid-cols-5">
         <div className="relative lg:col-span-2">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
