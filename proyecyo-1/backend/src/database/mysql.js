@@ -251,9 +251,45 @@ async function ensureAccessGuardAuditSchema() {
     if (!existing) {
       await query(
         `ALTER TABLE REGISTRO_ACCESO ADD CONSTRAINT ${escapeIdentifier(constraint)}
-          FOREIGN KEY (${escapeIdentifier(column)}) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL`,
+          FOREIGN KEY (${escapeIdentifier(column)}) REFERENCES USUARIO(id_usuario) ON DELETE RESTRICT`,
       );
     }
+  }
+  await ensureVisitHistoryRelations();
+}
+
+// HU-C04: se ejecuta tambien sobre bases existentes, sin borrar ni reconstruir evidencia.
+async function ensureVisitHistoryRelations() {
+  const relations = [
+    ["ACCESO", "id_visitante", "VISITANTE", "id_visitante"],
+    ["ACCESO", "id_casa", "CASA", "id_casa"],
+    ["ACCESO", "id_usuario_autoriza", "USUARIO", "id_usuario"],
+    ["REGISTRO_ACCESO", "id_acceso", "ACCESO", "id_acceso"],
+    ["REGISTRO_ACCESO", "id_guardia_ingreso", "USUARIO", "id_usuario"],
+    ["REGISTRO_ACCESO", "id_guardia_salida", "USUARIO", "id_usuario"],
+  ];
+  for (const [table, column, parent, parentColumn] of relations) {
+    const constraints = await query(
+      `SELECT k.CONSTRAINT_NAME AS name, r.DELETE_RULE AS delete_rule, r.UPDATE_RULE AS update_rule
+       FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
+       JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS r
+         ON r.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+         AND r.TABLE_NAME = k.TABLE_NAME
+       WHERE k.TABLE_SCHEMA = ? AND k.TABLE_NAME = ? AND k.COLUMN_NAME = ?
+         AND k.REFERENCED_TABLE_NAME = ? AND k.REFERENCED_COLUMN_NAME = ?`,
+      [env.DB_NAME, table, column, parent, parentColumn],
+    );
+    if (constraints.length && constraints.every((constraint) =>
+      ["RESTRICT", "NO ACTION"].includes(constraint.delete_rule) &&
+      ["RESTRICT", "NO ACTION"].includes(constraint.update_rule))) continue;
+
+    const name = constraints[0]?.name || `fk_huc04_${table.toLowerCase()}_${column}`;
+    const drops = constraints.map((constraint) => `DROP FOREIGN KEY ${escapeIdentifier(constraint.name)}, `).join("");
+    await query(
+      `ALTER TABLE ${escapeIdentifier(table)} ${drops}ADD CONSTRAINT ${escapeIdentifier(name)}
+       FOREIGN KEY (${escapeIdentifier(column)}) REFERENCES ${escapeIdentifier(parent)} (${escapeIdentifier(parentColumn)})
+       ON DELETE RESTRICT ON UPDATE RESTRICT`,
+    );
   }
 }
 
@@ -1116,6 +1152,7 @@ module.exports = {
   ensureVisitQrSchema,
   ensureQrValidationAttemptsSchema,
   ensureAccessGuardAuditSchema,
+  ensureVisitHistoryRelations,
   ensureAmenityReservationsSchema,
   ensureNotificationsSchema,
   ensureActiveSessionsSchema,

@@ -269,9 +269,9 @@ CREATE TABLE ACCESO (
     estado_acceso VARCHAR(30) NOT NULL DEFAULT 'AUTORIZADA',
     es_acceso_especial BOOLEAN NOT NULL DEFAULT FALSE,
     fuera_horario BOOLEAN NOT NULL DEFAULT FALSE,
-    FOREIGN KEY (id_visitante) REFERENCES VISITANTE(id_visitante),
-    FOREIGN KEY (id_casa) REFERENCES CASA(id_casa),
-    FOREIGN KEY (id_usuario_autoriza) REFERENCES USUARIO(id_usuario),
+    FOREIGN KEY (id_visitante) REFERENCES VISITANTE(id_visitante) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    FOREIGN KEY (id_casa) REFERENCES CASA(id_casa) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    FOREIGN KEY (id_usuario_autoriza) REFERENCES USUARIO(id_usuario) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CHECK (tipo_visita IN ('VISITA', 'DELIVERY', 'PROVEEDOR')),
     CHECK (estado_acceso IN ('AUTORIZADA', 'INGRESO_REGISTRADO', 'SALIDA_REGISTRADA', 'CANCELADA', 'PENDIENTE_APROBACION', 'RECHAZADA'))
 );
@@ -283,9 +283,9 @@ CREATE TABLE REGISTRO_ACCESO (
     hora_salida TIME,
     id_guardia_ingreso INT NULL,
     id_guardia_salida INT NULL,
-    FOREIGN KEY (id_acceso) REFERENCES ACCESO(id_acceso),
-    CONSTRAINT fk_registro_acceso_id_guardia_ingreso FOREIGN KEY (id_guardia_ingreso) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
-    CONSTRAINT fk_registro_acceso_id_guardia_salida FOREIGN KEY (id_guardia_salida) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL
+    FOREIGN KEY (id_acceso) REFERENCES ACCESO(id_acceso) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_registro_acceso_id_guardia_ingreso FOREIGN KEY (id_guardia_ingreso) REFERENCES USUARIO(id_usuario) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_registro_acceso_id_guardia_salida FOREIGN KEY (id_guardia_salida) REFERENCES USUARIO(id_usuario) ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 
 CREATE TABLE INTENTO_VALIDACION_QR (
