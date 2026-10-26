@@ -58,3 +58,44 @@ describe("HU-C04.1 eliminacion fisica", () => {
     expect(connection.commit).not.toHaveBeenCalled();
   });
 });
+
+describe("HU-C04.2 cancelacion logica", () => {
+  it.each(["AUTORIZADA", "INGRESO_REGISTRADO", "SALIDA_REGISTRADA"])(
+    "cancela desde %s conservando los movimientos y el estado anterior en auditoria", async (estado_acceso) => {
+      const original = { ...visit, estado_acceso, hora_salida: "13:00" };
+      connection.execute.mockResolvedValueOnce([[original]]).mockResolvedValue([{ affectedRows: 1 }]);
+      // Notificacion a guardias, luego consulta de respuesta.
+      query.mockResolvedValueOnce([]).mockResolvedValueOnce([{ ...original, estado_acceso: "CANCELADA" }]);
+      await expect(visits.cancelVisit(1, "residente", 41)).resolves.toMatchObject({
+        id_acceso: 41, estado_acceso: "CANCELADA", hora_salida: "13:00",
+      });
+      const audit = connection.execute.mock.calls.find(([sql]) => sql.includes("INSERT INTO AUDITORIA"));
+      expect(audit[1][1]).toBe("VISIT_CANCELLED");
+      expect(JSON.parse(audit[1][4])).toMatchObject({ estado_acceso });
+      expect(JSON.parse(audit[1][5])).toMatchObject({ estado_acceso: "CANCELADA" });
+      expect(connection.execute.mock.calls.some(([sql]) => /DELETE|UPDATE REGISTRO_ACCESO|UPDATE VISITANTE/i.test(sql))).toBe(false);
+      expect(connection.commit).toHaveBeenCalled();
+    },
+  );
+
+  it("un error al auditar revierte la cancelacion", async () => {
+    connection.execute.mockResolvedValueOnce([[visit]]).mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockRejectedValueOnce(new Error("audit unavailable"));
+    await expect(visits.cancelVisit(1, "residente", 41)).rejects.toThrow("audit unavailable");
+    expect(connection.rollback).toHaveBeenCalled();
+    expect(connection.commit).not.toHaveBeenCalled();
+  });
+
+  it.each(["CANCELADA", "RECHAZADA"])("no reactiva ni vuelve a cancelar %s", async (estado_acceso) => {
+    connection.execute.mockResolvedValueOnce([[{ ...visit, estado_acceso }]]);
+    await expect(visits.cancelVisit(1, "residente", 41)).rejects.toMatchObject({ status: 409 });
+    expect(connection.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("una cancelacion ajena no altera la visita", async () => {
+    connection.execute.mockResolvedValueOnce([[]]);
+    await expect(visits.cancelVisit(7, "inquilino", 41)).rejects.toMatchObject({ status: 404 });
+    expect(connection.execute.mock.calls[0][1]).toEqual([41, 1, 7]);
+    expect(connection.commit).not.toHaveBeenCalled();
+  });
+});

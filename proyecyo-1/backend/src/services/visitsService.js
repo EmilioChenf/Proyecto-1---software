@@ -703,42 +703,47 @@ async function cancelVisit(userId, role = "residente", accessId) {
     throw error;
   }
 
-  const rows = await query(
-    `
-      SELECT a.id_acceso, a.estado_acceso
-      FROM ACCESO a
-      INNER JOIN CASA c ON c.id_casa = a.id_casa
-      WHERE a.id_acceso = ? AND a.id_casa = ?
-        ${getOwnerFilter(role)}
-      LIMIT 1
-    `,
-    [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
-  );
-
-  const existing = rows[0];
-
-  if (!existing) {
-    const error = new Error("Visita no encontrada.");
-    error.status = 404;
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      `SELECT a.id_acceso, a.id_visitante, a.id_casa, a.fecha, a.hora_inicio, a.hora_fin, a.estado_acceso
+       FROM ACCESO a
+       WHERE a.id_acceso = ? AND a.id_casa = ? ${getOwnerFilter(role)}
+       LIMIT 1 FOR UPDATE`,
+      [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
+    );
+    const existing = rows[0];
+    if (!existing) {
+      const error = new Error("Visita no encontrada.");
+      error.status = 404;
+      throw error;
+    }
+    if (["CANCELADA", "RECHAZADA"].includes(existing.estado_acceso)) {
+      const error = new Error("La visita ya fue cancelada o rechazada previamente.");
+      error.status = 409;
+      throw error;
+    }
+    // Solo cambia el estado actual. La visita, los movimientos y sus guardias se conservan.
+    await connection.execute(
+      "UPDATE ACCESO SET estado_acceso = 'CANCELADA' WHERE id_acceso = ?",
+      [normalizedAccessId],
+    );
+    await transactionAudit(connection, {
+      userId,
+      action: "VISIT_CANCELLED",
+      entity: "ACCESO",
+      entityId: normalizedAccessId,
+      previousData: existing,
+      newData: { ...existing, estado_acceso: "CANCELADA" },
+    });
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
-
-  if (String(existing.estado_acceso).toUpperCase() === "INGRESO_REGISTRADO") {
-    const error = new Error("No se puede cancelar una visita que ya tiene ingreso registrado.");
-    error.status = 409;
-    throw error;
-  }
-
-  if (String(existing.estado_acceso).toUpperCase() === "CANCELADA") {
-    const error = new Error("La visita ya fue cancelada previamente.");
-    error.status = 409;
-    throw error;
-  }
-
-  await query(
-    "UPDATE ACCESO SET estado_acceso = 'CANCELADA' WHERE id_acceso = ?",
-    [normalizedAccessId],
-  );
 
   // SCRUM-178: notifica a todos los guardias activos sobre la cancelacion
   try {
@@ -760,7 +765,10 @@ async function cancelVisit(userId, role = "residente", accessId) {
         DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
         TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
         TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
-        NULL AS hora_salida,
+        (
+          SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i')
+          FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso LIMIT 1
+        ) AS hora_salida,
         a.tipo_visita,
         a.motivo_servicio,
         a.observaciones,
