@@ -8,6 +8,7 @@ const {
   describeProviderEntryMode,
   ensureProviderIdentifiers,
 } = require("../utils/providerAccessValidation");
+const { ensureVisitWindowNotPast, isVisitWindowExpired } = require("../utils/visitWindow");
 
 const DEFAULT_SCHEDULE = { inicio: "06:00", fin: "22:00" };
 
@@ -99,7 +100,9 @@ function mapSpecialAccess(row) {
     es_acceso_especial: Boolean(row.es_acceso_especial),
     estado_acceso: row.estado_acceso,
     token_qr: row.token_qr || null,
-    qr_value: row.token_qr ? `NEXUSVISIT:${row.token_qr}` : null,
+    // HU-C06.7: un QR cuya vigencia termino no se vuelve a entregar.
+    qr_value:
+      row.token_qr && !isVisitWindowExpired(row.fecha, row.hora_fin) ? `NEXUSVISIT:${row.token_qr}` : null,
     fuera_horario: Boolean(row.fuera_horario),
   };
 }
@@ -277,6 +280,8 @@ async function createSpecialAccess(adminUserId, payload = {}) {
     error.status = 400;
     throw error;
   }
+
+  ensureVisitWindowNotPast(fecha, horaInicio, horaFin);
 
   const houseRows = await query("SELECT id_casa FROM CASA WHERE id_casa = ? LIMIT 1", [idCasa]);
 
@@ -466,6 +471,7 @@ async function approveSpecialAccess(adminUserId, accessId) {
         a.id_acceso,
         a.estado_acceso,
         a.motivo_excepcion,
+        DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
         a.hora_inicio,
         a.hora_fin,
         v.nombre AS visitante,
@@ -494,6 +500,14 @@ async function approveSpecialAccess(adminUserId, accessId) {
   if (access.estado_acceso !== "PENDIENTE_APROBACION") {
     const error = new Error("Este acceso ya fue procesado.");
     error.status = 409;
+    throw error;
+  }
+
+  // HU-C06.7: aprobar tarde una solicitud no debe emitir un QR ya vencido.
+  if (isVisitWindowExpired(access.fecha, access.hora_fin)) {
+    const error = new Error("La vigencia de este acceso ya venció; no se generará un QR. Recházalo o registra uno nuevo.");
+    error.status = 409;
+    error.code = "QR_WINDOW_EXPIRED";
     throw error;
   }
 

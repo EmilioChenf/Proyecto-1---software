@@ -5,6 +5,7 @@ const { recordAudit } = require("./auditService");
 const { ensureValidVehiclePlate } = require("../utils/vehiclePlate");
 const { ensureValidDate, ensureValidTime } = require("../utils/dateTimeValidation");
 const { ensureValidDpi } = require("../utils/identityDocument");
+const { ensureVisitWindowNotPast } = require("../utils/visitWindow");
 const {
   describeProviderEntryMode,
   ensureProviderIdentifiers,
@@ -127,7 +128,8 @@ function mapVisit(row) {
     fuera_horario: Boolean(row.fuera_horario),
     motivo_excepcion: row.motivo_excepcion || "",
     qr_status: qrStatus,
-    qr_value: row.token_qr ? `NEXUSVISIT:${row.token_qr}` : null,
+    // HU-C06.7: un QR vencido no se entrega para mostrarlo ni compartirlo.
+    qr_value: row.token_qr && qrStatus !== "EXPIRED" ? `NEXUSVISIT:${row.token_qr}` : null,
     casa: row.casa,
   };
 }
@@ -315,7 +317,6 @@ async function createVisit(userId, role = "residente", payload) {
   const horaFin = ensureValidTime(payload.hora_fin, "hora de fin");
   const motivoServicio = ensureMaxLength(payload.motivo_servicio, 120, "El motivo del servicio");
   const observaciones = ensureMaxLength(payload.observaciones, 255, "Las observaciones");
-  const qrToken = generateQrToken();
 
   if (!nombre) {
     const error = new Error("El nombre del visitante es obligatorio.");
@@ -329,7 +330,10 @@ async function createVisit(userId, role = "residente", payload) {
     throw error;
   }
 
+  // HU-C06.6/C06.7: sin fechas ni horarios pasados, asi nunca se genera un QR vencido.
+  ensureVisitWindowNotPast(fecha, horaInicio, horaFin);
   await assertVisitTimesAllowed(horaInicio, horaFin, fecha);
+  const qrToken = generateQrToken();
 
   const connection = await pool.getConnection();
 
@@ -622,6 +626,10 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
     throw error;
   }
 
+  // Un acceso vigente que conserva su inicio puede editarse aunque ya haya empezado;
+  // cualquier cambio de fecha u hora de inicio no puede quedar en el pasado.
+  const keepsStart = fecha === visit.fecha && horaInicio.slice(0, 5) === String(visit.hora_inicio).slice(0, 5);
+  ensureVisitWindowNotPast(fecha, horaInicio, horaFin, { allowStartedWindow: keepsStart });
   await assertVisitTimesAllowed(horaInicio, horaFin, fecha);
 
   const connection = await pool.getConnection();
