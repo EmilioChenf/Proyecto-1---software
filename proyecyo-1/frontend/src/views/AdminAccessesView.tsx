@@ -690,7 +690,11 @@ export function AdminAccessesView() {
                 </tr>
               ) : (
                 accesses.map((access) => {
-                  const statusMeta = statusStyles[access.estado];
+                  const statusMeta = access.estado_visita === "CANCELADA"
+                    ? { ...statusStyles.RECHAZADO, label: "Cancelada" }
+                    : access.estado_visita === "VENCIDA"
+                      ? { ...statusStyles.PENDIENTE, label: "Vencida", dotClassName: "bg-slate-400" }
+                      : statusStyles[access.estado];
                   const StatusIcon = statusMeta.icon;
 
                   return (

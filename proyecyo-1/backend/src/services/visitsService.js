@@ -8,6 +8,16 @@ const crypto = require("crypto");
 const { guatemalaToday, sqlUtcTimeToGuatemala } = require("../utils/guatemalaTime");
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
+// Proyeccion comun: los movimientos se consultan independientemente del estado actual.
+const VISIT_HISTORY_FIELDS = `
+        (SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, '%H:%i')
+         FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso LIMIT 1) AS hora_ingreso,
+        (SELECT u.nombre FROM REGISTRO_ACCESO ra JOIN USUARIO u ON u.id_usuario = ra.id_guardia_ingreso
+         WHERE ra.id_acceso = a.id_acceso LIMIT 1) AS guardia_ingreso,
+        (SELECT u.nombre FROM REGISTRO_ACCESO ra JOIN USUARIO u ON u.id_usuario = ra.id_guardia_salida
+         WHERE ra.id_acceso = a.id_acceso LIMIT 1) AS guardia_salida,
+        EXISTS(SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso) AS tiene_historial,`;
+
 function normalizeString(value) {
   return String(value || "").trim();
 }
@@ -97,6 +107,10 @@ function mapVisit(row) {
     hora_inicio: row.hora_inicio,
     hora_fin: row.hora_fin,
     hora_salida: row.hora_salida || null,
+    hora_ingreso: row.hora_ingreso || null,
+    guardia_ingreso: row.guardia_ingreso || null,
+    guardia_salida: row.guardia_salida || null,
+    tiene_historial: Boolean(row.tiene_historial),
     tipo_visita: row.tipo_visita,
     motivo_servicio: row.motivo_servicio || "",
     observaciones: row.observaciones || "",
@@ -141,16 +155,17 @@ function normalizeQrTime(value, fallback) {
 }
 
 function getQrStatus(visit) {
+  // La cancelacion es el estado actual, aunque existan movimientos anteriores.
+  if (visit.estado_acceso === "CANCELADA" || visit.estado_acceso === "RECHAZADA") {
+    return "CANCELLED";
+  }
+
   if (visit.estado_acceso === "SALIDA_REGISTRADA" || visit.hora_salida) {
     return "EXIT_REGISTERED";
   }
 
   if (visit.estado_acceso === "INGRESO_REGISTRADO") {
     return "USED";
-  }
-
-  if (visit.estado_acceso === "CANCELADA" || visit.estado_acceso === "RECHAZADA") {
-    return "CANCELLED";
   }
 
   if (visit.estado_acceso === "PENDIENTE_APROBACION" || !visit.token_qr) {
@@ -212,6 +227,7 @@ async function listResidentVisits(userId, role = "residente") {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -317,17 +333,13 @@ async function createVisit(userId, role = "residente", payload) {
 
     const [existingVisitors] = await connection.execute(
       `SELECT id_visitante FROM VISITANTE
-       WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
+       WHERE nombre = ? AND COALESCE(dpi, '') = ? AND COALESCE(placa, '') = ?
        ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
-      [dpi, dpi, placa, placa.replace(/-/g, "")],
+      [nombre, dpi, placa],
     );
     let visitorId = existingVisitors[0]?.id_visitante;
-    if (visitorId) {
-      await connection.execute(
-        "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
-        [nombre, dpi || null, placa || null, visitorId],
-      );
-    } else {
+    // Reutilizar solo datos identicos; nunca reescribir un visitante de visitas anteriores.
+    if (!visitorId) {
       const [visitorResult] = await connection.execute(
         "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
         [nombre, dpi || null, placa || null],
@@ -360,6 +372,7 @@ async function createVisit(userId, role = "residente", payload) {
       `
         SELECT
           a.id_acceso,
+          ${VISIT_HISTORY_FIELDS}
           v.id_visitante,
           v.nombre,
           v.dpi,
@@ -405,54 +418,54 @@ async function deleteVisit(userId, role = "residente", accessId) {
     throw error;
   }
 
-  const rows = await query(
-    `
-      SELECT
-        a.id_acceso,
-        a.id_visitante,
-        v.nombre,
-        v.dpi,
-        v.placa,
-        DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
-        TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
-        TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
-        (
-          SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i')
-          FROM REGISTRO_ACCESO ra
-          WHERE ra.id_acceso = a.id_acceso
-          LIMIT 1
-        ) AS hora_salida,
-        a.tipo_visita,
-        a.motivo_servicio,
-        a.observaciones,
-        a.token_qr,
-        a.estado_acceso,
-        CONCAT(COALESCE(c.torre, ''), CASE WHEN c.torre IS NOT NULL AND c.torre <> '' THEN '-' ELSE '' END, c.numero) AS casa
-      FROM ACCESO a
-      INNER JOIN VISITANTE v
-        ON v.id_visitante = a.id_visitante
-      INNER JOIN CASA c
-        ON c.id_casa = a.id_casa
-      WHERE a.id_acceso = ? AND a.id_casa = ?
-        ${getOwnerFilter(role)}
-      LIMIT 1
-    `,
-    [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
-  );
-
-  const visit = rows[0];
-
-  if (!visit) {
-    const error = new Error("Visita no encontrada.");
-    error.status = 404;
-    throw error;
-  }
-
   const connection = await pool.getConnection();
-
   try {
     await connection.beginTransaction();
-    await connection.execute("DELETE FROM REGISTRO_ACCESO WHERE id_acceso = ?", [normalizedAccessId]);
+    const [rows] = await connection.execute(
+      `
+        SELECT
+          a.id_acceso,
+          ${VISIT_HISTORY_FIELDS}
+          a.id_visitante,
+          v.nombre,
+          v.dpi,
+          v.placa,
+          DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
+          TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
+          TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
+          (
+            SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i')
+            FROM REGISTRO_ACCESO ra
+            WHERE ra.id_acceso = a.id_acceso
+            LIMIT 1
+          ) AS hora_salida,
+          a.tipo_visita,
+          a.motivo_servicio,
+          a.observaciones,
+          a.token_qr,
+          a.estado_acceso,
+          CONCAT(COALESCE(c.torre, ''), CASE WHEN c.torre IS NOT NULL AND c.torre <> '' THEN '-' ELSE '' END, c.numero) AS casa
+        FROM ACCESO a
+        INNER JOIN VISITANTE v
+          ON v.id_visitante = a.id_visitante
+        INNER JOIN CASA c
+          ON c.id_casa = a.id_casa
+        WHERE a.id_acceso = ? AND a.id_casa = ?
+          ${getOwnerFilter(role)}
+        LIMIT 1 FOR UPDATE
+      `,
+      [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
+    );
+
+    const visit = rows[0];
+
+    if (!visit) {
+      const error = new Error("Visita no encontrada.");
+      error.status = 404;
+      throw error;
+    }
+
+    await assertVisitsHaveNoHistory(connection, [visit]);
     await connection.execute("DELETE FROM ACCESO WHERE id_acceso = ?", [normalizedAccessId]);
     await connection.execute(
       `
@@ -491,6 +504,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         a.id_visitante,
         v.nombre,
         v.dpi,
@@ -567,18 +581,30 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
 
   try {
     await connection.beginTransaction();
-    await connection.execute(
-      `
-        UPDATE VISITANTE
-        SET nombre = ?, dpi = ?, placa = ?
-        WHERE id_visitante = ?
-      `,
-      [nombre, dpi, placa, visit.id_visitante],
+    const [lockedRows] = await connection.execute(
+      `SELECT a.id_acceso, a.id_visitante, a.estado_acceso, a.token_qr,
+              DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha, a.hora_inicio, a.hora_fin
+       FROM ACCESO a WHERE a.id_acceso = ? AND a.id_casa = ? ${getOwnerFilter(role)}
+       LIMIT 1 FOR UPDATE`,
+      [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
+    );
+    const lockedVisit = lockedRows[0];
+    if (!lockedVisit || lockedVisit.estado_acceso !== "AUTORIZADA" || getQrStatus(lockedVisit) !== "VALID") {
+      const error = new Error("Este acceso ya no puede modificarse por su estado actual.");
+      error.status = 409;
+      throw error;
+    }
+    await assertVisitsHaveNoHistory(connection, [lockedVisit]);
+    // Cada correccion obtiene su propia identidad: otras visitas conservan sus datos originales.
+    const [visitorResult] = await connection.execute(
+      "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
+      [nombre, dpi || null, placa || null],
     );
     await connection.execute(
       `
         UPDATE ACCESO
-        SET fecha = ?,
+        SET id_visitante = ?,
+            fecha = ?,
             hora_inicio = ?,
             hora_fin = ?,
             tipo_visita = ?,
@@ -587,6 +613,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
         WHERE id_acceso = ?
       `,
       [
+        visitorResult.insertId,
         fecha,
         horaInicio,
         horaFin,
@@ -608,6 +635,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -641,6 +669,7 @@ async function createGuardCancellationNotifications(accessId) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.nombre AS visitante,
         TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
         DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
@@ -704,42 +733,47 @@ async function cancelVisit(userId, role = "residente", accessId) {
     throw error;
   }
 
-  const rows = await query(
-    `
-      SELECT a.id_acceso, a.estado_acceso
-      FROM ACCESO a
-      INNER JOIN CASA c ON c.id_casa = a.id_casa
-      WHERE a.id_acceso = ? AND a.id_casa = ?
-        ${getOwnerFilter(role)}
-      LIMIT 1
-    `,
-    [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
-  );
-
-  const existing = rows[0];
-
-  if (!existing) {
-    const error = new Error("Visita no encontrada.");
-    error.status = 404;
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = await connection.execute(
+      `SELECT a.id_acceso, a.id_visitante, a.id_casa, a.fecha, a.hora_inicio, a.hora_fin, a.estado_acceso
+       FROM ACCESO a
+       WHERE a.id_acceso = ? AND a.id_casa = ? ${getOwnerFilter(role)}
+       LIMIT 1 FOR UPDATE`,
+      [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
+    );
+    const existing = rows[0];
+    if (!existing) {
+      const error = new Error("Visita no encontrada.");
+      error.status = 404;
+      throw error;
+    }
+    if (["CANCELADA", "RECHAZADA"].includes(existing.estado_acceso)) {
+      const error = new Error("La visita ya fue cancelada o rechazada previamente.");
+      error.status = 409;
+      throw error;
+    }
+    // Solo cambia el estado actual. La visita, los movimientos y sus guardias se conservan.
+    await connection.execute(
+      "UPDATE ACCESO SET estado_acceso = 'CANCELADA' WHERE id_acceso = ?",
+      [normalizedAccessId],
+    );
+    await transactionAudit(connection, {
+      userId,
+      action: "VISIT_CANCELLED",
+      entity: "ACCESO",
+      entityId: normalizedAccessId,
+      previousData: existing,
+      newData: { ...existing, estado_acceso: "CANCELADA" },
+    });
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
-
-  if (String(existing.estado_acceso).toUpperCase() === "INGRESO_REGISTRADO") {
-    const error = new Error("No se puede cancelar una visita que ya tiene ingreso registrado.");
-    error.status = 409;
-    throw error;
-  }
-
-  if (String(existing.estado_acceso).toUpperCase() === "CANCELADA") {
-    const error = new Error("La visita ya fue cancelada previamente.");
-    error.status = 409;
-    throw error;
-  }
-
-  await query(
-    "UPDATE ACCESO SET estado_acceso = 'CANCELADA' WHERE id_acceso = ?",
-    [normalizedAccessId],
-  );
 
   // SCRUM-178: notifica a todos los guardias activos sobre la cancelacion
   try {
@@ -753,6 +787,7 @@ async function cancelVisit(userId, role = "residente", accessId) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -761,7 +796,10 @@ async function cancelVisit(userId, role = "residente", accessId) {
         DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
         TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
         TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
-        NULL AS hora_salida,
+        (
+          SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i')
+          FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso LIMIT 1
+        ) AS hora_salida,
         a.tipo_visita,
         a.motivo_servicio,
         a.observaciones,
@@ -814,15 +852,13 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
 
   try {
     await connection.beginTransaction();
-    await connection.execute(
-      `
-        DELETE ra FROM REGISTRO_ACCESO ra
-        INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
-        WHERE a.id_visitante = ? AND a.id_casa = ?
-          ${getOwnerFilter(role)}
-      `,
+    const [accesses] = await connection.execute(
+      `SELECT a.id_acceso, a.estado_acceso FROM ACCESO a
+       WHERE a.id_visitante = ? AND a.id_casa = ? ${getOwnerFilter(role)}
+       ORDER BY a.id_acceso FOR UPDATE`,
       [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
     );
+    await assertVisitsHaveNoHistory(connection, accesses);
     await connection.execute(
       `DELETE FROM ACCESO WHERE id_visitante = ? AND id_casa = ? ${getOwnerFilter(role)}`,
       [normalizedVisitorId, house.id_casa, ...getOwnerParams(userId, role)],
@@ -848,9 +884,27 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
   }
 }
 
+// El bloqueo de ACCESO serializa estas eliminaciones con ingreso, salida y cancelacion.
+// Incluso un estado inconsistente debe conservar cualquier REGISTRO_ACCESO existente.
+async function assertVisitsHaveNoHistory(connection, visits) {
+  for (const visit of visits) {
+    const [records] = await connection.execute(
+      "SELECT id_registro FROM REGISTRO_ACCESO WHERE id_acceso = ? LIMIT 1 FOR UPDATE",
+      [visit.id_acceso],
+    );
+    if (records.length || ["INGRESO_REGISTRADO", "SALIDA_REGISTRADA"].includes(visit.estado_acceso)) {
+      const error = new Error("La visita tiene historial de acceso y no puede eliminarse. Cancele la visita para conservar sus movimientos.");
+      error.status = 409;
+      error.code = "VISIT_HAS_HISTORY";
+      throw error;
+    }
+  }
+}
+
 const GUARD_VISIT_SELECT = `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -901,6 +955,8 @@ async function getGuardShiftVisits() {
       WHERE a.fecha <= ?
         AND (
           a.estado_acceso = 'INGRESO_REGISTRADO'
+          OR EXISTS (SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso
+                     AND ra.hora_ingreso IS NOT NULL AND ra.hora_salida IS NULL)
           OR (a.fecha = ? AND a.estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION'))
         )
     `,
@@ -1050,6 +1106,7 @@ async function findVisitByQrToken(normalizedToken) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -1100,6 +1157,7 @@ async function createArrivalNotification(connection, accessId) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.nombre AS visitante,
         c.numero,
         c.torre,
@@ -1177,11 +1235,34 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
 
   try {
     await connection.beginTransaction();
+    const [currentRows] = await connection.execute(
+      `SELECT a.estado_acceso, a.token_qr,
+              DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha, a.hora_inicio, a.hora_fin
+       FROM ACCESO a WHERE a.id_acceso = ? FOR UPDATE`,
+      [visit.id_acceso],
+    );
+    const currentStatus = currentRows[0] ? getQrStatus(currentRows[0]) : "CANCELLED";
+    if (currentStatus !== "VALID") {
+      const reason = {
+        CANCELLED: ["Acceso cancelado. No autorizar el ingreso.", 410, "ACCESS_CANCELLED"],
+        EXPIRED: ["QR expirado.", 410, "QR_EXPIRED"],
+        NOT_YET_VALID: ["Este QR aun no esta vigente.", 409, "QR_NOT_YET_VALID"],
+        PENDING_APPROVAL: ["Este acceso aun no ha sido aprobado.", 409, "QR_PENDING_APPROVAL"],
+      }[currentStatus] || ["Este QR ya fue utilizado.", 409, "QR_ALREADY_USED"];
+      const error = new Error(reason[0]);
+      error.status = reason[1];
+      error.code = reason[2];
+      throw error;
+    }
     const [updateResult] = await connection.execute(
       `
         UPDATE ACCESO
         SET estado_acceso = 'INGRESO_REGISTRADO'
         WHERE id_acceso = ? AND estado_acceso = 'AUTORIZADA'
+          AND NOT EXISTS (SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = ACCESO.id_acceso)
+          AND CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-06:00')
+              BETWEEN TIMESTAMP(fecha, COALESCE(hora_inicio, '00:00:00'))
+                  AND TIMESTAMP(fecha, COALESCE(hora_fin, '23:59:59'))
       `,
       [visit.id_acceso],
     );
@@ -1197,9 +1278,6 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
       `
         INSERT INTO REGISTRO_ACCESO (id_acceso, hora_ingreso, id_guardia_ingreso)
         VALUES (?, CURTIME(), ?)
-        ON DUPLICATE KEY UPDATE
-          hora_ingreso = VALUES(hora_ingreso),
-          id_guardia_ingreso = VALUES(id_guardia_ingreso)
       `,
       [visit.id_acceso, guardUserId],
     );
@@ -1218,12 +1296,16 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
     return findVisitByQrToken(normalizedToken);
   } catch (error) {
     await connection.rollback();
-    if (error.code === "QR_ALREADY_USED") {
+    const rejectionResult = {
+      QR_ALREADY_USED: "REUTILIZADO", ACCESS_CANCELLED: "CANCELADO", QR_EXPIRED: "EXPIRADO",
+      QR_NOT_YET_VALID: "AUN_NO_VIGENTE", QR_PENDING_APPROVAL: "PENDIENTE_APROBACION",
+    }[error.code];
+    if (rejectionResult) {
       await recordQrValidationAttempt({
         accessId: visit.id_acceso,
         tokenQr: normalizedToken,
         guardUserId,
-        result: "REUTILIZADO",
+        result: rejectionResult,
         detail: error.message,
       });
     }

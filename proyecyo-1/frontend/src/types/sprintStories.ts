@@ -40,7 +40,7 @@ export interface GuardAccessHistoryRecord {
   placa: string;
   casa: string;
   tipo_visita: string;
-  estado: "PENDIENTE" | "INGRESO" | "SALIDA" | "CANCELADA" | "RECHAZADA" | "PENDIENTE_APROBACION";
+  estado: "PENDIENTE" | "INGRESO" | "SALIDA" | "CANCELADA" | "VENCIDA" | "RECHAZADA" | "PENDIENTE_APROBACION";
   hora_programada: string;
   hora_ingreso: string | null;
   hora_salida: string | null;

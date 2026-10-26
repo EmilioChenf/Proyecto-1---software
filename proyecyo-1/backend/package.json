@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "test:huc04:mysql": "node --test --test-concurrency=1 test/integration/huc04.mysql.test.js",
     "test:sprint9-finance:mysql": "node scripts/run-isolated-tests.js sprint9-finance",
     "test:sprint9-history:mysql": "node scripts/run-isolated-tests.js sprint9-history",
     "test:sprint9-exports:mysql": "node scripts/run-isolated-tests.js sprint9-exports",

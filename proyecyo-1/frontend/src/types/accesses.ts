@@ -40,6 +40,7 @@ export interface AdminAccessRecord {
   casa_unidad: string;
   placa: string;
   estado: AdminAccessStatus;
+  estado_visita?: string;
   autorizado_por: string;
   es_acceso_especial?: boolean;
   fuera_horario?: boolean;

@@ -6,14 +6,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/services/api";
 import { getVisitScheduleConfigRequest } from "@/services/configurationService";
-import { deleteVisitRequest, getFrequentVisitorsRequest, getVisitsRequest } from "@/services/visitsService";
+import { cancelVisitRequest, deleteVisitRequest, getFrequentVisitorsRequest, getVisitsRequest } from "@/services/visitsService";
 import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 import { ResidenteVisitsView } from "@/views/ResidenteVisitsView";
 
 vi.mock("@/components/layout/AppShell", () => ({ AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 vi.mock("@/components/visits/QrCodeCard", () => ({ QrCodeCard: () => <div>Codigo QR</div> }));
 vi.mock("@/services/visitsService", () => ({
-  createVisitRequest: vi.fn(), deleteFrequentVisitorRequest: vi.fn(), deleteVisitRequest: vi.fn(),
+  cancelVisitRequest: vi.fn(), createVisitRequest: vi.fn(), deleteFrequentVisitorRequest: vi.fn(), deleteVisitRequest: vi.fn(),
   getFrequentVisitorsRequest: vi.fn(), getVisitsRequest: vi.fn(),
 }));
 vi.mock("@/services/configurationService", () => ({ getVisitScheduleConfigRequest: vi.fn() }));
@@ -64,5 +64,42 @@ describe("HU-C02 eliminar visita del residente", () => {
     await openAndDelete();
     await waitFor(() => expect(notifyError).toHaveBeenCalledWith(failure, "No fue posible eliminar la visita."));
     expect(screen.getByRole("button", { name: "Eliminar visita de Pedro Ramirez" })).toBeInTheDocument();
+  });
+
+  it("HU-C04 cancela una visita con movimientos sin quitarla del historial", async () => {
+    const historical = {
+      ...visit, estado_acceso: "SALIDA_REGISTRADA" as const, qr_status: "EXIT_REGISTERED" as const,
+      tiene_historial: true, hora_ingreso: "10:05", hora_salida: "10:55",
+      guardia_ingreso: "Guardia A", guardia_salida: "Guardia B", qr_value: "NEXUSVISIT:original",
+    };
+    vi.mocked(getVisitsRequest).mockResolvedValue([historical]);
+    vi.mocked(confirmAction).mockResolvedValue(true);
+    vi.mocked(cancelVisitRequest).mockResolvedValue({ ...historical, estado_acceso: "CANCELADA", qr_status: "CANCELLED" });
+    render(<MemoryRouter><ResidenteVisitsView /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Cancelar visita de Pedro Ramirez" }));
+    await screen.findByText("Estado: Cancelada");
+    expect(cancelVisitRequest).toHaveBeenCalledWith(41);
+    expect(screen.getByText("Ingreso: 10:05 por Guardia A")).toBeInTheDocument();
+    expect(screen.getByText("Salida: 10:55 por Guardia B")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Eliminar visita de Pedro Ramirez" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Codigo QR")).not.toBeInTheDocument();
+    expect(notifySuccess).toHaveBeenCalledWith("Visita cancelada. El historial se conserva.");
+  });
+
+  it("HU-C04 muestra una vencida sin ofrecer su QR", async () => {
+    vi.mocked(getVisitsRequest).mockResolvedValue([{ ...visit, qr_status: "EXPIRED", qr_value: "NEXUSVISIT:old" }]);
+    render(<MemoryRouter><ResidenteVisitsView /></MemoryRouter>);
+    await screen.findByText("Estado: Vencida");
+    expect(screen.getByText("Pedro Ramirez")).toBeInTheDocument();
+    expect(screen.queryByText("Codigo QR")).not.toBeInTheDocument();
+  });
+
+  it("HU-C04 no cancela cuando se cierra la confirmacion", async () => {
+    vi.mocked(confirmAction).mockResolvedValue(false);
+    render(<MemoryRouter><ResidenteVisitsView /></MemoryRouter>);
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Cancelar visita de Pedro Ramirez" }));
+    expect(cancelVisitRequest).not.toHaveBeenCalled();
+    expect(screen.getByText("Estado: Autorizada")).toBeInTheDocument();
   });
 });

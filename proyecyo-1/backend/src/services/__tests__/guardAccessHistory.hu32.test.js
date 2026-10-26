@@ -12,6 +12,8 @@ describe("HU32 historial de garita", () => {
     [{ estado_acceso: "RECHAZADA" }, "RECHAZADA"],
     [{ estado_acceso: "PENDIENTE_APROBACION" }, "PENDIENTE_APROBACION"],
     [{ estado_acceso: "CANCELADA" }, "CANCELADA"],
+    [{ estado_acceso: "CANCELADA", hora_ingreso: "09:00", hora_salida: "10:00" }, "CANCELADA"],
+    [{ estado_acceso: "AUTORIZADA", vencida: 1 }, "VENCIDA"],
     [{ estado_acceso: "INGRESO_REGISTRADO", hora_ingreso: "09:00" }, "INGRESO"],
     [{ estado_acceso: "SALIDA_REGISTRADA", hora_ingreso: "09:00", hora_salida: "10:00" }, "SALIDA"],
   ])("mapea %j como %s (solo AUTORIZADA sin ingreso es pendiente)", (row, expected) => {
@@ -24,6 +26,7 @@ describe("HU32 historial de garita", () => {
     ["PENDIENTE_APROBACION", "a.estado_acceso = 'PENDIENTE_APROBACION'"],
     ["PENDIENTE", "COALESCE(a.estado_acceso, 'AUTORIZADA') = 'AUTORIZADA'"],
     ["SALIDA", "ra.hora_salida IS NOT NULL"],
+    ["VENCIDA", "TIMESTAMP(a.fecha, COALESCE(a.hora_fin, '23:59:59'))"],
   ])("el filtro %s se aplica en el backend", async (status, fragment) => {
     query.mockResolvedValueOnce([]);
     await listGuardDailyAccessHistory({ date: "2026-10-04", status });
@@ -67,7 +70,8 @@ describe("HU32 visitas recientes de garita", () => {
       }
       expect(query.mock.calls[1][0]).toContain("LIMIT 20");
       expect(query.mock.calls[0][0]).not.toContain("LIMIT 20");
-      expect(query.mock.calls[0][0]).not.toContain("id_usuario");
+      // Los guardias ejecutores se muestran sin filtrar por cuenta/autorizador.
+      expect(query.mock.calls[0][0]).not.toMatch(/(?:a\.id_usuario_autoriza|ra\.id_guardia_ingreso|ra\.id_guardia_salida)\s*=\s*\?/);
     } finally {
       jest.useRealTimers();
     }

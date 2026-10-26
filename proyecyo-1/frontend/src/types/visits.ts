@@ -11,6 +11,10 @@ export interface VisitRecord {
   hora_inicio: string;
   hora_fin: string;
   hora_salida?: string | null;
+  hora_ingreso?: string | null;
+  guardia_ingreso?: string | null;
+  guardia_salida?: string | null;
+  tiene_historial?: boolean;
   tipo_visita: VisitType;
   motivo_servicio?: string;
   observaciones?: string;
