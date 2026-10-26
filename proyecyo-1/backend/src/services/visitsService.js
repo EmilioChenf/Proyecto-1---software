@@ -317,17 +317,13 @@ async function createVisit(userId, role = "residente", payload) {
 
     const [existingVisitors] = await connection.execute(
       `SELECT id_visitante FROM VISITANTE
-       WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
+       WHERE nombre = ? AND COALESCE(dpi, '') = ? AND COALESCE(placa, '') = ?
        ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
-      [dpi, dpi, placa, placa.replace(/-/g, "")],
+      [nombre, dpi, placa],
     );
     let visitorId = existingVisitors[0]?.id_visitante;
-    if (visitorId) {
-      await connection.execute(
-        "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
-        [nombre, dpi || null, placa || null, visitorId],
-      );
-    } else {
+    // Reutilizar solo datos identicos; nunca reescribir un visitante de visitas anteriores.
+    if (!visitorId) {
       const [visitorResult] = await connection.execute(
         "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
         [nombre, dpi || null, placa || null],
@@ -566,18 +562,30 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
 
   try {
     await connection.beginTransaction();
-    await connection.execute(
-      `
-        UPDATE VISITANTE
-        SET nombre = ?, dpi = ?, placa = ?
-        WHERE id_visitante = ?
-      `,
-      [nombre, dpi, placa, visit.id_visitante],
+    const [lockedRows] = await connection.execute(
+      `SELECT a.id_acceso, a.id_visitante, a.estado_acceso, a.token_qr,
+              DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha, a.hora_inicio, a.hora_fin
+       FROM ACCESO a WHERE a.id_acceso = ? AND a.id_casa = ? ${getOwnerFilter(role)}
+       LIMIT 1 FOR UPDATE`,
+      [normalizedAccessId, house.id_casa, ...getOwnerParams(userId, role)],
+    );
+    const lockedVisit = lockedRows[0];
+    if (!lockedVisit || lockedVisit.estado_acceso !== "AUTORIZADA" || getQrStatus(lockedVisit) !== "VALID") {
+      const error = new Error("Este acceso ya no puede modificarse por su estado actual.");
+      error.status = 409;
+      throw error;
+    }
+    await assertVisitsHaveNoHistory(connection, [lockedVisit]);
+    // Cada correccion obtiene su propia identidad: otras visitas conservan sus datos originales.
+    const [visitorResult] = await connection.execute(
+      "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
+      [nombre, dpi || null, placa || null],
     );
     await connection.execute(
       `
         UPDATE ACCESO
-        SET fecha = ?,
+        SET id_visitante = ?,
+            fecha = ?,
             hora_inicio = ?,
             hora_fin = ?,
             tipo_visita = ?,
@@ -586,6 +594,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
         WHERE id_acceso = ?
       `,
       [
+        visitorResult.insertId,
         fecha,
         horaInicio,
         horaFin,

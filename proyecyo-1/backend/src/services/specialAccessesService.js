@@ -251,17 +251,13 @@ async function createSpecialAccess(adminUserId, payload = {}) {
 
       const [existingVisitorRows] = await connection.execute(
         `SELECT id_visitante FROM VISITANTE
-         WHERE dpi = ? OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
+         WHERE nombre = ? AND COALESCE(dpi, '') = ? AND COALESCE(placa, '') = ?
          ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
-        [dpi, placa, placa.replace(/-/g, "")],
+        [nombre, dpi, placa],
       );
 
     if (existingVisitorRows[0]) {
       visitorId = existingVisitorRows[0].id_visitante;
-      await connection.execute(
-        "UPDATE VISITANTE SET nombre = ?, placa = ? WHERE id_visitante = ?",
-        [nombre, placa || null, visitorId],
-      );
     } else {
       const [visitorResult] = await connection.execute(
         "INSERT INTO VISITANTE (nombre, dpi, placa) VALUES (?, ?, ?)",
