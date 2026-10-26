@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  cancelVisitRequest,
   createVisitRequest,
   deleteFrequentVisitorRequest,
   deleteVisitRequest,
@@ -102,16 +103,16 @@ function countTodayVisits(visits: VisitRecord[]) {
 }
 
 function getVisitStatusLabel(visit: VisitRecord) {
+  if (visit.estado_acceso === "CANCELADA" || visit.qr_status === "CANCELLED") {
+    return "Cancelada";
+  }
+
   if (visit.estado_acceso === "SALIDA_REGISTRADA" || visit.qr_status === "EXIT_REGISTERED") {
     return "Salida registrada";
   }
 
   if (visit.estado_acceso === "INGRESO_REGISTRADO" || visit.qr_status === "USED") {
     return "Ingreso registrado";
-  }
-
-  if (visit.estado_acceso === "CANCELADA" || visit.qr_status === "CANCELLED") {
-    return "Cancelada";
   }
 
   if (visit.qr_status === "EXPIRED") {
@@ -355,10 +356,27 @@ export function ResidenteVisitsView() {
     }
   }
 
+  async function handleCancel(visit: VisitRecord) {
+    const confirmed = await confirmAction({
+      title: "¿Cancelar la visita?",
+      text: `Se cancelará el acceso de ${visit.nombre}. Sus entradas y salidas permanecerán en el historial.`,
+      confirmText: "Cancelar visita",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    try {
+      const cancelled = await cancelVisitRequest(visit.id_acceso);
+      setVisits((current) => current.map((item) => item.id_acceso === visit.id_acceso ? cancelled : item));
+      void notifySuccess("Visita cancelada. El historial se conserva.");
+    } catch (error) {
+      void notifyError(error, "No fue posible cancelar la visita.");
+    }
+  }
+
   async function handleDeleteFrequentVisitor(visitor: FrequentVisitor) {
     const confirmed = await confirmAction({
       title: `¿Eliminar a ${visitor.nombre} de tus visitantes frecuentes?`,
-      text: "También se eliminarán todas sus visitas asociadas.",
+      text: "Se eliminarán sus visitas sin historial. Si tiene movimientos de acceso, deberá cancelar las visitas y conservar su historial.",
       confirmText: "Eliminar visitante",
       tone: "danger",
     });
@@ -776,14 +794,22 @@ export function ResidenteVisitsView() {
                     <div>
                       <div className="flex items-start justify-between gap-4">
                         <p className="text-2xl font-semibold text-slate-900">{visit.nombre}</p>
-                        <button
+                        {!visit.tiene_historial && !visit.hora_ingreso && !visit.hora_salida &&
+                        !["INGRESO_REGISTRADO", "SALIDA_REGISTRADA"].includes(visit.estado_acceso || "") ? <button
                           type="button"
                           onClick={() => handleDelete(visit)}
                           className="rounded-full p-2 text-rose-500 transition hover:bg-rose-50"
                           aria-label={`Eliminar visita de ${visit.nombre}`}
                         >
                           <Trash2 className="size-5" />
-                        </button>
+                        </button> : null}
+                        {!["CANCELADA", "RECHAZADA"].includes(visit.estado_acceso || "") ? (
+                          <button type="button" onClick={() => handleCancel(visit)}
+                            className="rounded-full p-2 text-rose-500 transition hover:bg-rose-50"
+                            aria-label={`Cancelar visita de ${visit.nombre}`}>
+                            <X className="size-5" />
+                          </button>
+                        ) : null}
                       </div>
                       <div className="mt-2 space-y-1 text-slate-600">
                         <p>DPI: {visit.dpi}</p>
@@ -797,6 +823,8 @@ export function ResidenteVisitsView() {
                           Hora: {visit.hora_inicio} - {visit.hora_fin}
                         </p>
                         <p>Tipo de acceso: {visitTypeLabels[visit.tipo_visita]}</p>
+                        {visit.hora_ingreso ? <p>Ingreso: {visit.hora_ingreso}{visit.guardia_ingreso ? ` por ${visit.guardia_ingreso}` : ""}</p> : null}
+                        {visit.hora_salida ? <p>Salida: {visit.hora_salida}{visit.guardia_salida ? ` por ${visit.guardia_salida}` : ""}</p> : null}
                         {visit.observaciones ? (
                           <p>Observaciones: {visit.observaciones}</p>
                         ) : null}
@@ -809,7 +837,7 @@ export function ResidenteVisitsView() {
                       </p>
                     </div>
                   </div>
-                  {visit.qr_value ? (
+                  {visit.qr_value && !["CANCELLED", "EXPIRED"].includes(visit.qr_status || "") ? (
                     <QrCodeCard
                       value={visit.qr_value}
                       title={`QR ${visit.nombre}`}

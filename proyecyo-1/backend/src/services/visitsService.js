@@ -8,6 +8,16 @@ const crypto = require("crypto");
 const { guatemalaToday, sqlUtcTimeToGuatemala } = require("../utils/guatemalaTime");
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
+// Proyeccion comun: los movimientos se consultan independientemente del estado actual.
+const VISIT_HISTORY_FIELDS = `
+        (SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, '%H:%i')
+         FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso LIMIT 1) AS hora_ingreso,
+        (SELECT u.nombre FROM REGISTRO_ACCESO ra JOIN USUARIO u ON u.id_usuario = ra.id_guardia_ingreso
+         WHERE ra.id_acceso = a.id_acceso LIMIT 1) AS guardia_ingreso,
+        (SELECT u.nombre FROM REGISTRO_ACCESO ra JOIN USUARIO u ON u.id_usuario = ra.id_guardia_salida
+         WHERE ra.id_acceso = a.id_acceso LIMIT 1) AS guardia_salida,
+        EXISTS(SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso) AS tiene_historial,`;
+
 function normalizeString(value) {
   return String(value || "").trim();
 }
@@ -97,6 +107,10 @@ function mapVisit(row) {
     hora_inicio: row.hora_inicio,
     hora_fin: row.hora_fin,
     hora_salida: row.hora_salida || null,
+    hora_ingreso: row.hora_ingreso || null,
+    guardia_ingreso: row.guardia_ingreso || null,
+    guardia_salida: row.guardia_salida || null,
+    tiene_historial: Boolean(row.tiene_historial),
     tipo_visita: row.tipo_visita,
     motivo_servicio: row.motivo_servicio || "",
     observaciones: row.observaciones || "",
@@ -213,6 +227,7 @@ async function listResidentVisits(userId, role = "residente") {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -357,6 +372,7 @@ async function createVisit(userId, role = "residente", payload) {
       `
         SELECT
           a.id_acceso,
+          ${VISIT_HISTORY_FIELDS}
           v.id_visitante,
           v.nombre,
           v.dpi,
@@ -409,6 +425,7 @@ async function deleteVisit(userId, role = "residente", accessId) {
       `
         SELECT
           a.id_acceso,
+          ${VISIT_HISTORY_FIELDS}
           a.id_visitante,
           v.nombre,
           v.dpi,
@@ -487,6 +504,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         a.id_visitante,
         v.nombre,
         v.dpi,
@@ -617,6 +635,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -650,6 +669,7 @@ async function createGuardCancellationNotifications(accessId) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.nombre AS visitante,
         TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
         DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
@@ -767,6 +787,7 @@ async function cancelVisit(userId, role = "residente", accessId) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -883,6 +904,7 @@ async function assertVisitsHaveNoHistory(connection, visits) {
 const GUARD_VISIT_SELECT = `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -933,6 +955,8 @@ async function getGuardShiftVisits() {
       WHERE a.fecha <= ?
         AND (
           a.estado_acceso = 'INGRESO_REGISTRADO'
+          OR EXISTS (SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso
+                     AND ra.hora_ingreso IS NOT NULL AND ra.hora_salida IS NULL)
           OR (a.fecha = ? AND a.estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION'))
         )
     `,
@@ -1082,6 +1106,7 @@ async function findVisitByQrToken(normalizedToken) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.id_visitante,
         v.nombre,
         v.dpi,
@@ -1132,6 +1157,7 @@ async function createArrivalNotification(connection, accessId) {
     `
       SELECT
         a.id_acceso,
+        ${VISIT_HISTORY_FIELDS}
         v.nombre AS visitante,
         c.numero,
         c.torre,

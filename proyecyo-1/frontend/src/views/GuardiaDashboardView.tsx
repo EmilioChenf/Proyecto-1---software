@@ -21,6 +21,7 @@ const movementLabels: Record<GuardAccessHistoryRecord["estado"], { label: string
   PENDIENTE: { label: "Pendiente", className: "bg-amber-50 text-amber-700" },
   INGRESO: { label: "Ingresó", className: "bg-emerald-50 text-emerald-700" },
   SALIDA: { label: "Salida", className: "bg-blue-50 text-blue-700" },
+  VENCIDA: { label: "Vencida", className: "bg-slate-100 text-slate-600" },
   CANCELADA: { label: "Cancelada", className: "bg-rose-50 text-rose-700" },
   RECHAZADA: { label: "Rechazada", className: "bg-rose-50 text-rose-700" },
   PENDIENTE_APROBACION: { label: "Por aprobar", className: "bg-violet-50 text-violet-700" },
@@ -54,12 +55,12 @@ export function GuardiaDashboardView() {
         .sort((a, b) => a.hora_programada.localeCompare(b.hora_programada)),
     [records],
   );
-  const inside = records.filter((record) => record.estado === "INGRESO");
-  const exits = records.filter((record) => record.estado === "SALIDA");
+  const inside = records.filter((record) => Boolean(record.hora_ingreso) && !record.hora_salida);
+  const exits = records.filter((record) => Boolean(record.hora_salida));
   const movements = useMemo(
     () =>
       records
-        .filter((record) => record.estado === "INGRESO" || record.estado === "SALIDA")
+        .filter((record) => Boolean(record.hora_ingreso || record.hora_salida))
         .sort((a, b) => lastMovement(b).localeCompare(lastMovement(a)))
         .slice(0, 5),
     [records],

@@ -200,16 +200,20 @@ async function listResidentRegulations(filters = {}) {
 // AUTORIZADA, INGRESO_REGISTRADO, SALIDA_REGISTRADA, CANCELADA,
 // PENDIENTE_APROBACION y RECHAZADA. Solo AUTORIZADA sin ingreso es PENDIENTE.
 function mapGuardHistoryStatus(row) {
-  if (row.hora_salida) return "SALIDA";
-  if (row.hora_ingreso) return "INGRESO";
   const accessStatus = String(row.estado_acceso || "AUTORIZADA").toUpperCase();
   if (accessStatus === "CANCELADA") return "CANCELADA";
+  if (row.hora_salida) return "SALIDA";
+  if (row.hora_ingreso) return "INGRESO";
+  if (accessStatus === "AUTORIZADA" && Number(row.vencida)) return "VENCIDA";
   if (accessStatus === "RECHAZADA") return "RECHAZADA";
   if (accessStatus === "PENDIENTE_APROBACION") return "PENDIENTE_APROBACION";
   if (accessStatus === "SALIDA_REGISTRADA") return "SALIDA";
   if (accessStatus === "INGRESO_REGISTRADO") return "INGRESO";
   return "PENDIENTE";
 }
+
+const EXPIRED_VISIT_SQL = `(a.estado_acceso = 'AUTORIZADA' AND
+  TIMESTAMP(a.fecha, COALESCE(a.hora_fin, '23:59:59')) < CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-06:00'))`;
 
 async function listGuardDailyAccessHistory(filters = {}) {
   const date = normalizeDate(filters.date) || guatemalaToday();
@@ -221,13 +225,15 @@ async function listGuardDailyAccessHistory(filters = {}) {
   // Los filtros usan las mismas reglas que mapGuardHistoryStatus para que
   // frontend, backend y KPIs del dashboard coincidan.
   if (status === "INGRESO") {
-    sqlFilters.push("ra.hora_ingreso IS NOT NULL AND ra.hora_salida IS NULL");
+    sqlFilters.push("ra.hora_ingreso IS NOT NULL AND ra.hora_salida IS NULL AND a.estado_acceso <> 'CANCELADA'");
   } else if (status === "SALIDA") {
-    sqlFilters.push("ra.hora_salida IS NOT NULL");
+    sqlFilters.push("ra.hora_salida IS NOT NULL AND a.estado_acceso <> 'CANCELADA'");
   } else if (status === "PENDIENTE") {
-    sqlFilters.push("ra.hora_ingreso IS NULL AND COALESCE(a.estado_acceso, 'AUTORIZADA') = 'AUTORIZADA'");
+    sqlFilters.push(`ra.hora_ingreso IS NULL AND COALESCE(a.estado_acceso, 'AUTORIZADA') = 'AUTORIZADA' AND NOT COALESCE(${EXPIRED_VISIT_SQL}, FALSE)`);
   } else if (status === "CANCELADA") {
-    sqlFilters.push("ra.hora_ingreso IS NULL AND a.estado_acceso = 'CANCELADA'");
+    sqlFilters.push("a.estado_acceso = 'CANCELADA'");
+  } else if (status === "VENCIDA") {
+    sqlFilters.push(`ra.hora_ingreso IS NULL AND ra.hora_salida IS NULL AND ${EXPIRED_VISIT_SQL}`);
   } else if (status === "RECHAZADA") {
     sqlFilters.push("ra.hora_ingreso IS NULL AND a.estado_acceso = 'RECHAZADA'");
   } else if (status === "PENDIENTE_APROBACION") {
@@ -248,6 +254,7 @@ async function listGuardDailyAccessHistory(filters = {}) {
         CONCAT(COALESCE(c.torre, ''), CASE WHEN c.torre IS NOT NULL AND c.torre <> '' THEN '-' ELSE '' END, c.numero) AS casa,
         a.tipo_visita,
         a.estado_acceso,
+        ${EXPIRED_VISIT_SQL} AS vencida,
         TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_programada,
         TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, '%H:%i') AS hora_ingreso,
         TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i') AS hora_salida,

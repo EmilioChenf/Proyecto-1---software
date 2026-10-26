@@ -118,6 +118,36 @@ describe("HU-C04.4 QR cancelado o vencido", () => {
   });
 });
 
+describe("HU-C04.5 consultas del historial", () => {
+  const history = {
+    ...visit, estado_acceso: "CANCELADA", tiene_historial: 1,
+    hora_ingreso: "09:00", hora_salida: "10:00", guardia_ingreso: "Guardia A", guardia_salida: "Guardia B",
+  };
+  it("el residente conserva movimientos y guardias al listar una cancelada", async () => {
+    query.mockResolvedValueOnce([history]);
+    await expect(visits.listResidentVisits(1)).resolves.toEqual([expect.objectContaining({
+      ...history, tiene_historial: true, qr_status: "CANCELLED",
+    })]);
+  });
+
+  it("el administrador conserva las horas y responsables junto al estado actual", async () => {
+    query.mockReset().mockResolvedValueOnce([{ ...history, estado_visita: "CANCELADA", hora: "09:00", numero: "1", torre: "A" }]);
+    const { listAdminAccesses } = require("../adminAccessesService");
+    await expect(listAdminAccesses()).resolves.toEqual([expect.objectContaining({
+      nombre: visit.nombre, casa_unidad: "A-1", estado_visita: "CANCELADA",
+      hora: "09:00", hora_salida: "10:00", guardia_ingreso: "Guardia A", guardia_salida: "Guardia B",
+    })]);
+  });
+
+  it("el filtro de canceladas no excluye visitas con movimientos", async () => {
+    query.mockReset().mockResolvedValueOnce([]);
+    await require("../sprintStoriesService").listGuardDailyAccessHistory({ date: "2026-10-26", status: "CANCELADA" });
+    const where = query.mock.calls[0][0].split("WHERE").pop();
+    expect(where).toContain("a.estado_acceso = 'CANCELADA'");
+    expect(where).not.toContain("ra.hora_ingreso IS NULL");
+  });
+});
+
 describe("HU-C04.1 eliminacion fisica", () => {
   it.each(["AUTORIZADA", "INGRESO_REGISTRADO", "SALIDA_REGISTRADA", "CANCELADA"])(
     "conserva registros incluso cuando el estado es %s", async (estado_acceso) => {

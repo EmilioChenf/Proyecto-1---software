@@ -42,6 +42,7 @@ const historyStatusLabels: Record<GuardAccessHistoryRecord["estado"], { label: s
   PENDIENTE: { label: "Pendiente", className: "bg-amber-50 text-amber-700" },
   INGRESO: { label: "Ingresó", className: "bg-emerald-50 text-emerald-700" },
   SALIDA: { label: "Salida", className: "bg-blue-50 text-blue-700" },
+  VENCIDA: { label: "Vencida", className: "bg-slate-100 text-slate-600" },
   CANCELADA: { label: "Cancelada", className: "bg-rose-50 text-rose-700" },
   RECHAZADA: { label: "Rechazada", className: "bg-rose-50 text-rose-700" },
   PENDIENTE_APROBACION: { label: "Por aprobar", className: "bg-violet-50 text-violet-700" },
@@ -70,16 +71,30 @@ function canUseCamera() {
 }
 
 function getVisitBadge(visit: VisitRecord): { label: string; className: string } {
+  if (visit.estado_acceso === "CANCELADA" || visit.qr_status === "CANCELLED") {
+    return {
+      label: "Cancelado",
+      className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+    };
+  }
+
   if (visit.qr_status === "EXIT_REGISTERED" || visit.estado_acceso === "SALIDA_REGISTRADA") {
     return {
       label: "Salida registrada",
       className: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200",
     };
   }
-  if (visit.estado_acceso === "CANCELADA" || visit.qr_status === "CANCELLED") {
+  if (visit.qr_status === "NOT_YET_VALID") {
     return {
-      label: "Cancelado",
-      className: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
+      label: "QR aun no vigente",
+      className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+    };
+  }
+
+  if (visit.qr_status === "EXPIRED") {
+    return {
+      label: "QR expirado",
+      className: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200",
     };
   }
 
@@ -93,20 +108,6 @@ function getVisitBadge(visit: VisitRecord): { label: string; className: string }
     return {
       label: "Acceso especial",
       className: "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200",
-    };
-  }
-
-  if (visit.qr_status === "NOT_YET_VALID") {
-    return {
-      label: "QR aun no vigente",
-      className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-    };
-  }
-
-  if (visit.qr_status === "EXPIRED") {
-    return {
-      label: "QR expirado",
-      className: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200",
     };
   }
 
@@ -941,6 +942,7 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
                 <option value="INGRESO">Ingresos</option>
                 <option value="SALIDA">Salidas</option>
                 <option value="CANCELADA">Canceladas</option>
+                <option value="VENCIDA">Vencidas</option>
                 <option value="RECHAZADA">Rechazadas</option>
                 <option value="PENDIENTE_APROBACION">Por aprobar</option>
               </select>

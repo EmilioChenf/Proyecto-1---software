@@ -118,6 +118,7 @@ function mapAdminAccess(row) {
     casa_unidad: buildHouseLabel(row),
     placa: normalizeString(row.placa) || "-",
     estado: mapAccessStatus(row.estado_acceso),
+    estado_visita: row.estado_visita || row.estado_acceso,
     autorizado_por: buildAuthorizerLabel(row),
     es_acceso_especial: Boolean(row.es_acceso_especial),
     fuera_horario: Boolean(row.fuera_horario),
@@ -440,6 +441,9 @@ async function listAdminAccesses(filters = {}, reportRange = null) {
         TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i') AS hora_salida,
         a.tipo_visita,
         a.estado_acceso,
+        CASE WHEN a.estado_acceso = 'AUTORIZADA'
+          AND TIMESTAMP(a.fecha, COALESCE(a.hora_fin, '23:59:59')) < CONVERT_TZ(UTC_TIMESTAMP(), '+00:00', '-06:00')
+          THEN 'VENCIDA' ELSE a.estado_acceso END AS estado_visita,
         a.es_acceso_especial,
         a.fuera_horario,
         v.nombre,
