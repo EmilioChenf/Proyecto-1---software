@@ -77,7 +77,11 @@ describe("Formulario real de visitas del residente", () => {
 
     await screen.findByText("No hay visitas registradas para esta residencia.");
     await user.type(screen.getByLabelText("Nombre Completo *"), "Laura Perez");
+    // HU-C03 exige DPI o placa; HU-C06 exige una fecha que no haya pasado.
+    await user.type(screen.getByLabelText(/DPI \/ Documento/), "1234567890123");
     await user.click(screen.getByRole("button", { name: /Siguiente/ }));
+    await user.clear(screen.getByLabelText("Fecha de visita *"));
+    await user.type(screen.getByLabelText("Fecha de visita *"), "2099-07-20");
     await user.clear(screen.getByLabelText("Hora de inicio *"));
     await user.type(screen.getByLabelText("Hora de inicio *"), "10:00");
     await user.clear(screen.getByLabelText("Hora de fin *"));

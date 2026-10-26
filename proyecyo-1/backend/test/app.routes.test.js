@@ -328,6 +328,43 @@ describe("Rutas reales de NexusResidencial", () => {
     ]);
   });
 
+  // HU-C06.1/C06.2: cada rol registra proveedores solo en su propia ruta.
+  it("el residente y el administrador registran proveedores en sus rutas", async () => {
+    behavior.registerProvider = async () => ({ proveedor: { id_servicio: 1 }, acceso: { id_acceso: 2 } });
+    const payload = { nombre: "Plomeria", motivo_servicio: "Plomeria", id_casa: 4 };
+
+    const owner = await authenticated(request(app).post("/residente/proveedores"), "residente", 30).send(payload);
+    const admin = await authenticated(request(app).post("/admin/proveedores"), "admin", 1).send(payload);
+
+    assert.equal(owner.status, 201);
+    assert.equal(admin.status, 201);
+    assert.deepEqual(calls.registerProvider.mock.calls.map((call) => call.arguments[0]), [
+      { id: 30, role: "residente" },
+      { id: 1, role: "admin" },
+    ]);
+  });
+
+  it("rechaza el registro de proveedores en rutas de otro rol", async () => {
+    const attempts = [
+      ["/inquilino/proveedores", "residente"],
+      ["/residente/proveedores", "inquilino"],
+      ["/admin/proveedores", "residente"],
+      ["/admin/proveedores", "guardia"],
+      ["/inquilino/proveedores", "guardia"],
+    ];
+
+    for (const [url, role] of attempts) {
+      const response = await authenticated(request(app).post(url), role).send({ nombre: "X" });
+      assert.equal(response.status, 403, `${role} en ${url}`);
+    }
+    assert.equal(calls.registerProvider.mock.callCount(), 0);
+  });
+
+  it("las consultas de proveedores del inquilino ya no aceptan residentes", async () => {
+    const response = await authenticated(request(app).get("/inquilino/proveedores"), "residente");
+    assert.equal(response.status, 403);
+  });
+
   it("devuelve 404 cuando la notificacion no pertenece al usuario", async () => {
     behavior.markNotificationAsRead = async () => {
       throw httpError("Notificacion no encontrada.", 404);

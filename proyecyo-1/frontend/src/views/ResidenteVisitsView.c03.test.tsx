@@ -79,16 +79,15 @@ describe("HU-C03 visitantes frecuentes", () => {
     const dupError = Object.assign(new Error("Duplicado"), { status: 409, code: "DUPLICATE_VISIT" });
     vi.mocked(createVisitRequest).mockRejectedValue(dupError);
     render(<MemoryRouter><ResidenteVisitsView /></MemoryRouter>);
-    await userEvent.click(await screen.findByRole("button", { name: /autorizar visita/i }));
-    const nameInput = await screen.findByPlaceholderText(/nombre/i);
-    await userEvent.type(nameInput, "Juan Perez");
-    const nextBtn = screen.getByRole("button", { name: /siguiente/i });
-    await userEvent.click(nextBtn);
-    const dateInput = screen.getByLabelText(/fecha/i);
+    await screen.findByText("No hay visitas registradas para esta residencia.");
+    await userEvent.type(screen.getByLabelText("Nombre Completo *"), "Juan Perez");
+    await userEvent.type(screen.getByLabelText(/DPI \/ Documento/), "1234567890123");
+    await userEvent.click(screen.getByRole("button", { name: /siguiente/i }));
+    const dateInput = screen.getByLabelText("Fecha de visita *");
     await userEvent.clear(dateInput);
     await userEvent.type(dateInput, "2099-12-31");
     await userEvent.click(screen.getByRole("button", { name: /siguiente/i }));
-    await userEvent.click(screen.getByRole("button", { name: /autorizar/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Autorizar Visita" }));
     await waitFor(() =>
       expect(screen.getByText(/ya existe una visita autorizada/i)).toBeInTheDocument(),
     );
