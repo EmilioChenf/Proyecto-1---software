@@ -21,7 +21,7 @@ const calls = {
     behavior.validateAmenityReservationConflict(...args),
   ),
   listAdminAccesses: mock.fn((...args) => behavior.listAdminAccesses(...args)),
-  createTenantProvider: mock.fn((...args) => behavior.createTenantProvider(...args)),
+  registerProvider: mock.fn((...args) => behavior.registerProvider(...args)),
 };
 
 const noop = async () => {
@@ -70,7 +70,7 @@ const serviceFakes = {
     listTenantProviders: noop,
     getTenantProvidersHistory: noop,
     listOwnerProviders: noop,
-    createTenantProvider: calls.createTenantProvider,
+    registerProvider: calls.registerProvider,
     updateTenantProvider: noop,
     updateOwnerProviderValidation: noop,
   },
@@ -131,7 +131,7 @@ beforeEach(() => {
   behavior.markNotificationAsRead = noop;
   behavior.validateAmenityReservationConflict = noop;
   behavior.listAdminAccesses = noop;
-  behavior.createTenantProvider = noop;
+  behavior.registerProvider = noop;
 });
 
 function authenticated(agent, role, userId = 7) {
@@ -301,16 +301,18 @@ describe("Rutas reales de NexusResidencial", () => {
   it("registra correctamente un proveedor del inquilino", async () => {
     const payload = {
       nombre: "Electricidad Lopez",
-      tipo_servicio: "ELECTRICIDAD",
-      descripcion: "Mantenimiento residencial",
+      motivo_servicio: "Electricidad",
+      medio_ingreso: "VEHICULO",
+      placa: "P-123ABC",
+      fecha: "2999-01-01",
+      hora_inicio: "09:00",
+      hora_fin: "11:00",
     };
-    const provider = {
-      id_servicio: 33,
-      ...payload,
-      activo: true,
-      estado: "PENDIENTE",
+    const result = {
+      proveedor: { id_servicio: 33, nombre: payload.nombre, activo: true, estado: "PENDIENTE" },
+      acceso: { id_acceso: 90, tipo_visita: "PROVEEDOR", medio_ingreso: "VEHICULO" },
     };
-    behavior.createTenantProvider = async () => provider;
+    behavior.registerProvider = async () => result;
 
     const response = await authenticated(
       request(app).post("/inquilino/proveedores"),
@@ -319,8 +321,11 @@ describe("Rutas reales de NexusResidencial", () => {
     ).send(payload);
 
     assert.equal(response.status, 201);
-    assert.deepEqual(response.body, provider);
-    assert.deepEqual(calls.createTenantProvider.mock.calls[0].arguments, [21, payload]);
+    assert.deepEqual(response.body, result);
+    assert.deepEqual(calls.registerProvider.mock.calls[0].arguments, [
+      { id: 21, role: "inquilino" },
+      payload,
+    ]);
   });
 
   it("devuelve 404 cuando la notificacion no pertenece al usuario", async () => {

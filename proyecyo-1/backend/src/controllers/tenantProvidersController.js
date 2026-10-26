@@ -2,7 +2,7 @@ const {
   listTenantProviders,
   getTenantProvidersHistory,
   listOwnerProviders,
-  createTenantProvider,
+  registerProvider,
   updateTenantProvider,
   updateOwnerProviderValidation,
 } = require("../services/tenantProvidersService");
@@ -52,10 +52,15 @@ async function patchOwnerProvider(req, res, next) {
   }
 }
 
-async function postTenantProvider(req, res, next) {
+// HU-C06: inquilino y residente registran proveedores con el mismo servicio; el
+// rol de la sesion decide en que unidad se registra.
+async function postProvider(req, res, next) {
   try {
-    const provider = await createTenantProvider(req.authUser.id, req.body || {});
-    res.status(201).json(provider);
+    const result = await registerProvider(
+      { id: req.authUser.id, role: req.authUser.role },
+      req.body || {},
+    );
+    res.status(201).json(result);
   } catch (error) {
     next(error);
   }
@@ -65,7 +70,7 @@ module.exports = {
   getTenantProviders,
   getTenantProviderHistory,
   getOwnerProviders,
-  postTenantProvider,
+  postProvider,
   patchTenantProvider,
   patchOwnerProvider,
 };

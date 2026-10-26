@@ -4,19 +4,23 @@ const {
   getTenantProviders,
   getTenantProviderHistory,
   getOwnerProviders,
-  postTenantProvider,
+  postProvider,
   patchTenantProvider,
   patchOwnerProvider,
 } = require("../controllers/tenantProvidersController");
-const { requireResident, requireResidentOrTenant } = require("../middlewares/requireResident");
+const { requireResident, requireTenant } = require("../middlewares/requireResident");
 
 const router = express.Router();
 
-router.get("/inquilino/proveedores", requireResidentOrTenant, getTenantProviders);
-router.get("/inquilino/proveedores/historial", requireResidentOrTenant, getTenantProviderHistory);
-router.post("/inquilino/proveedores", requireResidentOrTenant, postTenantProvider);
-router.patch("/inquilino/proveedores/:id", requireResidentOrTenant, patchTenantProvider);
+// HU-C06.2: los permisos del backend coinciden con las pantallas del frontend.
+// /inquilino/* resuelve la unidad del inquilino, asi que solo lo usa el inquilino;
+// el residente gestiona y registra sus proveedores en /residente/*.
+router.get("/inquilino/proveedores", requireTenant, getTenantProviders);
+router.get("/inquilino/proveedores/historial", requireTenant, getTenantProviderHistory);
+router.post("/inquilino/proveedores", requireTenant, postProvider);
+router.patch("/inquilino/proveedores/:id", requireTenant, patchTenantProvider);
 router.get("/residente/proveedores", requireResident, getOwnerProviders);
+router.post("/residente/proveedores", requireResident, postProvider);
 router.patch("/residente/proveedores/:id", requireResident, patchOwnerProvider);
 
 module.exports = router;

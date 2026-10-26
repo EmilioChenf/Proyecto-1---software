@@ -1,4 +1,15 @@
-const { query } = require("../database/mysql");
+const crypto = require("crypto");
+
+const { pool, query } = require("../database/mysql");
+const { assertVisitTimesAllowed } = require("./configurationService");
+const { getVisitById } = require("./visitsService");
+const { ensureValidDate, ensureValidTime } = require("../utils/dateTimeValidation");
+const { ensureProviderIdentifiers } = require("../utils/providerAccessValidation");
+const { ensureVisitWindowNotPast } = require("../utils/visitWindow");
+
+// HU-C06.1/C06.2: roles que pueden registrar proveedores. Las rutas usan el mismo
+// conjunto (administrador, residente/propietario e inquilino).
+const PROVIDER_REGISTRATION_ROLES = Object.freeze(["admin", "residente", "inquilino"]);
 
 function normalizeBoolean(value) {
   return value === true || value === "true" || value === 1 || value === "1";
@@ -564,103 +575,327 @@ async function updateTenantProvider(userId, serviceId, payload = {}) {
   return providers.find((provider) => provider.id_servicio === normalizedServiceId);
 }
 
-async function createTenantProvider(userId, payload = {}) {
-  const house = await getTenantHouse(userId);
-  const user = await getUserContext(userId);
+function httpError(message, status, code) {
+  const error = new Error(message);
+  error.status = status;
+  if (code) error.code = code;
+  return error;
+}
+
+async function getHouseById(houseId) {
+  const rows = await query(
+    `
+      SELECT c.id_casa, c.numero, c.torre
+      FROM CASA c
+      WHERE c.id_casa = ?
+      LIMIT 1
+    `,
+    [houseId],
+  );
+
+  if (!rows[0]) {
+    throw httpError("La casa seleccionada no existe.", 404);
+  }
+
+  return rows[0];
+}
+
+/** Casa en la que el actor puede registrar al proveedor segun su rol. */
+async function resolveProviderHouse(actor, payload = {}) {
+  const requestedHouseId = Number(payload.id_casa);
+  const hasRequestedHouse = Number.isInteger(requestedHouseId) && requestedHouseId > 0;
+
+  if (actor.role === "inquilino") {
+    const house = await getTenantHouse(actor.id);
+    if (hasRequestedHouse && Number(house.id_casa) !== requestedHouseId) {
+      throw httpError("No tienes permisos para registrar proveedores en esta unidad.", 403);
+    }
+    return house;
+  }
+
+  if (actor.role === "residente") {
+    const houses = await getOwnerHouses(actor.id);
+    if (!hasRequestedHouse) return houses[0];
+    const house = houses.find((item) => Number(item.id_casa) === requestedHouseId);
+    if (!house) {
+      throw httpError("No tienes permisos para registrar proveedores en esta unidad.", 403);
+    }
+    return house;
+  }
+
+  if (actor.role === "admin") {
+    if (!hasRequestedHouse) {
+      throw httpError("Debe seleccionar una casa valida.", 400);
+    }
+    return getHouseById(requestedHouseId);
+  }
+
+  throw httpError("Tu rol no puede registrar proveedores.", 403);
+}
+
+function generateQrToken() {
+  return crypto.randomBytes(18).toString("hex");
+}
+
+function validateProviderRegistration(payload = {}) {
   const nombre = normalizeString(payload.nombre);
-  const tipoServicio = normalizeString(payload.tipo_servicio) || "General";
-  const descripcion =
-    normalizeString(payload.descripcion) || "Proveedor registrado por el inquilino para esta unidad.";
+  const servicio = normalizeString(payload.motivo_servicio || payload.tipo_servicio);
+  const observaciones = normalizeString(payload.observaciones || payload.descripcion);
 
   if (!nombre) {
-    const error = new Error("El nombre del proveedor es obligatorio.");
-    error.status = 400;
-    throw error;
+    throw httpError("El nombre del proveedor es obligatorio.", 400);
+  }
+  if (nombre.length > 100) {
+    throw httpError("El nombre del proveedor no puede superar 100 caracteres.", 400);
+  }
+  if (!servicio) {
+    throw httpError("Indica el servicio que realizara el proveedor.", 400);
+  }
+  if (servicio.length > 120) {
+    throw httpError("El servicio no puede superar 120 caracteres.", 400);
+  }
+  if (observaciones.length > 255) {
+    throw httpError("Las observaciones no pueden superar 255 caracteres.", 400);
   }
 
-  const existingRows = await query(
+  const { medioIngreso, placa, dpi } = ensureProviderIdentifiers(payload);
+  const fecha = ensureValidDate(payload.fecha);
+  const horaInicio = ensureValidTime(payload.hora_inicio, "hora de inicio");
+  const horaFin = ensureValidTime(payload.hora_fin, "hora de fin");
+
+  if (horaInicio >= horaFin) {
+    throw httpError("La hora de fin debe ser mayor a la hora de inicio.", 400);
+  }
+
+  ensureVisitWindowNotPast(fecha, horaInicio, horaFin);
+
+  return { nombre, servicio, observaciones, medioIngreso, placa, dpi, fecha, horaInicio, horaFin };
+}
+
+async function getHouseProvider(houseId, serviceId) {
+  const rows = await query(
     `
-      SELECT id_servicio
-      FROM SERVICIO
-      WHERE LOWER(nombre) = LOWER(?)
-        AND LOWER(tipo_servicio) = LOWER(?)
+      SELECT
+        s.id_servicio,
+        s.nombre,
+        s.tipo_servicio,
+        s.descripcion,
+        cs.id_casa,
+        cs.activo,
+        cs.estado_validacion,
+        DATE_FORMAT(cs.fecha_registro, '%Y-%m-%d %H:%i:%s') AS fecha_registro,
+        DATE_FORMAT(cs.actualizado_en, '%Y-%m-%d %H:%i:%s') AS actualizado_en,
+        c.numero,
+        c.torre,
+        propietario.nombre AS propietario_nombre,
+        creador.realizado_por_nombre AS registrado_por
+      FROM CASA_SERVICIO cs
+      INNER JOIN SERVICIO s ON s.id_servicio = cs.id_servicio
+      INNER JOIN CASA c ON c.id_casa = cs.id_casa
+      LEFT JOIN RESIDENTE r ON r.id_residente = c.id_residente
+      LEFT JOIN USUARIO propietario ON propietario.id_usuario = r.id_usuario
+      LEFT JOIN HISTORIAL_CAMBIO_PROVEEDOR creador
+        ON creador.id_casa = c.id_casa
+        AND creador.id_servicio = s.id_servicio
+        AND creador.accion = 'CREACION'
+      WHERE cs.id_casa = ? AND cs.id_servicio = ?
       LIMIT 1
     `,
-    [nombre, tipoServicio],
+    [houseId, serviceId],
   );
 
-  let serviceId = existingRows[0]?.id_servicio;
+  return rows[0] ? mapOwnerProvider(rows[0]) : null;
+}
 
-  if (!serviceId) {
-    const result = await query(
+/**
+ * HU-C06: registro de un proveedor desde cualquiera de los roles permitidos.
+ * En una sola transaccion vincula el proveedor a la casa y crea su acceso con QR,
+ * de modo que nunca queda un proveedor sin acceso ni un acceso sin identificador.
+ * El inquilino deja al proveedor PENDIENTE de validacion del propietario; el
+ * propietario y el administrador lo registran ya VALIDADO.
+ */
+async function registerProvider(actor, payload = {}) {
+  if (!actor || !PROVIDER_REGISTRATION_ROLES.includes(actor.role)) {
+    throw httpError("Tu rol no puede registrar proveedores.", 403);
+  }
+
+  const data = validateProviderRegistration(payload);
+  const house = await resolveProviderHouse(actor, payload);
+  const user = await getUserContext(actor.id);
+  await assertVisitTimesAllowed(data.horaInicio, data.horaFin, data.fecha);
+
+  const validationStatus = actor.role === "inquilino" ? "PENDIENTE" : "VALIDADO";
+  const houseLabel = house.torre ? `${house.torre}-${house.numero}` : house.numero;
+  const connection = await pool.getConnection();
+  let serviceId;
+  let accessId;
+  let previousLink;
+
+  try {
+    await connection.beginTransaction();
+
+    const [existingServices] = await connection.execute(
       `
-        INSERT INTO SERVICIO (nombre, tipo_servicio, descripcion)
-        VALUES (?, ?, ?)
+        SELECT id_servicio
+        FROM SERVICIO
+        WHERE LOWER(nombre) = LOWER(?)
+          AND LOWER(tipo_servicio) = LOWER(?)
+        LIMIT 1
       `,
-      [nombre, tipoServicio, descripcion],
+      [data.nombre, data.servicio],
     );
-    serviceId = result.insertId;
+    serviceId = existingServices[0]?.id_servicio;
+
+    if (!serviceId) {
+      const [serviceResult] = await connection.execute(
+        "INSERT INTO SERVICIO (nombre, tipo_servicio, descripcion) VALUES (?, ?, ?)",
+        [data.nombre, data.servicio, data.observaciones || `Proveedor registrado para la unidad ${houseLabel}.`],
+      );
+      serviceId = serviceResult.insertId;
+    }
+
+    const [linkRows] = await connection.execute(
+      "SELECT activo, estado_validacion FROM CASA_SERVICIO WHERE id_casa = ? AND id_servicio = ? LIMIT 1 FOR UPDATE",
+      [house.id_casa, serviceId],
+    );
+    previousLink = linkRows[0] || null;
+
+    await connection.execute(
+      `
+        INSERT INTO CASA_SERVICIO (id_casa, id_servicio, fecha_registro, actualizado_en, activo, estado_validacion)
+        VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, TRUE, ?)
+        ON DUPLICATE KEY UPDATE
+          activo = TRUE,
+          actualizado_en = CURRENT_TIMESTAMP,
+          estado_validacion = CASE
+            WHEN estado_validacion = 'VALIDADO' THEN estado_validacion
+            ELSE VALUES(estado_validacion)
+          END
+      `,
+      [house.id_casa, serviceId, validationStatus],
+    );
+
+    const [existingVisitors] = await connection.execute(
+      `SELECT id_visitante, nombre, dpi, placa FROM VISITANTE
+       WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
+       ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
+      [data.dpi, data.dpi, data.placa, data.placa.replace(/-/g, "")],
+    );
+    const existingVisitor = existingVisitors[0];
+    let visitorId = existingVisitor?.id_visitante;
+
+    if (existingVisitor) {
+      // HU-C03: no se sobrescriben datos de un visitante existente sin confirmacion.
+      const dataChanged =
+        existingVisitor.nombre !== data.nombre ||
+        (data.dpi && (existingVisitor.dpi || "") !== data.dpi) ||
+        (data.placa && (existingVisitor.placa || "") !== data.placa);
+
+      if (dataChanged && !payload.confirmar_actualizacion) {
+        const error = httpError(
+          `Ya existe un visitante registrado con esos datos (${existingVisitor.nombre}). ` +
+            "¿Deseas actualizar sus datos al registrar este proveedor?",
+          409,
+          "VISITOR_DATA_CONFLICT",
+        );
+        error.existing = {
+          id_visitante: existingVisitor.id_visitante,
+          nombre: existingVisitor.nombre,
+          dpi: existingVisitor.dpi,
+          placa: existingVisitor.placa,
+        };
+        throw error;
+      }
+
+      if (dataChanged) {
+        await connection.execute(
+          "UPDATE VISITANTE SET nombre = ?, dpi = COALESCE(?, dpi), placa = COALESCE(?, placa) WHERE id_visitante = ?",
+          [data.nombre, data.dpi || null, data.placa || null, visitorId],
+        );
+      }
+    } else {
+      const [visitorResult] = await connection.execute(
+        "INSERT INTO VISITANTE (nombre, dpi, placa, activo) VALUES (?, ?, ?, TRUE)",
+        [data.nombre, data.dpi || null, data.placa || null],
+      );
+      visitorId = visitorResult.insertId;
+    }
+
+    const [duplicateRows] = await connection.execute(
+      `SELECT id_acceso FROM ACCESO
+       WHERE id_visitante = ? AND id_casa = ? AND fecha = ? AND hora_inicio = ? AND hora_fin = ?
+         AND estado_acceso <> 'CANCELADA'
+       LIMIT 1`,
+      [visitorId, house.id_casa, data.fecha, data.horaInicio, data.horaFin],
+    );
+    if (duplicateRows.length > 0) {
+      throw httpError(
+        "Ya existe un acceso autorizado para este proveedor en la misma fecha y horario.",
+        409,
+        "DUPLICATE_VISIT",
+      );
+    }
+
+    const [accessResult] = await connection.execute(
+      `
+        INSERT INTO ACCESO (
+          id_visitante, id_casa, id_usuario_autoriza, fecha, hora_inicio, hora_fin,
+          tipo_visita, motivo_servicio, observaciones, token_qr, estado_acceso
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'PROVEEDOR', ?, ?, ?, 'AUTORIZADA')
+      `,
+      [
+        visitorId,
+        house.id_casa,
+        actor.id,
+        data.fecha,
+        data.horaInicio,
+        data.horaFin,
+        data.servicio,
+        data.observaciones || null,
+        generateQrToken(),
+      ],
+    );
+    accessId = accessResult.insertId;
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
   }
-
-  const currentRows = await query(
-    `
-      SELECT activo, estado_validacion
-      FROM CASA_SERVICIO
-      WHERE id_casa = ?
-        AND id_servicio = ?
-      LIMIT 1
-    `,
-    [house.id_casa, serviceId],
-  );
-
-  await query(
-    `
-      INSERT INTO CASA_SERVICIO (
-        id_casa,
-        id_servicio,
-        fecha_registro,
-        actualizado_en,
-        activo,
-        estado_validacion
-      )
-      VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, TRUE, 'PENDIENTE')
-      ON DUPLICATE KEY UPDATE
-        activo = TRUE,
-        actualizado_en = CURRENT_TIMESTAMP,
-        estado_validacion = CASE
-          WHEN estado_validacion = 'VALIDADO' THEN estado_validacion
-          ELSE 'PENDIENTE'
-        END
-    `,
-    [house.id_casa, serviceId],
-  );
 
   await createProviderHistoryEntry({
     idCasa: house.id_casa,
     idServicio: Number(serviceId),
-    accion: currentRows.length > 0 ? "REACTIVACION" : "CREACION",
-    detalle:
-      currentRows.length > 0
-        ? `${user.nombre} reactivo o actualizo el proveedor ${nombre}.`
-        : `${user.nombre} registro el proveedor ${nombre} para la unidad ${house.torre}-${house.numero}.`,
-    activoAnterior: currentRows[0] ? Number(currentRows[0].activo) === 1 : null,
+    accion: previousLink ? "REACTIVACION" : "CREACION",
+    detalle: previousLink
+      ? `${user.nombre} reactivo el proveedor ${data.nombre} con un nuevo acceso.`
+      : `${user.nombre} registro el proveedor ${data.nombre} para la unidad ${houseLabel}.`,
+    activoAnterior: previousLink ? Number(previousLink.activo) === 1 : null,
     activoNuevo: true,
-    estadoAnterior: currentRows[0]?.estado_validacion || null,
-    estadoNuevo: currentRows[0]?.estado_validacion === "VALIDADO" ? "VALIDADO" : "PENDIENTE",
+    estadoAnterior: previousLink?.estado_validacion || null,
+    estadoNuevo: previousLink?.estado_validacion === "VALIDADO" ? "VALIDADO" : validationStatus,
     realizadoPorUsuario: user.id_usuario,
     realizadoPorNombre: user.nombre,
     realizadoPorRol: user.rol,
   });
 
-  const providers = await listTenantProviders(userId);
-  return providers.find((provider) => provider.id_servicio === Number(serviceId));
+  const [proveedor, acceso] = await Promise.all([
+    getHouseProvider(house.id_casa, serviceId),
+    getVisitById(accessId),
+  ]);
+
+  return { proveedor, acceso };
 }
 
 module.exports = {
+  PROVIDER_REGISTRATION_ROLES,
+  registerProvider,
   listTenantProviders,
   getTenantProvidersHistory,
   listOwnerProviders,
-  createTenantProvider,
   updateTenantProvider,
   updateOwnerProviderValidation,
 };

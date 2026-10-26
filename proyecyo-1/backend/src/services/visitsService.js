@@ -1164,6 +1164,48 @@ async function findVisitByQrToken(normalizedToken) {
   return mapVisit(visit);
 }
 
+/** Acceso ya creado, con el mismo formato que el historial de visitas. */
+async function getVisitById(accessId) {
+  const rows = await query(
+    `
+      SELECT
+        a.id_acceso,
+        v.id_visitante,
+        v.nombre,
+        v.dpi,
+        v.placa,
+        NULL AS foto,
+        DATE_FORMAT(a.fecha, '%Y-%m-%d') AS fecha,
+        TIME_FORMAT(a.hora_inicio, '%H:%i') AS hora_inicio,
+        TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
+        NULL AS hora_salida,
+        a.tipo_visita,
+        a.motivo_servicio,
+        a.observaciones,
+        a.token_qr,
+        a.estado_acceso,
+        a.es_acceso_especial,
+        a.fuera_horario,
+        a.motivo_excepcion,
+        CONCAT(COALESCE(c.torre, ''), CASE WHEN c.torre IS NOT NULL AND c.torre <> '' THEN '-' ELSE '' END, c.numero) AS casa
+      FROM ACCESO a
+      INNER JOIN VISITANTE v ON v.id_visitante = a.id_visitante
+      INNER JOIN CASA c ON c.id_casa = a.id_casa
+      WHERE a.id_acceso = ?
+      LIMIT 1
+    `,
+    [accessId],
+  );
+
+  if (!rows[0]) {
+    const error = new Error("Acceso no encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  return mapVisit(rows[0]);
+}
+
 async function createArrivalNotification(connection, accessId) {
   const [rows] = await connection.execute(
     `
@@ -1452,6 +1494,7 @@ module.exports = {
   cancelVisit,
   deleteFrequentVisitor,
   updateFrequentVisitor,
+  getVisitById,
   getGuardShiftVisits,
   validateQrVisit,
   registerQrEntry,

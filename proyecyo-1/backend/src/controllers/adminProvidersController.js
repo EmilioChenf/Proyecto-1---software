@@ -3,6 +3,7 @@ const {
   listAdminProviderHistory,
   updateAdminProvider,
 } = require("../services/adminProvidersService");
+const { registerProvider } = require("../services/tenantProvidersService");
 
 async function getAdminProviders(req, res, next) {
   try {
@@ -31,7 +32,18 @@ async function patchAdminProvider(req, res, next) {
   }
 }
 
+// HU-C06.1: el administrador registra proveedores para cualquier casa (id_casa).
+async function postAdminProvider(req, res, next) {
+  try {
+    const result = await registerProvider({ id: req.authUser.id, role: req.authUser.role }, req.body || {});
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
+  postAdminProvider,
   getAdminProviders,
   getAdminProvidersHistory,
   patchAdminProvider,
