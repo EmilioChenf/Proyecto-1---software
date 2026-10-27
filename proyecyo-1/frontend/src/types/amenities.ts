@@ -21,6 +21,12 @@ export interface AmenityReservation {
   usuario_nombre?: string;
   usuario_rol?: "residente" | "inquilino" | "admin" | "guardia";
   unidad?: string;
+  /** HU-C05.5/C05.9: autoria (solo en vistas de administrador). */
+  creada_por_nombre?: string | null;
+  creada_por_admin?: boolean;
+  cancelada_por_nombre?: string | null;
+  cancelada_en?: string | null;
+  motivo_cancelacion?: string | null;
 }
 
 export interface AmenityReservationHistory {
@@ -37,6 +43,8 @@ export interface AmenityReservationHistory {
   estado_anterior: string;
   estado_nuevo: string;
   realizado_por_nombre: string;
+  realizado_por_rol?: string | null;
+  motivo?: string | null;
   creado_en: string;
 }
 

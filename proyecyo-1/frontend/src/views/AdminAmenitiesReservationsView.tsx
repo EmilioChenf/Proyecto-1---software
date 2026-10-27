@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  adminCancelAmenitiesReservationRequest,
   createAdminAmenitiesReservationRequest,
   getAdminAmenityAvailabilityRequest,
   getAdminAmenitiesRequest,
@@ -33,6 +34,7 @@ import type {
   ReservableUserOption,
   UpdateAmenitySchedulePayload,
 } from "@/types/amenities";
+import { confirmAction, notifyError, notifySuccess, promptText } from "@/utils/feedback";
 
 type CalendarDay = {
   date: string;
@@ -277,6 +279,7 @@ export function AdminAmenitiesReservationsView() {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isSubmittingReservation, setIsSubmittingReservation] = useState(false);
   const [isSubmittingSchedule, setIsSubmittingSchedule] = useState(false);
+  const [cancellingKey, setCancellingKey] = useState<string | null>(null);
   const [availabilityPreview, setAvailabilityPreview] =
     useState<AmenityAvailabilityResponse | null>(null);
   const [reservationAvailability, setReservationAvailability] =
@@ -486,8 +489,14 @@ export function AdminAmenitiesReservationsView() {
     [monthRange, reservations, selectedAmenityFilter],
   );
 
+  // HU-C05.7: el calendario solo marca como ocupado lo que sigue activo; las
+  // canceladas se cuentan aparte para no perder el historial del dia.
   const reservationsByDate = useMemo(() => {
     return monthReservations.reduce<Record<string, AmenityReservation[]>>((accumulator, reservation) => {
+      if (reservation.estado === "CANCELADA") {
+        return accumulator;
+      }
+
       if (!accumulator[reservation.fecha]) {
         accumulator[reservation.fecha] = [];
       }
@@ -496,6 +505,17 @@ export function AdminAmenitiesReservationsView() {
       return accumulator;
     }, {});
   }, [monthReservations]);
+
+  const cancelledByDate = useMemo(
+    () =>
+      monthReservations.reduce<Record<string, number>>((accumulator, reservation) => {
+        if (reservation.estado === "CANCELADA") {
+          accumulator[reservation.fecha] = (accumulator[reservation.fecha] || 0) + 1;
+        }
+        return accumulator;
+      }, {}),
+    [monthReservations],
+  );
 
   const actionAmenity = useMemo(() => {
     if (amenities.length === 0) {
@@ -513,8 +533,12 @@ export function AdminAmenitiesReservationsView() {
     const currentTime = getCurrentTime();
 
     return amenities.map((amenity) => {
+      // HU-C05.7: una reserva cancelada no ocupa bloques ni cuenta como reserva activa.
       const todayReservations = reservations.filter(
-        (reservation) => reservation.id_amenidad === amenity.id_amenidad && reservation.fecha === today,
+        (reservation) =>
+          reservation.id_amenidad === amenity.id_amenidad &&
+          reservation.fecha === today &&
+          reservation.estado !== "CANCELADA",
       );
       const slots = buildAmenitySlots(amenity);
       const occupiedSlots = slots.filter((slot) =>
@@ -558,15 +582,25 @@ export function AdminAmenitiesReservationsView() {
       .slice(0, 8);
   }, [reservations, today]);
 
+  const cancelledReservations = useMemo(
+    () =>
+      reservations
+        .filter((reservation) => reservation.estado === "CANCELADA")
+        .sort((left, right) => String(right.cancelada_en || "").localeCompare(String(left.cancelada_en || "")))
+        .slice(0, 8),
+    [reservations],
+  );
+
   const weeklyStats = useMemo(() => {
     const currentWeek = getWeekRange(new Date());
     const previousWeekStart = addDays(parseDate(currentWeek.from), -7);
     const previousWeek = getWeekRange(previousWeekStart);
 
-    const currentTotal = reservations.filter(
+    const active = reservations.filter((reservation) => reservation.estado !== "CANCELADA");
+    const currentTotal = active.filter(
       (reservation) => reservation.fecha >= currentWeek.from && reservation.fecha <= currentWeek.to,
     ).length;
-    const previousTotal = reservations.filter(
+    const previousTotal = active.filter(
       (reservation) =>
         reservation.fecha >= previousWeek.from && reservation.fecha <= previousWeek.to,
     ).length;
@@ -673,6 +707,21 @@ export function AdminAmenitiesReservationsView() {
         return;
       }
 
+      // HU-C05.10: confirmar explicitamente que se reserva en nombre de otra persona.
+      const owner = users.find((item) => item.id_usuario === payload.id_usuario);
+      const amenityName = amenities.find((item) => item.id_amenidad === payload.id_amenidad)?.nombre || "la amenidad";
+      const confirmed = await confirmAction({
+        title: "¿Reservar en nombre de otra persona?",
+        text:
+          `Vas a reservar ${amenityName} el ${payload.fecha} de ${payload.hora_inicio} a ${payload.hora_fin} ` +
+          `para ${owner?.nombre || "el usuario seleccionado"} (${owner?.unidad || "sin unidad"}). ` +
+          "La reserva quedará registrada como creada por tu cuenta de administrador.",
+        confirmText: "Confirmar reserva",
+      });
+      if (!confirmed) {
+        return;
+      }
+
       await createAdminAmenitiesReservationRequest(payload);
       await refreshDashboard();
       setSuccessMessage("La reserva se registro correctamente en la base de datos.");
@@ -690,6 +739,37 @@ export function AdminAmenitiesReservationsView() {
       );
     } finally {
       setIsSubmittingReservation(false);
+    }
+  }
+
+  // HU-C05.4/C05.5: cancelacion administrativa con motivo; el residente o inquilino
+  // la ve en su historial y recibe una notificacion.
+  async function handleAdminCancel(reservation: AmenityReservation) {
+    const motivo = await promptText({
+      title: "¿Cancelar esta reserva?",
+      text:
+        `${reservation.amenidad_nombre} · ${reservation.fecha} ${reservation.hora_inicio}-${reservation.hora_fin} · ` +
+        `${reservation.usuario_nombre || "Residente"} (${reservation.unidad || "sin unidad"}). ` +
+        "El horario quedará libre y se notificará al usuario.",
+      label: "Motivo de la cancelación (opcional)",
+      placeholder: "Ej. mantenimiento de la amenidad",
+      confirmText: "Cancelar reserva",
+      cancelText: "Volver",
+      tone: "danger",
+    });
+    if (motivo === null) {
+      return;
+    }
+
+    try {
+      setCancellingKey(reservation.reservation_key);
+      await adminCancelAmenitiesReservationRequest(reservation.reservation_key, motivo || undefined);
+      await refreshDashboard();
+      void notifySuccess(`Reserva de ${reservation.usuario_nombre || "el usuario"} cancelada; el horario quedó libre.`);
+    } catch (error) {
+      void notifyError(error, "No fue posible cancelar la reserva.");
+    } finally {
+      setCancellingKey(null);
     }
   }
 
@@ -904,6 +984,11 @@ export function AdminAmenitiesReservationsView() {
                           ? `${dayReservations.length} reserva${dayReservations.length === 1 ? "" : "s"}`
                           : "Disponible"}
                       </div>
+                      {cancelledByDate[day.date] ? (
+                        <div className="text-[0.65rem] opacity-80">
+                          {cancelledByDate[day.date]} cancelada{cancelledByDate[day.date] === 1 ? "" : "s"}
+                        </div>
+                      ) : null}
                     </button>
                   );
                 })}
@@ -1071,19 +1156,36 @@ export function AdminAmenitiesReservationsView() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-[0.82rem]">
-                            <Button
-                              type="button"
-                              variant="link"
-                              className="h-auto px-0 text-blue-600"
-                              onClick={() =>
-                                openAvailabilityModal({
-                                  id_amenidad: reservation.id_amenidad,
-                                  fecha: reservation.fecha,
-                                })
-                              }
-                            >
-                              Ver detalle
-                            </Button>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto px-0 text-blue-600"
+                                onClick={() =>
+                                  openAvailabilityModal({
+                                    id_amenidad: reservation.id_amenidad,
+                                    fecha: reservation.fecha,
+                                  })
+                                }
+                              >
+                                Ver detalle
+                              </Button>
+                              {reservation.estado_actual !== "FINALIZADA" ? (
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  className="h-auto px-0 text-rose-600"
+                                  disabled={cancellingKey === reservation.reservation_key}
+                                  aria-label={`Cancelar reserva de ${reservation.usuario_nombre || "residente"} en ${reservation.amenidad_nombre}`}
+                                  onClick={() => void handleAdminCancel(reservation)}
+                                >
+                                  {cancellingKey === reservation.reservation_key ? "Cancelando..." : "Cancelar"}
+                                </Button>
+                              ) : null}
+                            </div>
+                            {reservation.creada_por_admin && reservation.creada_por_nombre ? (
+                              <p className="mt-1 text-[0.7rem] text-slate-400">Creada por {reservation.creada_por_nombre}</p>
+                            ) : null}
                           </td>
                         </tr>
                       );
@@ -1094,6 +1196,29 @@ export function AdminAmenitiesReservationsView() {
             )}
           </CardContent>
         </Card>
+        {cancelledReservations.length > 0 ? (
+          <Card className="border-slate-200 shadow-[0_20px_48px_rgba(15,23,42,0.07)]">
+            <CardHeader className="px-4 pt-4">
+              <CardTitle className="text-lg font-semibold text-slate-950">Cancelaciones recientes</CardTitle>
+              <CardDescription>Quién canceló, cuándo y por qué. El horario ya está libre.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 px-4 pb-4">
+              {cancelledReservations.map((reservation) => (
+                <div key={reservation.reservation_key} className="rounded-xl bg-slate-50 px-3 py-2 text-[0.8rem] text-slate-600">
+                  <p className="font-medium text-slate-800">
+                    {reservation.amenidad_nombre} · {formatShortDate(reservation.fecha)} {reservation.hora_inicio}-{reservation.hora_fin} ·{" "}
+                    {reservation.usuario_nombre || "Sin dato"} ({reservation.unidad || "Sin unidad"})
+                  </p>
+                  <p>
+                    Cancelada por {reservation.cancelada_por_nombre || "registro anterior sin autor"}
+                    {reservation.cancelada_en ? ` el ${reservation.cancelada_en} (UTC)` : ""}
+                    {reservation.motivo_cancelacion ? ` · Motivo: ${reservation.motivo_cancelacion}` : ""}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       <OverlayPanel

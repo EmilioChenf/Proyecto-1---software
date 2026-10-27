@@ -1143,6 +1143,20 @@ async function ensureAccessHistoryPreservationSchema() {
   await addNullableUserReference("ACCESO", "id_usuario_elimina", "fk_acceso_usuario_elimina");
 }
 
+// HU-C05: quien crea (o crea en nombre de otro), modifica y cancela una reserva, cuando
+// y por que. Aditivo e idempotente; HISTORIAL_RESERVA ya existe (ensureSprintUserStoriesSchema).
+async function ensureReservationAuditSchema() {
+  await addNullableUserReference("RESERVA", "creada_por", "fk_reserva_creada_por");
+  await addNullableUserReference("RESERVA", "cancelada_por", "fk_reserva_cancelada_por");
+  await addColumnIfMissing("RESERVA", "cancelada_en", "DATETIME NULL");
+  await addColumnIfMissing("RESERVA", "motivo_cancelacion", "VARCHAR(255) NULL");
+  if (await tableExists("HISTORIAL_RESERVA")) {
+    await addColumnIfMissing("HISTORIAL_RESERVA", "id_amenidad_nueva", "INT NULL");
+    await addColumnIfMissing("HISTORIAL_RESERVA", "realizado_por_rol", "VARCHAR(40) NULL");
+    await addColumnIfMissing("HISTORIAL_RESERVA", "motivo", "VARCHAR(255) NULL");
+  }
+}
+
 module.exports = {
   pool,
   query,
@@ -1167,6 +1181,7 @@ module.exports = {
   ensureRemindersSchema,
   ensureSimulatedPaymentsSchema,
   ensureDemoRequestsSchema,
-  // Al final: depende de tablas creadas por los ensure anteriores.
+  // Al final: dependen de tablas creadas por los ensure anteriores.
   ensureAccessHistoryPreservationSchema,
+  ensureReservationAuditSchema,
 };

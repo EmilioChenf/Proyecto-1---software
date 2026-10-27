@@ -9,6 +9,7 @@ const {
   createAmenityReservation,
   updateAmenityReservation,
   cancelAmenityReservation,
+  adminCancelAmenityReservation,
   getAmenityStats,
   updateAmenitySchedule,
 } = require("../services/amenitiesReservationsService");
@@ -169,7 +170,7 @@ async function patchAmenityReservation(req, res, next) {
 
 async function patchCancelAmenityReservation(req, res, next) {
   try {
-    const reservation = await cancelAmenityReservation(req.authUser, req.params.key);
+    const reservation = await cancelAmenityReservation(req.authUser, req.params.key, req.body || {});
     res.status(200).json(reservation);
   } catch (error) {
     next(error);
@@ -180,6 +181,16 @@ async function postAdminAmenityReservation(req, res, next) {
   try {
     const reservation = await createAmenityReservation(getAdminViewer(req), req.body || {});
     res.status(201).json(reservation);
+  } catch (error) {
+    next(error);
+  }
+}
+
+// HU-C05.4: cancelacion administrativa; el administrador sale de la sesion validada.
+async function patchAdminCancelAmenityReservation(req, res, next) {
+  try {
+    const reservation = await adminCancelAmenityReservation(getAdminViewer(req), req.params.key, req.body || {});
+    res.status(200).json(reservation);
   } catch (error) {
     next(error);
   }
@@ -210,5 +221,6 @@ module.exports = {
   patchAmenityReservation,
   patchCancelAmenityReservation,
   postAdminAmenityReservation,
+  patchAdminCancelAmenityReservation,
   putAdminAmenitySchedule,
 };

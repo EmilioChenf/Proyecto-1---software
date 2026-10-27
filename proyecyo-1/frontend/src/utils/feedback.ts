@@ -68,6 +68,30 @@ export async function confirmAction(options: ConfirmOptions): Promise<boolean> {
   return result.isConfirmed;
 }
 
+type PromptOptions = ConfirmOptions & {
+  label: string;
+  placeholder?: string;
+  maxLength?: number;
+};
+
+/**
+ * Confirmacion con un texto opcional (por ejemplo, el motivo de una cancelacion).
+ * Devuelve el texto (puede ser "") si el usuario confirma, o null si cancela.
+ * inputLabel/inputPlaceholder se asignan como texto plano en SweetAlert2.
+ */
+export async function promptText({ label, placeholder, maxLength = 255, ...options }: PromptOptions): Promise<string | null> {
+  const result = await base.fire({
+    ...buildConfirmOptions(options),
+    input: "textarea",
+    inputLabel: label,
+    inputPlaceholder: placeholder,
+    inputAttributes: { maxlength: String(maxLength), "aria-label": label },
+    inputValidator: (value: string) =>
+      value && value.length > maxLength ? `Máximo ${maxLength} caracteres.` : undefined,
+  });
+  return result.isConfirmed ? String(result.value ?? "").trim() : null;
+}
+
 /** Exito de una accion: aviso breve que no bloquea la pantalla. */
 export function notifySuccess(message: string, title?: string) {
   return toast.fire({ icon: "success", titleText: title ?? message, text: title ? message : undefined });

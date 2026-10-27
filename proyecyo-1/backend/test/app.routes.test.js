@@ -22,6 +22,7 @@ const calls = {
   ),
   listAdminAccesses: mock.fn((...args) => behavior.listAdminAccesses(...args)),
   registerProvider: mock.fn((...args) => behavior.registerProvider(...args)),
+  adminCancelAmenityReservation: mock.fn((...args) => behavior.adminCancelAmenityReservation(...args)),
 };
 
 const noop = async () => {
@@ -51,6 +52,7 @@ const serviceFakes = {
     createAmenityReservation: noop,
     updateAmenityReservation: noop,
     cancelAmenityReservation: noop,
+    adminCancelAmenityReservation: calls.adminCancelAmenityReservation,
     getAmenityStats: noop,
     updateAmenitySchedule: noop,
   },
@@ -132,6 +134,7 @@ beforeEach(() => {
   behavior.validateAmenityReservationConflict = noop;
   behavior.listAdminAccesses = noop;
   behavior.registerProvider = noop;
+  behavior.adminCancelAmenityReservation = noop;
 });
 
 function authenticated(agent, role, userId = 7) {
@@ -358,6 +361,27 @@ describe("Rutas reales de NexusResidencial", () => {
       assert.equal(response.status, 403, `${role} en ${url}`);
     }
     assert.equal(calls.registerProvider.mock.callCount(), 0);
+  });
+
+  // HU-C05.4/C05.12: solo un administrador cancela reservas ajenas; su identidad sale
+  // de la sesion y nunca del cuerpo de la peticion.
+  it("solo el administrador cancela reservas desde la ruta administrativa", async () => {
+    const url = "/admin/reservas/amenidades/9-2-2099-01-10-10:00/cancelar";
+    for (const role of ["residente", "inquilino", "guardia"]) {
+      const response = await authenticated(request(app).patch(url), role).send({ motivo: "x" });
+      assert.equal(response.status, 403, role);
+    }
+    assert.equal((await request(app).patch(url).send({})).status, 401);
+    assert.equal(calls.adminCancelAmenityReservation.mock.callCount(), 0);
+
+    behavior.adminCancelAmenityReservation = async () => ({ estado: "CANCELADA" });
+    const response = await authenticated(request(app).patch(url), "admin", 3).send({ motivo: "Mantenimiento", id_usuario: 99 });
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls.adminCancelAmenityReservation.mock.calls[0].arguments, [
+      { role: "admin", id: 3 },
+      "9-2-2099-01-10-10:00",
+      { motivo: "Mantenimiento", id_usuario: 99 },
+    ]);
   });
 
   it("las consultas de proveedores del inquilino ya no aceptan residentes", async () => {

@@ -330,9 +330,16 @@ CREATE TABLE RESERVA (
     hora_fin TIME,
     estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA',
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- HU-C05: autoria de la creacion y de la cancelacion.
+    creada_por INT NULL,
+    cancelada_por INT NULL,
+    cancelada_en DATETIME NULL,
+    motivo_cancelacion VARCHAR(255) NULL,
     PRIMARY KEY (id_usuario, id_amenidad, fecha, hora_inicio),
     FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario),
     FOREIGN KEY (id_amenidad) REFERENCES AMENIDAD(id_amenidad),
+    CONSTRAINT fk_reserva_creada_por FOREIGN KEY (creada_por) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_reserva_cancelada_por FOREIGN KEY (cancelada_por) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
     CHECK (estado IN ('PENDIENTE', 'CONFIRMADA', 'CANCELADA'))
 );
 

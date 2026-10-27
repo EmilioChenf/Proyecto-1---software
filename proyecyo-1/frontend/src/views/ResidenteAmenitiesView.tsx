@@ -23,7 +23,24 @@ import type {
   AmenityReservation,
   AmenityReservationHistory,
 } from "@/types/amenities";
-import { formatUtcTimestamp } from "@/utils/guatemalaTime";
+import { formatUtcTimestamp, guatemalaToday } from "@/utils/guatemalaTime";
+import { guatemalaCurrentTime } from "@/utils/providerAccess";
+import { getApiErrorCode } from "@/utils/apiErrorDetails";
+import { notifyError } from "@/utils/feedback";
+
+// HU-C05.1: un bloque que ya empezo (o de un dia pasado) no se puede reservar.
+function isPastSlot(fecha: string, horaInicio: string, now = new Date()) {
+  const today = guatemalaToday(0, now);
+  if (fecha < today) return true;
+  return fecha === today && horaInicio <= guatemalaCurrentTime(now);
+}
+
+const historyActionLabels: Record<string, string> = {
+  MODIFICACION: "Modificada",
+  CANCELACION: "Cancelada",
+  CANCELACION_ADMIN: "Cancelada por administración",
+  CREACION_ADMIN: "Creada por administración",
+};
 
 type SlotSelection = {
   hora_inicio: string;
@@ -177,6 +194,7 @@ export function ResidenteAmenitiesView() {
     () => amenities.find((item) => item.id_amenidad === selectedAmenityId) || null,
     [amenities, selectedAmenityId],
   );
+  const selectedDateIsPast = Boolean(selectedDate) && selectedDate < guatemalaToday();
 
   const selectedReservations = useMemo(() => {
     if (availability?.fecha === selectedDate && availability.amenidad.id_amenidad === selectedAmenityId) {
@@ -213,6 +231,11 @@ export function ResidenteAmenitiesView() {
 
     if (selectedSlotIsBusy) {
       setErrorMessage("Ese horario ya no esta disponible.");
+      return;
+    }
+
+    if (isPastSlot(selectedDate, selectedSlot.hora_inicio)) {
+      void notifyError("La fecha u hora seleccionada ya pasó. Elige un horario futuro.", undefined, "No se puede reservar en el pasado");
       return;
     }
 
@@ -255,7 +278,13 @@ export function ResidenteAmenitiesView() {
       );
       setSelectedSlot(null);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible confirmar la reserva.");
+      // HU-C05.1: el error de la accion se muestra flotante, visible aunque la
+      // cuadricula este lejos del encabezado de la pagina.
+      void notifyError(
+        error,
+        "No fue posible confirmar la reserva.",
+        getApiErrorCode(error) === "RESERVATION_IN_PAST" ? "No se puede reservar en el pasado" : undefined,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -480,6 +509,14 @@ export function ResidenteAmenitiesView() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedDateIsPast ? (
+              <Alert variant="destructive">
+                <AlertTitle>Fecha pasada</AlertTitle>
+                <AlertDescription>
+                  No se pueden registrar reservas en fechas pasadas. Elige hoy o un día futuro.
+                </AlertDescription>
+              </Alert>
+            ) : null}
             {isLoadingAvailability ? (
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
                 Cargando disponibilidad...
@@ -490,12 +527,13 @@ export function ResidenteAmenitiesView() {
                   const isSelected =
                     selectedSlot?.hora_inicio === slot.hora_inicio &&
                     selectedSlot?.hora_fin === slot.hora_fin;
+                  const isPast = isPastSlot(selectedDate, slot.hora_inicio);
 
                   return (
                     <button
                       key={`${slot.hora_inicio}-${slot.hora_fin}`}
                       type="button"
-                      disabled={!slot.disponible || !selectedAmenity}
+                      disabled={!slot.disponible || !selectedAmenity || isPast}
                       onClick={() =>
                         setSelectedSlot({
                           hora_inicio: slot.hora_inicio,
@@ -503,7 +541,9 @@ export function ResidenteAmenitiesView() {
                         })
                       }
                       className={`rounded-2xl border px-4 py-3 text-left transition ${
-                        !slot.disponible
+                        isPast
+                          ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                          : !slot.disponible
                           ? "cursor-not-allowed border-rose-200 bg-rose-50 text-rose-700"
                           : isSelected
                             ? "border-emerald-300 bg-emerald-50 text-emerald-800"
@@ -515,7 +555,7 @@ export function ResidenteAmenitiesView() {
                         {slot.hora_inicio} - {slot.hora_fin}
                       </p>
                       <p className="mt-1 text-xs">
-                        {slot.disponible ? "Disponible" : "Ocupado"}
+                        {isPast ? "Horario pasado" : slot.disponible ? "Disponible" : "Ocupado"}
                       </p>
                     </button>
                   );
@@ -627,7 +667,9 @@ export function ResidenteAmenitiesView() {
               <History className="size-5 text-blue-600" />
               Historial de reservas
             </CardTitle>
-            <CardDescription>Modificaciones y cancelaciones registradas en base de datos.</CardDescription>
+            <CardDescription>
+              Modificaciones y cancelaciones (incluidas las de administración, con su motivo) registradas en base de datos.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {reservationHistory.length === 0 ? (
@@ -640,7 +682,7 @@ export function ResidenteAmenitiesView() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium text-slate-900">{entry.amenidad_nombre}</p>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                      {entry.accion}
+                      {historyActionLabels[entry.accion] || entry.accion}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-slate-500">{entry.detalle}</p>
