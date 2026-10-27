@@ -6,7 +6,7 @@ const { env } = require("./config/env");
 const { mountRecurrenteWebhook } = require("./middlewares/recurrenteRawBody");
 const { createWebhookHandler } = require("./controllers/recurrenteWebhookController");
 const { logger, sanitizeText } = require("./utils/safeLogger");
-const { createSecurityRateLimiters } = require("./middlewares/securityRateLimits");
+const { createSecurityRateLimiters, PAYMENT_START_PATHS, GUARD_QR_PATHS } = require("./middlewares/securityRateLimits");
 const authRoutes = require("./routes/authRoutes");
 const activeSessionsRoutes = require("./routes/activeSessionsRoutes");
 const auditRoutes = require("./routes/auditRoutes");
@@ -80,6 +80,10 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
   app.post("/auth/password/forgot", securityLimits.passwordForgot);
   app.post("/auth/password/reset", securityLimits.passwordReset);
   app.post("/auth/password/change", securityLimits.passwordChange);
+  // HU-C01.5: tambien el formulario publico, el inicio de pagos y las lecturas de QR.
+  app.post("/public/solicitudes-demo", securityLimits.publicForm);
+  app.post(PAYMENT_START_PATHS, securityLimits.paymentStart);
+  app.post(GUARD_QR_PATHS, securityLimits.guardQr);
   app.use(authRoutes);
   app.use(activeSessionsRoutes);
   app.use(auditRoutes);

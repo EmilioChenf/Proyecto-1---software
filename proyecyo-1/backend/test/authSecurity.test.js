@@ -13,6 +13,10 @@ const SENSITIVE_POSTS = [
   ["passwordForgot", "/auth/password/forgot", { email: "no-es-correo" }, 400],
   ["passwordReset", "/auth/password/reset", { token: "x", password: "x" }, 400],
   ["passwordChange", "/auth/password/change", { currentPassword: "a", newPassword: "b", confirmPassword: "b" }, 401],
+  // HU-C01.5: POST sensibles fuera de la autenticacion.
+  ["publicForm", "/public/solicitudes-demo", {}, 400],
+  ["paymentStart", "/residente/pagos/recurrente/checkout", { id_cuota: 1 }, 401],
+  ["guardQr", "/guardia/registrar-ingreso", { qrToken: "x" }, 401],
 ];
 
 describe("HU-C01 rate limiting de POST sensibles", () => {
@@ -39,6 +43,36 @@ describe("HU-C01 rate limiting de POST sensibles", () => {
     }
     assert.equal((await request(first).post("/auth/password/forgot").send({ email: "x" })).status, 429);
     assert.equal((await request(createApp()).post("/auth/password/forgot").send({ email: "x" })).status, 400);
+  });
+
+  it("HU-C01.5: el limite de pagos es comun a todas las rutas que inician un cobro", async () => {
+    const app = createApp();
+    const { limit } = SECURITY_RATE_LIMITS.paymentStart;
+    for (let attempt = 0; attempt < limit; attempt++) {
+      const path = attempt % 2 ? "/inquilino/pagos-simulados" : "/residente/pagos/recurrente/reintentar";
+      assert.equal((await request(app).post(path).send({})).status, 401);
+    }
+    const blocked = await request(app).post("/residente/pagos-simulados").send({});
+    assert.equal(blocked.status, 429);
+    assert.equal(blocked.body.code, "RATE_LIMITED");
+  });
+
+  it("HU-C01.6: las lecturas de QR aceptadas no consumen el limite del guardia", async () => {
+    const express = require("express");
+    const { createSecurityRateLimiters, GUARD_QR_PATHS } = require("../src/middlewares/securityRateLimits");
+    const app = express();
+    const limits = createSecurityRateLimiters();
+    app.post(GUARD_QR_PATHS, limits.guardQr, (req, res) => {
+      res.status(req.query.ok ? 200 : 409).json({});
+    });
+    const { limit } = SECURITY_RATE_LIMITS.guardQr;
+    for (let i = 0; i < limit * 2; i++) {
+      assert.equal((await request(app).post("/guardia/registrar-ingreso?ok=1")).status, 200, "uso normal sin limite");
+    }
+    for (let i = 0; i < limit; i++) {
+      assert.equal((await request(app).post("/guardia/validar-qr")).status, 409);
+    }
+    assert.equal((await request(app).post("/guardia/registrar-salida")).status, 429);
   });
 
   it("los GET no consumen el limite de los POST sensibles", async () => {
