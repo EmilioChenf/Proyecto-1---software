@@ -13,6 +13,8 @@ export interface VisitRecord {
   hora_inicio: string;
   hora_fin: string;
   hora_salida?: string | null;
+  /** HU-C04.5: hora real de ingreso (Guatemala), si la garita lo registro. */
+  hora_ingreso?: string | null;
   tipo_visita: VisitType;
   medio_ingreso?: ProviderEntryMode | null;
   motivo_servicio?: string;
@@ -34,6 +36,8 @@ export interface FrequentVisitor {
   placa: string;
   total_visitas: number;
   ultima_fecha: string | null;
+  /** HU-C03.5: vivienda mostrada al confirmar el acceso rapido. */
+  casa?: string;
 }
 
 export interface VisitPayload {

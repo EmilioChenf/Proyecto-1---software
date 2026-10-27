@@ -27,10 +27,29 @@ function ensureVisitIdentifiers(payload, tipoVisita) {
     return { placa, dpi };
   }
 
+  const dpi = ensureValidDpi(payload.dpi);
+  // HU-C03.1: una visita personal (la que genera visitantes frecuentes) siempre
+  // identifica al visitante con su DPI/documento; delivery conserva DPI o placa.
+  if (tipoVisita === "VISITA" && !dpi) {
+    throw visitorDocumentRequired();
+  }
+
   return {
-    dpi: ensureValidDpi(payload.dpi),
+    dpi,
     placa: ensureValidVehiclePlate(payload.placa),
   };
+}
+
+function visitorDocumentRequired() {
+  const error = new Error("El DPI/documento del visitante es obligatorio (13 dígitos).");
+  error.status = 400;
+  error.code = "VISITOR_DOCUMENT_REQUIRED";
+  error.errores = [{ field: "dpi", message: error.message }];
+  return error;
+}
+
+function houseLabel(house) {
+  return `${house.torre ? `${house.torre}-` : ""}${house.numero}`;
 }
 
 function ensureVisitType(value) {
@@ -118,6 +137,8 @@ function mapVisit(row) {
     hora_inicio: row.hora_inicio,
     hora_fin: row.hora_fin,
     hora_salida: row.hora_salida || null,
+    // HU-C04.5: movimiento de entrada visible aunque la visita quede cancelada o vencida.
+    hora_ingreso: row.hora_ingreso || null,
     tipo_visita: row.tipo_visita,
     medio_ingreso: row.tipo_visita === "PROVEEDOR" ? describeProviderEntryMode(row.placa) : null,
     motivo_servicio: row.motivo_servicio || "",
@@ -249,6 +270,12 @@ async function listResidentVisits(userId, role = "residente") {
           WHERE ra.id_acceso = a.id_acceso
           LIMIT 1
         ) AS hora_salida,
+        (
+          SELECT TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, '%H:%i')
+          FROM REGISTRO_ACCESO ra
+          WHERE ra.id_acceso = a.id_acceso
+          LIMIT 1
+        ) AS hora_ingreso,
         a.tipo_visita,
         a.motivo_servicio,
         a.observaciones,
@@ -261,6 +288,7 @@ async function listResidentVisits(userId, role = "residente") {
       INNER JOIN CASA c
         ON c.id_casa = a.id_casa
       WHERE a.id_casa = ?
+        AND a.eliminado_en IS NULL
         ${getOwnerFilter(role)}
       ORDER BY a.fecha DESC, a.hora_inicio DESC, a.id_acceso DESC
     `,
@@ -303,6 +331,8 @@ async function listFrequentVisitors(userId, role = "residente") {
     ultima_fecha: row.ultima_fecha
       ? new Date(row.ultima_fecha).toISOString().slice(0, 10)
       : null,
+    // HU-C03.5: vivienda que se muestra al confirmar el acceso rapido.
+    casa: houseLabel(house),
   }));
 }
 
@@ -339,9 +369,12 @@ async function createVisit(userId, role = "residente", payload) {
 
   try {
     await connection.beginTransaction();
+    // HU-C03.9: serializa las autorizaciones de la misma vivienda. Sin este bloqueo, dos
+    // envios simultaneos con un DPI nuevo no ven al visitante del otro y emiten dos QR.
+    await connection.execute("SELECT id_casa FROM CASA WHERE id_casa = ? FOR UPDATE", [house.id_casa]);
 
     const [existingVisitors] = await connection.execute(
-      `SELECT id_visitante, nombre, dpi, placa FROM VISITANTE
+      `SELECT id_visitante, nombre, dpi, placa, activo FROM VISITANTE
        WHERE (? <> '' AND dpi = ?) OR (? <> '' AND UPPER(REPLACE(REPLACE(placa, '-', ''), ' ', '')) = ?)
        ORDER BY id_visitante LIMIT 1 FOR UPDATE`,
       [dpi, dpi, placa, placa.replace(/-/g, "")],
@@ -363,11 +396,13 @@ async function createVisit(userId, role = "residente", payload) {
         );
         error.status = 409;
         error.code = "VISITOR_DATA_CONFLICT";
+        // Solo se devuelven los identificadores que el usuario ya escribio: el
+        // VISITANTE es compartido y no debe revelar datos que no conoce.
         error.existing = {
           id_visitante: existingVisitor.id_visitante,
           nombre: existingVisitor.nombre,
-          dpi: existingVisitor.dpi,
-          placa: existingVisitor.placa,
+          dpi: dpi && existingVisitor.dpi === dpi ? existingVisitor.dpi : null,
+          placa: placa && existingVisitor.placa === placa ? existingVisitor.placa : null,
         };
         throw error;
       }
@@ -377,6 +412,12 @@ async function createVisit(userId, role = "residente", payload) {
           "UPDATE VISITANTE SET nombre = ?, dpi = ?, placa = ? WHERE id_visitante = ?",
           [nombre, dpi || null, placa || null, visitorId],
         );
+      }
+
+      // HU-C03.6: autorizar de nuevo a un visitante desactivado lo reactiva; su
+      // historial nunca se perdio.
+      if (!existingVisitor.activo) {
+        await connection.execute("UPDATE VISITANTE SET activo = TRUE WHERE id_visitante = ?", [visitorId]);
       }
     } else {
       const [visitorResult] = await connection.execute(
@@ -461,6 +502,30 @@ async function createVisit(userId, role = "residente", payload) {
   }
 }
 
+// HU-C04: evidencia de acceso de una visita. Con movimientos (entrada/salida) o con
+// intentos de validacion de su QR, la visita ya forma parte del historial de garita.
+async function getAccessHistoryEvidence(accessId, runner = query) {
+  const rows = await runner(
+    `
+      SELECT
+        (SELECT COUNT(*) FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = ?) AS movimientos,
+        (SELECT COUNT(*) FROM INTENTO_VALIDACION_QR iv WHERE iv.id_acceso = ?) AS intentos
+    `,
+    [accessId, accessId],
+  );
+  return {
+    movimientos: Number(rows[0]?.movimientos || 0),
+    intentos: Number(rows[0]?.intentos || 0),
+  };
+}
+
+function conflict(message, code) {
+  const error = new Error(message);
+  error.status = 409;
+  error.code = code;
+  return error;
+}
+
 async function deleteVisit(userId, role = "residente", accessId) {
   const house = await getHouseByUserId(userId, role);
   const normalizedAccessId = Number(accessId);
@@ -500,6 +565,7 @@ async function deleteVisit(userId, role = "residente", accessId) {
       INNER JOIN CASA c
         ON c.id_casa = a.id_casa
       WHERE a.id_acceso = ? AND a.id_casa = ?
+        AND a.eliminado_en IS NULL
         ${getOwnerFilter(role)}
       LIMIT 1
     `,
@@ -514,12 +580,73 @@ async function deleteVisit(userId, role = "residente", accessId) {
     throw error;
   }
 
+  const status = String(visit.estado_acceso || "").toUpperCase();
+
+  // HU-C04.1: con el visitante adentro no se elimina ni se oculta nada: la garita
+  // todavia debe registrar su salida sobre este mismo acceso.
+  if (status === "INGRESO_REGISTRADO") {
+    throw conflict(
+      "El visitante sigue dentro del residencial. La visita no puede eliminarse hasta que la garita registre su salida.",
+      "VISIT_IN_PROGRESS",
+    );
+  }
+
+  const evidence = await getAccessHistoryEvidence(normalizedAccessId);
+  const hasHistory = status === "SALIDA_REGISTRADA" || evidence.movimientos > 0 || evidence.intentos > 0;
+
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
-    await connection.execute("DELETE FROM REGISTRO_ACCESO WHERE id_acceso = ?", [normalizedAccessId]);
-    await connection.execute("DELETE FROM ACCESO WHERE id_acceso = ?", [normalizedAccessId]);
+
+    if (hasHistory) {
+      // HU-C04.1/C04.2: eliminacion logica. Se conservan visitante, vivienda, horario,
+      // REGISTRO_ACCESO (timestamps y guardias) e intentos; solo se retira de la lista
+      // del residente. Si el QR seguia vigente queda cancelado (HU-C04.4).
+      const [result] = await connection.execute(
+        `
+          UPDATE ACCESO
+          SET eliminado_en = UTC_TIMESTAMP(),
+              id_usuario_elimina = ?,
+              cancelado_en = CASE WHEN estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION') THEN UTC_TIMESTAMP() ELSE cancelado_en END,
+              id_usuario_cancela = CASE WHEN estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION') THEN ? ELSE id_usuario_cancela END,
+              estado_acceso = CASE WHEN estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION') THEN 'CANCELADA' ELSE estado_acceso END
+          WHERE id_acceso = ?
+            AND eliminado_en IS NULL
+            AND estado_acceso <> 'INGRESO_REGISTRADO'
+        `,
+        [userId, userId, normalizedAccessId],
+      );
+      if (result.affectedRows !== 1) {
+        throw conflict("La visita cambio de estado mientras se eliminaba. Actualiza la lista e intenta de nuevo.", "VISIT_STATE_CHANGED");
+      }
+      await transactionAudit(connection, {
+        userId,
+        action: "VISIT_ARCHIVED",
+        entity: "ACCESO",
+        entityId: normalizedAccessId,
+        previousData: { estado_acceso: status },
+        newData: { eliminado: true, conserva_historial: true, movimientos: evidence.movimientos, intentos: evidence.intentos },
+      });
+      await connection.commit();
+      return { ...mapVisit(visit), desactivada: true };
+    }
+
+    // Sin movimientos ni intentos no hay evidencia de acceso: se conserva el borrado
+    // fisico historico. La condicion se repite en SQL por si la garita actuo en paralelo.
+    const [deleted] = await connection.execute(
+      `
+        DELETE FROM ACCESO
+        WHERE id_acceso = ?
+          AND estado_acceso NOT IN ('INGRESO_REGISTRADO', 'SALIDA_REGISTRADA')
+          AND NOT EXISTS (SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = ?)
+          AND NOT EXISTS (SELECT 1 FROM INTENTO_VALIDACION_QR iv WHERE iv.id_acceso = ?)
+      `,
+      [normalizedAccessId, normalizedAccessId, normalizedAccessId],
+    );
+    if (deleted.affectedRows !== 1) {
+      throw conflict("La visita cambio de estado mientras se eliminaba. Actualiza la lista e intenta de nuevo.", "VISIT_STATE_CHANGED");
+    }
     await connection.execute(
       `
         DELETE FROM VISITANTE
@@ -534,7 +661,7 @@ async function deleteVisit(userId, role = "residente", accessId) {
     );
     await connection.commit();
 
-    return mapVisit(visit);
+    return { ...mapVisit(visit), desactivada: false };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -779,6 +906,7 @@ async function cancelVisit(userId, role = "residente", accessId) {
       FROM ACCESO a
       INNER JOIN CASA c ON c.id_casa = a.id_casa
       WHERE a.id_acceso = ? AND a.id_casa = ?
+        AND a.eliminado_en IS NULL
         ${getOwnerFilter(role)}
       LIMIT 1
     `,
@@ -805,10 +933,38 @@ async function cancelVisit(userId, role = "residente", accessId) {
     throw error;
   }
 
-  await query(
-    "UPDATE ACCESO SET estado_acceso = 'CANCELADA' WHERE id_acceso = ?",
-    [normalizedAccessId],
+  // HU-C04.3: una visita finalizada conserva su estado historico; cancelarla
+  // reescribiria SALIDA_REGISTRADA y perderia la trazabilidad.
+  if (String(existing.estado_acceso).toUpperCase() === "SALIDA_REGISTRADA") {
+    throw conflict("La visita ya finalizó (salida registrada) y se conserva en el historial; no puede cancelarse.", "VISIT_ALREADY_FINISHED");
+  }
+
+  if (String(existing.estado_acceso).toUpperCase() === "RECHAZADA") {
+    throw conflict("La visita fue rechazada por la administración; no puede cancelarse.", "VISIT_REJECTED");
+  }
+
+  // Cancelacion logica condicional: si la garita registro el ingreso en paralelo,
+  // la cancelacion no ocurre (HU-C04.4: nunca queda un QR cancelado con alguien adentro).
+  const cancelResult = await query(
+    `
+      UPDATE ACCESO
+      SET estado_acceso = 'CANCELADA', cancelado_en = UTC_TIMESTAMP(), id_usuario_cancela = ?
+      WHERE id_acceso = ? AND estado_acceso IN ('AUTORIZADA', 'PENDIENTE_APROBACION')
+    `,
+    [userId, normalizedAccessId],
   );
+  if (!cancelResult || cancelResult.affectedRows !== 1) {
+    throw conflict("La visita cambió de estado (por ejemplo, ya se registró el ingreso). Actualiza la lista.", "VISIT_STATE_CHANGED");
+  }
+
+  await recordAudit({
+    userId,
+    action: "VISIT_CANCELLED",
+    entity: "ACCESO",
+    entityId: normalizedAccessId,
+    previousData: { estado_acceso: existing.estado_acceso },
+    newData: { estado_acceso: "CANCELADA" },
+  }).catch((auditError) => logger.warn("No fue posible auditar la cancelacion de la visita.", auditError));
 
   // SCRUM-178: notifica a todos los guardias activos sobre la cancelacion
   try {
@@ -879,10 +1035,15 @@ async function deleteFrequentVisitor(userId, role = "residente", visitorId) {
     throw error;
   }
 
+  // HU-C03.6/C04.1: movimientos, intentos de QR o estados de acceso ya usados son
+  // historial; en ese caso solo se desactiva al visitante.
   const historyRows = await query(
-    `SELECT COUNT(*) AS total FROM REGISTRO_ACCESO ra
-     INNER JOIN ACCESO a ON a.id_acceso = ra.id_acceso
-     WHERE a.id_visitante = ? AND a.id_casa = ?`,
+    `SELECT COUNT(*) AS total FROM ACCESO a
+     WHERE a.id_visitante = ? AND a.id_casa = ?
+       AND (a.estado_acceso IN ('INGRESO_REGISTRADO', 'SALIDA_REGISTRADA')
+         OR a.eliminado_en IS NOT NULL
+         OR EXISTS (SELECT 1 FROM REGISTRO_ACCESO ra WHERE ra.id_acceso = a.id_acceso)
+         OR EXISTS (SELECT 1 FROM INTENTO_VALIDACION_QR iv WHERE iv.id_acceso = a.id_acceso))`,
     [normalizedVisitorId, house.id_casa],
   );
   const hasHistory = Number(historyRows[0]?.total) > 0;
@@ -1469,6 +1630,24 @@ async function updateFrequentVisitor(userId, role = "residente", visitorId, payl
   if (!nombre) {
     const error = new Error("El nombre del visitante es obligatorio.");
     error.status = 400;
+    throw error;
+  }
+
+  // HU-C03.1: un visitante frecuente no puede quedar sin documento.
+  if (!dpi) {
+    throw visitorDocumentRequired();
+  }
+
+  // HU-C03.3: la edicion explicita tampoco puede duplicar el DPI de otro visitante.
+  const sameDpi = await query(
+    "SELECT id_visitante FROM VISITANTE WHERE dpi = ? AND id_visitante <> ? LIMIT 1",
+    [dpi, normalizedVisitorId],
+  );
+  if (sameDpi[0]) {
+    const error = new Error("Ya existe otro visitante registrado con ese DPI.");
+    error.status = 409;
+    error.code = "VISITOR_DPI_IN_USE";
+    error.errores = [{ field: "dpi", message: error.message }];
     throw error;
   }
 

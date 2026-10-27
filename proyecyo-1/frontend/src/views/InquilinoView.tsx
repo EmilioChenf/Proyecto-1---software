@@ -33,6 +33,7 @@ import {
   deleteVisitRequest,
   getFrequentVisitorsRequest,
   getVisitsRequest,
+  updateFrequentVisitorRequest,
   updateVisitRequest,
 } from "@/services/visitsService";
 import {
@@ -54,11 +55,18 @@ import type {
 import type { AuthorizationRequest, TenantPermission } from "@/types/sprintStories";
 import type { FrequentVisitor, VisitPayload, VisitRecord, VisitType } from "@/types/visits";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
-import { getVisitAccessRuleError, providerEntryModeLabels } from "@/utils/providerAccess";
+import {
+  getDpiError,
+  getVisitAccessRuleError,
+  normalizeDpi,
+  providerEntryModeLabels,
+  VISITOR_DOCUMENT_REQUIRED_MESSAGE,
+} from "@/utils/providerAccess";
+import { getApiErrorCode, getExistingVisitor } from "@/utils/apiErrorDetails";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
-import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
+import { confirmAction, notifyError, notifySuccess, notifyWarning } from "@/utils/feedback";
 
-type VisitFormState = VisitPayload;
+type VisitFormState = VisitPayload & { confirmar_actualizacion?: boolean };
 type AccessFilter = "TODOS" | "APROBADO" | "UTILIZADO" | "RECHAZADO" | "PENDIENTE";
 type ProviderFilterStatus = TenantProviderStatus | "TODOS";
 
@@ -219,6 +227,10 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
   const [editForm, setEditForm] = useState<VisitFormState>(createInitialForm);
   const [visits, setVisits] = useState<VisitRecord[]>([]);
   const [frequentVisitors, setFrequentVisitors] = useState<FrequentVisitor[]>([]);
+  // HU-C03.4: edicion explicita de los datos permitidos del visitante frecuente.
+  const [editingVisitor, setEditingVisitor] = useState<FrequentVisitor | null>(null);
+  const [visitorForm, setVisitorForm] = useState({ nombre: "", dpi: "", placa: "" });
+  const [isSavingVisitor, setIsSavingVisitor] = useState(false);
   const [providers, setProviders] = useState<TenantProvider[]>([]);
   const [providerHistory, setProviderHistory] = useState<TenantProviderHistoryRecord[]>([]);
   const [providerSearch, setProviderSearch] = useState("");
@@ -376,6 +388,12 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
         return false;
       }
 
+      const dpiError = getDpiError(form.dpi);
+      if (dpiError) {
+        setErrorMessage(dpiError);
+        return false;
+      }
+
       const plateError = getVehiclePlateError(form.placa);
       if (plateError) {
         setErrorMessage(plateError);
@@ -398,7 +416,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
       const accessRuleError = getVisitAccessRuleError(form);
       if (accessRuleError) {
         setErrorMessage(
-          form.tipo_visita === "PROVEEDOR" && /placa|DPI/.test(accessRuleError)
+          form.tipo_visita !== "DELIVERY" && /placa|DPI/.test(accessRuleError)
             ? `${accessRuleError} Regresa al paso 1 para completarlo.`
             : accessRuleError,
         );
@@ -508,9 +526,65 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
       setStep(1);
       await refreshFrequentVisitors();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
+      const code = getApiErrorCode(error);
+      if (code === "VISITOR_DATA_CONFLICT" && !payload.confirmar_actualizacion) {
+        // HU-C03.2/C03.3: los datos del visitante existente solo cambian si el usuario lo confirma.
+        setErrorMessage("");
+        const existing = getExistingVisitor(error);
+        const matched = [existing?.dpi ? `DPI ${existing.dpi}` : "", existing?.placa ? `placa ${existing.placa}` : ""]
+          .filter(Boolean)
+          .join(" y ");
+        const confirmed = await confirmAction({
+          title: "Visitante existente detectado",
+          text:
+            `Ya existe un visitante registrado${matched ? ` con ${matched}` : " con esos datos"}: ` +
+            `${existing?.nombre || "sin nombre"}. Si continúas, sus datos se actualizarán con los que ingresaste.`,
+          confirmText: "Actualizar datos y autorizar",
+          tone: "warning",
+        });
+        if (confirmed) {
+          await createVisit({ ...payload, confirmar_actualizacion: true }, message);
+        }
+      } else if (code === "DUPLICATE_VISIT") {
+        setErrorMessage("Ya existe una visita autorizada para este visitante en la misma fecha y horario. Por favor elige un horario diferente.");
+      } else {
+        setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  function openEditVisitor(visitor: FrequentVisitor) {
+    setEditingVisitor(visitor);
+    setVisitorForm({ nombre: visitor.nombre, dpi: visitor.dpi || "", placa: visitor.placa || "" });
+  }
+
+  async function handleSaveVisitor() {
+    if (!editingVisitor) return;
+    // HU-C03.1: el visitante frecuente conserva siempre un DPI valido.
+    const dpiError = normalizeDpi(visitorForm.dpi.trim()) ? getDpiError(visitorForm.dpi) : VISITOR_DOCUMENT_REQUIRED_MESSAGE;
+    const plateError = getVehiclePlateError(visitorForm.placa);
+    if (!visitorForm.nombre.trim() || dpiError || plateError) {
+      void notifyWarning(dpiError || plateError || "El nombre del visitante es obligatorio.", "Revisa los datos del visitante");
+      return;
+    }
+    try {
+      setIsSavingVisitor(true);
+      const updated = await updateFrequentVisitorRequest(editingVisitor.id_visitante, visitorForm);
+      setFrequentVisitors((current) =>
+        current.map((item) =>
+          item.id_visitante === updated.id_visitante
+            ? { ...item, nombre: updated.nombre, dpi: updated.dpi || "", placa: updated.placa || "" }
+            : item,
+        ),
+      );
+      setEditingVisitor(null);
+      void notifySuccess("Datos del visitante actualizados correctamente.");
+    } catch (error) {
+      void notifyError(error, "No fue posible actualizar los datos del visitante.");
+    } finally {
+      setIsSavingVisitor(false);
     }
   }
 
@@ -617,19 +691,42 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
   }
 
   async function handleQuickAuthorize(visitor: FrequentVisitor) {
-    setAuthorizingVisitorId(visitor.id_visitante);
     const now = new Date();
     const finish = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const fecha = getDateInTimezone(now);
+    const horaInicio = getTimeInTimezone(now);
+    const horaFin = getTimeInTimezone(finish);
 
+    if (!visitor.dpi) {
+      void notifyWarning(
+        `${visitor.nombre} no tiene DPI registrado. Edita el visitante frecuente y agrega su documento antes de autorizarlo.`,
+        "Falta el DPI del visitante",
+      );
+      return;
+    }
+
+    // HU-C03.5: visitante, vivienda y vigencia antes de emitir el QR.
+    const confirmed = await confirmAction({
+      title: "Confirmar acceso rápido",
+      text:
+        `Visitante: ${visitor.nombre} (DPI ${visitor.dpi}). ` +
+        `Vivienda: ${visitor.casa || "tu vivienda"}. ` +
+        `Vigencia: ${fecha} de ${horaInicio} a ${horaFin}. ¿Autorizar el ingreso?`,
+      confirmText: "Autorizar",
+      tone: "info",
+    });
+    if (!confirmed) return;
+
+    setAuthorizingVisitorId(visitor.id_visitante);
     await createVisit(
       {
         nombre: visitor.nombre,
         dpi: visitor.dpi,
         placa: visitor.placa,
         foto: "",
-        fecha: getDateInTimezone(now),
-        hora_inicio: getTimeInTimezone(now),
-        hora_fin: getTimeInTimezone(finish),
+        fecha,
+        hora_inicio: horaInicio,
+        hora_fin: horaFin,
         tipo_visita: "VISITA",
       },
       `Visita rapida autorizada para ${visitor.nombre}.`,
@@ -729,7 +826,9 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
   async function handleDelete(visit: VisitRecord) {
     const confirmed = await confirmAction({
       title: "¿Eliminar la visita?",
-      text: `Se eliminará la visita autorizada de ${visit.nombre}.`,
+      text:
+        `Se retirará la visita de ${visit.nombre} de tu lista. ` +
+        "Si ya tiene entradas, salidas o lecturas de QR registradas, su historial se conserva y su QR deja de ser válido.",
       confirmText: "Eliminar visita",
       tone: "danger",
     });
@@ -739,9 +838,13 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
     }
 
     try {
-      await deleteVisitRequest(visit.id_acceso);
+      const result = await deleteVisitRequest(visit.id_acceso);
       setVisits((current) => current.filter((item) => item.id_acceso !== visit.id_acceso));
-      void notifySuccess("Visita eliminada correctamente.");
+      void notifySuccess(
+        result?.desactivada
+          ? "La visita se retiró de tu lista. Su historial de accesos se conserva."
+          : "Visita eliminada correctamente.",
+      );
     } catch (error) {
       void notifyError(error, "No fue posible eliminar la visita.");
     }
@@ -1114,23 +1217,70 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                     {visitor.ultima_fecha ? ` | Ultima: ${formatDate(visitor.ultima_fecha)}` : ""}
                   </p>
                 </div>
-                <Button
-                  onClick={() => handleQuickAuthorize(visitor)}
-                  disabled={isSubmitting}
-                  className="rounded-2xl bg-[linear-gradient(90deg,#a855f7_0%,#8b2cf5_100%)] px-6 text-base text-white hover:opacity-95"
-                >
-                  {authorizingVisitorId === visitor.id_visitante ? (
-                    <>
-                      <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Autorizando...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="size-4" />
-                      Autorizar
-                    </>
-                  )}
-                </Button>
+                {editingVisitor?.id_visitante === visitor.id_visitante ? (
+                  <form
+                    aria-label={`Editar visitante frecuente ${visitor.nombre}`}
+                    className="grid w-full gap-2 md:max-w-md"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleSaveVisitor();
+                    }}
+                  >
+                    <label className="space-y-1 text-sm text-slate-700">
+                      Nombre
+                      <Input value={visitorForm.nombre} onChange={(event) => setVisitorForm((current) => ({ ...current, nombre: event.target.value }))} />
+                    </label>
+                    <label className="space-y-1 text-sm text-slate-700">
+                      DPI *
+                      <Input
+                        value={visitorForm.dpi}
+                        aria-invalid={Boolean(normalizeDpi(visitorForm.dpi.trim()) ? getDpiError(visitorForm.dpi) : true) || undefined}
+                        onChange={(event) => setVisitorForm((current) => ({ ...current, dpi: event.target.value }))}
+                      />
+                    </label>
+                    <label className="space-y-1 text-sm text-slate-700">
+                      Placa
+                      <Input value={visitorForm.placa} onChange={(event) => setVisitorForm((current) => ({ ...current, placa: event.target.value }))} />
+                    </label>
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={isSavingVisitor} className="rounded-xl">
+                        {isSavingVisitor ? "Guardando..." : "Guardar"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setEditingVisitor(null)} className="rounded-xl">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleQuickAuthorize(visitor)}
+                      disabled={isSubmitting}
+                      className="rounded-2xl bg-[linear-gradient(90deg,#a855f7_0%,#8b2cf5_100%)] px-6 text-base text-white hover:opacity-95"
+                    >
+                      {authorizingVisitorId === visitor.id_visitante ? (
+                        <>
+                          <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Autorizando...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="size-4" />
+                          Autorizar
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      aria-label={`Editar visitante frecuente ${visitor.nombre}`}
+                      onClick={() => openEditVisitor(visitor)}
+                      className="rounded-2xl"
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -1177,7 +1327,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-800">DPI / Documento (Opcional)</span>
+                <span className="text-sm font-medium text-slate-800">DPI / Documento <span className="text-xs text-slate-400">(obligatorio en visitas personales)</span></span>
                 <Input
                   value={form.dpi}
                   onChange={(event) => updateForm("dpi", event.target.value)}
@@ -1421,6 +1571,11 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                           <p className="mt-2 text-sm font-medium text-slate-800">
                             {visit.hora_inicio} - {visit.hora_fin}
                           </p>
+                          {visit.hora_ingreso || visit.hora_salida ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Ingreso {visit.hora_ingreso || "--:--"} · Salida {visit.hora_salida || "--:--"}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="rounded-2xl bg-slate-50 p-4">
                           <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Placa</p>

@@ -36,8 +36,8 @@ type ConfirmOptions = {
   text?: string;
   confirmText?: string;
   cancelText?: string;
-  /** "danger" para acciones destructivas o irreversibles. */
-  tone?: "danger" | "warning" | "primary";
+  /** "danger" para acciones destructivas o irreversibles; "info" para confirmar datos. */
+  tone?: "danger" | "warning" | "primary" | "info";
 };
 
 /** Opciones de SweetAlert2 para una confirmacion (separadas para poder verificarlas). */
@@ -51,11 +51,11 @@ export function buildConfirmOptions({
   return {
     titleText: title,
     text,
-    icon: tone === "primary" ? "question" : "warning",
+    icon: tone === "primary" ? "question" : tone === "info" ? "info" : "warning",
     showCancelButton: true,
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,
-    confirmButtonColor: COLORS[tone],
+    confirmButtonColor: tone === "info" ? COLORS.primary : COLORS[tone],
     reverseButtons: true,
     // En acciones destructivas el foco inicial queda en "Cancelar".
     focusCancel: tone === "danger",

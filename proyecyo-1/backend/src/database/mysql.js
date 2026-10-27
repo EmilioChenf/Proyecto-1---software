@@ -1109,6 +1109,40 @@ async function ensureHousesSchema() {
   }
 }
 
+async function addNullableUserReference(table, column, constraint) {
+  if (!(await columnExists(table, column))) {
+    await query(`ALTER TABLE ${escapeIdentifier(table)} ADD COLUMN ${escapeIdentifier(column)} INT NULL`);
+  }
+  const [existing] = await query(
+    `SELECT 1 AS existe FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+      WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ?`,
+    [env.DB_NAME, table, constraint],
+  );
+  if (!existing) {
+    await query(
+      `ALTER TABLE ${escapeIdentifier(table)} ADD CONSTRAINT ${escapeIdentifier(constraint)}
+        FOREIGN KEY (${escapeIdentifier(column)}) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL`,
+    );
+  }
+}
+
+async function addColumnIfMissing(table, column, definition) {
+  if (!(await columnExists(table, column))) {
+    await query(`ALTER TABLE ${escapeIdentifier(table)} ADD COLUMN ${escapeIdentifier(column)} ${definition}`);
+  }
+}
+
+// HU-C04: una visita con movimientos nunca se borra fisicamente. La cancelacion y la
+// eliminacion pedida por el residente quedan como marcas logicas con su autor y fecha;
+// el estado historico (INGRESO/SALIDA) y REGISTRO_ACCESO se conservan intactos.
+// Aditivo e idempotente: las filas existentes quedan en NULL.
+async function ensureAccessHistoryPreservationSchema() {
+  await addColumnIfMissing("ACCESO", "cancelado_en", "DATETIME NULL");
+  await addNullableUserReference("ACCESO", "id_usuario_cancela", "fk_acceso_usuario_cancela");
+  await addColumnIfMissing("ACCESO", "eliminado_en", "DATETIME NULL");
+  await addNullableUserReference("ACCESO", "id_usuario_elimina", "fk_acceso_usuario_elimina");
+}
+
 module.exports = {
   pool,
   query,
@@ -1133,4 +1167,6 @@ module.exports = {
   ensureRemindersSchema,
   ensureSimulatedPaymentsSchema,
   ensureDemoRequestsSchema,
+  // Al final: depende de tablas creadas por los ensure anteriores.
+  ensureAccessHistoryPreservationSchema,
 };

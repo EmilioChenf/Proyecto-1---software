@@ -61,6 +61,9 @@ describe("HU-C06 fechas y horarios pasados", () => {
     const base = { tipo_visita: "PROVEEDOR", placa: "", dpi: "", fecha: "2026-10-27", hora_inicio: "08:00", hora_fin: "09:00" };
     expect(getVisitAccessRuleError({ ...base, medio_ingreso: "VEHICULO" }, { now })).toMatch(/placa es obligatoria/);
     expect(getVisitAccessRuleError({ ...base }, { now })).toMatch(/DPI es obligatorio/);
-    expect(getVisitAccessRuleError({ ...base, tipo_visita: "VISITA" }, { now })).toBe("");
+    // HU-C03.1: la visita personal exige DPI; delivery conserva la regla anterior.
+    expect(getVisitAccessRuleError({ ...base, tipo_visita: "VISITA" }, { now })).toMatch(/DPI\/documento del visitante es obligatorio/);
+    expect(getVisitAccessRuleError({ ...base, tipo_visita: "VISITA", dpi: "1234567890123" }, { now })).toBe("");
+    expect(getVisitAccessRuleError({ ...base, tipo_visita: "DELIVERY" }, { now })).toBe("");
   });
 });

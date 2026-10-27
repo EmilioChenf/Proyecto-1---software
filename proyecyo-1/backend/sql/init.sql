@@ -271,9 +271,16 @@ CREATE TABLE ACCESO (
     estado_acceso VARCHAR(30) NOT NULL DEFAULT 'AUTORIZADA',
     es_acceso_especial BOOLEAN NOT NULL DEFAULT FALSE,
     fuera_horario BOOLEAN NOT NULL DEFAULT FALSE,
+    -- HU-C04: cancelacion y eliminacion logicas; nunca se borran movimientos.
+    cancelado_en DATETIME NULL,
+    id_usuario_cancela INT NULL,
+    eliminado_en DATETIME NULL,
+    id_usuario_elimina INT NULL,
     FOREIGN KEY (id_visitante) REFERENCES VISITANTE(id_visitante),
     FOREIGN KEY (id_casa) REFERENCES CASA(id_casa),
     FOREIGN KEY (id_usuario_autoriza) REFERENCES USUARIO(id_usuario),
+    CONSTRAINT fk_acceso_usuario_cancela FOREIGN KEY (id_usuario_cancela) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_acceso_usuario_elimina FOREIGN KEY (id_usuario_elimina) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
     CHECK (tipo_visita IN ('VISITA', 'DELIVERY', 'PROVEEDOR')),
     CHECK (estado_acceso IN ('AUTORIZADA', 'INGRESO_REGISTRADO', 'SALIDA_REGISTRADA', 'CANCELADA', 'PENDIENTE_APROBACION', 'RECHAZADA'))
 );

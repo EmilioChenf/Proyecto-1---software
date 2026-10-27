@@ -42,6 +42,17 @@ const { recurrenteCheckoutRoutes } = require("./routes/recurrenteCheckoutRoutes"
 const { adminRecurrenteReconciliationRoutes } = require("./routes/adminRecurrenteReconciliationRoutes");
 const { adminRecurrenteRefundRoutes } = require("./routes/adminRecurrenteRefundRoutes");
 
+function sanitizeExisting(existing) {
+  const id = Number(existing.id_visitante);
+  return {
+    id_visitante: Number.isInteger(id) && id > 0 ? id : null,
+    nombre: existing.nombre ? sanitizeText(String(existing.nombre)) : null,
+    // El DPI ya viene validado (13 digitos); sanitizeText lo confundiria con un PAN.
+    dpi: /^\d{13}$/.test(String(existing.dpi || "")) ? String(existing.dpi) : null,
+    placa: existing.placa ? sanitizeText(String(existing.placa)) : null,
+  };
+}
+
 function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurrenteReconciliationService, recurrenteRefundService } = {}) {
   const app = express();
   // Sin TRUST_PROXY (por defecto) req.ip es la conexion directa, como hasta ahora.
@@ -130,6 +141,10 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
       // Errores por campo (formato que el frontend ya interpreta en getFieldErrors).
       ...(status < 500 && Array.isArray(error.errores)
         ? { errores: error.errores.map(({ field, message: fieldMessage }) => ({ field: sanitizeText(field), message: sanitizeText(fieldMessage) })) }
+        : {}),
+      // HU-C03.2: registro existente que el usuario debe confirmar antes de actualizarlo.
+      ...(status < 500 && error.existing && typeof error.existing === "object"
+        ? { existing: sanitizeExisting(error.existing) }
         : {}),
     });
   });

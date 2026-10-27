@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/services/api";
 import { getVisitScheduleConfigRequest } from "@/services/configurationService";
 import {
   createVisitRequest,
@@ -76,7 +77,8 @@ describe("HU-C03 visitantes frecuentes", () => {
 
   it("HU-C03.8: error DUPLICATE_VISIT muestra mensaje claro al usuario", async () => {
     vi.mocked(getFrequentVisitorsRequest).mockResolvedValue([]);
-    const dupError = Object.assign(new Error("Duplicado"), { status: 409, code: "DUPLICATE_VISIT" });
+    // Misma forma que produce apiRequest: el codigo viaja en el cuerpo de la respuesta.
+    const dupError = new ApiError("Duplicado", 409, { message: "Duplicado", code: "DUPLICATE_VISIT" });
     vi.mocked(createVisitRequest).mockRejectedValue(dupError);
     render(<MemoryRouter><ResidenteVisitsView /></MemoryRouter>);
     await screen.findByText("No hay visitas registradas para esta residencia.");

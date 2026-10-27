@@ -40,6 +40,11 @@ export interface AdminAccessRecord {
   casa_unidad: string;
   placa: string;
   estado: AdminAccessStatus;
+  /** HU-C04.5: estado exacto (CANCELADA, VENCIDA, SALIDA_REGISTRADA, ...). */
+  estado_detalle?: string;
+  hora_ingreso?: string | null;
+  cancelado_por?: string | null;
+  eliminado_por_residente?: boolean;
   autorizado_por: string;
   es_acceso_especial?: boolean;
   fuera_horario?: boolean;
