@@ -68,3 +68,32 @@ it("si el usuario cancela la confirmacion no se registra ningun pago", async () 
   await waitFor(() => expect(confirmAction).toHaveBeenCalled());
   expect(payTenantObligationRequest).not.toHaveBeenCalled();
 });
+
+// HU-C07.4: proteccion de UX contra el doble envio (el backend ademas es idempotente).
+it("un doble clic inicia un solo checkout y el boton sigue deshabilitado durante la redireccion", async () => {
+  vi.mocked(getTenantAccountStatementRequest).mockResolvedValue({ ...statement, modelo_contractual: true });
+  vi.mocked(createTenantCheckoutRequest).mockResolvedValue({ referencia_local: "r", checkout_url: "https://app.recurrente.com/checkout-session/ch_x" });
+  render(<MemoryRouter><InquilinoAccountView /></MemoryRouter>);
+  const [button] = await screen.findAllByRole("button", { name: "Pagar" });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  await waitFor(() => expect(redirectToRecurrente).toHaveBeenCalledTimes(1));
+  expect(confirmAction).toHaveBeenCalledTimes(1);
+  expect(createTenantCheckoutRequest).toHaveBeenCalledTimes(1);
+  expect(await screen.findByRole("button", { name: "Procesando..." })).toBeDisabled();
+});
+
+it("un pago simulado no se envia dos veces y el exito solo aparece con el comprobante del servidor", async () => {
+  vi.mocked(getTenantAccountStatementRequest).mockResolvedValue(statement);
+  let resolvePayment: (value: Awaited<ReturnType<typeof payTenantObligationRequest>>) => void = () => {};
+  vi.mocked(payTenantObligationRequest).mockReturnValue(new Promise((resolve) => { resolvePayment = resolve; }));
+  render(<MemoryRouter><InquilinoAccountView /></MemoryRouter>);
+  const [button] = await screen.findAllByRole("button", { name: "Pagar" });
+  fireEvent.click(button);
+  await waitFor(() => expect(payTenantObligationRequest).toHaveBeenCalledTimes(1));
+  fireEvent.click(await screen.findByRole("button", { name: "Procesando..." }));
+  expect(payTenantObligationRequest).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText(/Pago realizado/)).not.toBeInTheDocument();
+  resolvePayment({ id_transaccion: 1, id_pago: 9, id_cuota: 5, concepto: "Alquiler", monto_base: 1000, recargo: 10, total: 1010, estado: "APROBADA", fecha_limite: "2026-08-31", numero_comprobante: "NXR-00000009" } as never);
+  expect(await screen.findByText(/Pago realizado: NXR-00000009/)).toBeInTheDocument();
+});

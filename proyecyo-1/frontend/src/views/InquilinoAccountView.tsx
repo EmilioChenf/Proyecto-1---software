@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -207,23 +207,41 @@ export function InquilinoAccountView() {
   const [hasta, setHasta] = useState("");
   const [payingId, setPayingId] = useState<number | null>(null);
   const [paymentMessage, setPaymentMessage] = useState("");
+  // HU-C07.4: un solo envio por vez, aunque el usuario haga doble clic antes de que
+  // React vuelva a renderizar el boton deshabilitado.
+  const paymentInProgress = useRef(false);
 
   async function payQuota(quota: TenantAccountQuota) {
-    const confirmed = await confirmAction({
-      title: `¿Pagar ${quota.servicio}?`,
-      text: `${statement.modelo_contractual ? "Pago mediante Recurrente." : "Pago simulado para fines académicos."} Monto base: ${formatCurrency(quota.monto_base)} · Recargos: ${formatCurrency(quota.recargo)} · Total: ${formatCurrency(quota.saldo_pendiente)}`,
-      confirmText: "Confirmar pago",
-    });
-    if (!confirmed) return;
+    if (paymentInProgress.current) return;
+    paymentInProgress.current = true;
+    let redirecting = false;
     try {
+      const confirmed = await confirmAction({
+        title: `¿Pagar ${quota.servicio}?`,
+        text: `${statement.modelo_contractual ? "Pago mediante Recurrente." : "Pago simulado para fines académicos."} Monto base: ${formatCurrency(quota.monto_base)} · Recargos: ${formatCurrency(quota.recargo)} · Total: ${formatCurrency(quota.saldo_pendiente)}`,
+        confirmText: "Confirmar pago",
+      });
+      if (!confirmed) return;
       setPayingId(quota.id_cuota); setErrorMessage(""); setPaymentMessage("");
-      if(statement.modelo_contractual){const checkout=await createTenantCheckoutRequest(quota.id_cuota);redirectToRecurrente(checkout.checkout_url);return;}
+      if (statement.modelo_contractual) {
+        const checkout = await createTenantCheckoutRequest(quota.id_cuota);
+        // Crear el checkout no confirma ningun pago; el boton sigue deshabilitado
+        // mientras el navegador abre Recurrente.
+        redirecting = true;
+        redirectToRecurrente(checkout.checkout_url);
+        return;
+      }
       const payment = await payTenantObligationRequest(quota.id_cuota);
       setPaymentMessage(`Pago realizado: ${payment.numero_comprobante}`);
       await loadAccount({ silent: true });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No fue posible registrar el pago simulado.");
-    } finally { setPayingId(null); }
+    } finally {
+      if (!redirecting) {
+        setPayingId(null);
+        paymentInProgress.current = false;
+      }
+    }
   }
 
   async function downloadReceipt(id: number, reference: string) {
