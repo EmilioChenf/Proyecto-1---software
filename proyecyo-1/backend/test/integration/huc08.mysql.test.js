@@ -32,9 +32,10 @@ else {
   }
   const hhmm = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
   // Ventana vigente ahora mismo en Guatemala (QR VALID), dentro del horario configurado.
+  // Empieza en el minuto actual: HU-C06.6 rechaza inicios mas de 10 minutos en el pasado.
   function currentWindow() {
     const now = guatemalaMinutesNow();
-    return { hora_inicio: hhmm(Math.max(0, now - 60)), hora_fin: hhmm(Math.min(23 * 60 + 59, now + 60)) };
+    return { hora_inicio: hhmm(now), hora_fin: hhmm(Math.min(23 * 60 + 59, now + 60)) };
   }
 
   async function createUser(key, role, { active = true } = {}) {
