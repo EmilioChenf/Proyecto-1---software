@@ -16,7 +16,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((pairs, value, inde
 const baseUrl = String(args.url || "").replace(/\/$/, "");
 const outDir = path.resolve(args.out || "ui-feedback-out");
 if (!/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(baseUrl)) throw new Error("--url debe ser un servidor local.");
-const browserPath = ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "C:/Program Files/Google/Chrome/Application/chrome.exe",
+const browserPath = args.browser || ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "/usr/bin/google-chrome", "/usr/bin/chromium"].find((candidate) => existsSync(candidate));
 if (!browserPath) throw new Error("No se encontro Edge/Chrome.");
 
@@ -43,7 +43,7 @@ async function main() {
   mkdirSync(outDir, { recursive: true });
   const profile = mkdtempSync(path.join(tmpdir(), "nexus-ui-feedback-"));
   const port = 9800 + Math.floor(Math.random() * 150);
-  const child = spawn(browserPath, ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
+  const child = spawn(browserPath, ["--headless=new", ...(process.getuid?.() === 0 ? ["--no-sandbox"] : []), `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions", "about:blank"], { stdio: "ignore" });
   const checks = [];
   try {

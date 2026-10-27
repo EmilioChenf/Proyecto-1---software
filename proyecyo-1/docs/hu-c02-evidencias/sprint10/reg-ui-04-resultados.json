@@ -1,0 +1,127 @@
+{
+  "baseUrl": "http://127.0.0.1:5192",
+  "browser": "chromium",
+  "checkedAt": "2026-10-27T22:15:09.011Z",
+  "checks": [
+    {
+      "name": "desktop: confirmacion con foco en Cancelar",
+      "ok": true,
+      "title": "¿Eliminar a Ana <b>Lopez</b>?",
+      "boldInjected": false,
+      "focused": "swal2-cancel swal2-styled",
+      "bodyHeight": "",
+      "htmlHeight": ""
+    },
+    {
+      "name": "desktop: datos del usuario como texto (sin HTML)",
+      "ok": true
+    },
+    {
+      "name": "desktop: heightAuto desactivado (no altera body/html)",
+      "ok": true
+    },
+    {
+      "name": "desktop: error del servidor en SweetAlert2",
+      "ok": true,
+      "errorText": "No se puede eliminar un usuario con historial de accesos."
+    },
+    {
+      "name": "desktop: el error no se duplica en la pagina",
+      "ok": true,
+      "apariciones": 1
+    },
+    {
+      "name": "desktop: exito como toast",
+      "ok": true,
+      "toastTitle": "Usuario eliminado correctamente."
+    },
+    {
+      "name": "desktop: campos invalidos marcados en el modal",
+      "ok": true,
+      "invalid": [
+        "user-name",
+        "user-email",
+        "user-password",
+        "user-role"
+      ],
+      "focused": "user-name",
+      "border": "rgb(220, 38, 38)",
+      "swalOpen": false
+    },
+    {
+      "name": "desktop: correo duplicado junto al campo, sin SweetAlert2",
+      "ok": true,
+      "message": "Ya existe un usuario con ese correo.",
+      "focused": "user-email",
+      "swalOpen": false,
+      "alerts": 0,
+      "screenshots": [
+        "swal-desktop-1-confirmacion.png",
+        "swal-desktop-2-error-servidor.png",
+        "swal-desktop-3-exito-toast.png",
+        "modal-desktop-4-campos-invalidos.png",
+        "modal-desktop-5-correo-duplicado.png"
+      ]
+    },
+    {
+      "name": "movil: confirmacion con foco en Cancelar",
+      "ok": true,
+      "title": "¿Eliminar a Ana <b>Lopez</b>?",
+      "boldInjected": false,
+      "focused": "swal2-cancel swal2-styled",
+      "bodyHeight": "",
+      "htmlHeight": ""
+    },
+    {
+      "name": "movil: datos del usuario como texto (sin HTML)",
+      "ok": true
+    },
+    {
+      "name": "movil: heightAuto desactivado (no altera body/html)",
+      "ok": true
+    },
+    {
+      "name": "movil: error del servidor en SweetAlert2",
+      "ok": true,
+      "errorText": "No se puede eliminar un usuario con historial de accesos."
+    },
+    {
+      "name": "movil: el error no se duplica en la pagina",
+      "ok": true,
+      "apariciones": 1
+    },
+    {
+      "name": "movil: exito como toast",
+      "ok": true,
+      "toastTitle": "Usuario eliminado correctamente."
+    },
+    {
+      "name": "movil: campos invalidos marcados en el modal",
+      "ok": true,
+      "invalid": [
+        "user-name",
+        "user-email",
+        "user-password",
+        "user-role"
+      ],
+      "focused": "user-name",
+      "border": "rgb(220, 38, 38)",
+      "swalOpen": false
+    },
+    {
+      "name": "movil: correo duplicado junto al campo, sin SweetAlert2",
+      "ok": true,
+      "message": "Ya existe un usuario con ese correo.",
+      "focused": "user-email",
+      "swalOpen": false,
+      "alerts": 0,
+      "screenshots": [
+        "swal-movil-1-confirmacion.png",
+        "swal-movil-2-error-servidor.png",
+        "swal-movil-3-exito-toast.png",
+        "modal-movil-4-campos-invalidos.png",
+        "modal-movil-5-correo-duplicado.png"
+      ]
+    }
+  ]
+}
