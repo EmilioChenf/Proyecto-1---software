@@ -75,10 +75,10 @@ test('H2 traslado desde vínculo legado conserva historia y dirige visitas y sol
   const [i]=await query('SELECT id_inquilino FROM INQUILINO WHERE id_usuario=?',[pedro]);
   await query('INSERT INTO INQUILINO_CASA(id_inquilino,id_casa) VALUES(?,?)',[i.id_inquilino,old]);
   const visits=require('../../src/services/visitsService');
-  const historic=await visits.createVisit(pedro,'inquilino',{nombre:'Visita previa',dpi:'',placa:'',fecha:first,hora_inicio:'10:00',hora_fin:'10:30',tipo_visita:'VISITA'});
+  const historic=await visits.createVisit(pedro,'inquilino',{nombre:'Visita previa',dpi:`${Date.now()}`.slice(-12)+'1',placa:'',fecha:first,hora_inicio:'10:00',hora_fin:'10:30',tipo_visita:'VISITA'});
   await contracts.configureHouse(current,body(maria,{inquilino_privado:{id_usuario:pedro}}),admin);
   assert.deepEqual((await query('SELECT id_casa FROM INQUILINO_CASA WHERE id_inquilino=?',[i.id_inquilino])).map(x=>Number(x.id_casa)),[current]);
-  const created=await visits.createVisit(pedro,'inquilino',{nombre:'Visita nueva',dpi:'',placa:'',fecha:first,hora_inicio:'11:00',hora_fin:'11:30',tipo_visita:'VISITA'});
+  const created=await visits.createVisit(pedro,'inquilino',{nombre:'Visita nueva',dpi:`${Date.now()}`.slice(-12)+'2',placa:'',fecha:first,hora_inicio:'11:00',hora_fin:'11:30',tipo_visita:'VISITA'});
   assert.equal(Number((await query('SELECT id_casa FROM ACCESO WHERE id_acceso=?',[created.id_acceso]))[0].id_casa),current);
   assert.equal(Number((await query('SELECT id_casa FROM ACCESO WHERE id_acceso=?',[historic.id_acceso]))[0].id_casa),old);
   const service=require('../../src/services/sprintStoriesService');

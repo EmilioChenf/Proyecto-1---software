@@ -1,0 +1,17 @@
+    ok 1 - HU-C03.1: una visita personal sin DPI o con DPI invalido se rechaza sin crear registros
+    ok 2 - HU-C03.2/C03.3: un DPI existente con otro nombre no sobrescribe en silencio y devuelve el visitante
+    ok 3 - HU-C03.8-C03.10: una visita equivalente se rechaza con mensaje claro y nunca emite dos QR validos
+    ok 4 - HU-C03.4/C03.5: edicion explicita del visitante frecuente con DPI obligatorio y unico; la lista incluye la vivienda
+    ok 5 - HU-C03.6/C03.7: con historial el visitante se desactiva, conserva sus visitas y se reactiva al autorizarlo de nuevo
+    ok 6 - HU-C04.1/C04.7 antes del ingreso: sin movimientos ni lecturas la visita se elimina fisicamente
+    ok 7 - HU-C04.1-C04.3/C04.7 durante y despues: con el visitante adentro no se elimina; tras la salida se retira conservando todo
+    ok 8 - HU-C04.4/C04.5: una visita cancelada no reutiliza su QR, registra quien la cancelo y conserva las lecturas
+    ok 9 - HU-C04.4/C04.5: una visita vencida no permite usar su QR y se muestra como vencida
+    ok 10 - HU-C04.6: ninguna relacion borra en cascada accesos, movimientos ni intentos
+    ok 11 - HU-C05.1/C05.2: reservar en el pasado responde 400 con codigo y campo, y no guarda nada
+    ok 12 - HU-C05.3-C05.12: modificar registra el cambio; admin cancela con motivo, se audita, se notifica y libera el horario
+    ok 13 - HU-C05.9/C05.11 y HU-C08.16: admin A reserva en nombre de un usuario; admin B lo ve con su autor y queda auditado
+ok 1 - Sprint 10: visitantes, accesos con historial y reservas
+# tests 13
+# pass 13
+# fail 0

@@ -188,9 +188,12 @@ test('R1 arranque real rechaza titularidad ambigua antes de publicar la aplicaci
   }finally{await f.c.end();}
 });
 
-function visitWindow(){const hour=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'America/Guatemala',hour:'2-digit',hourCycle:'h23'}).format(new Date()));return hour<12?['00:00','11:59']:['12:00','23:59'];}
+// Vigente ahora: HU-C06.6 rechaza inicios pasados y HU-C03.1 exige el DPI del visitante.
+function visitWindow(){const now=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Guatemala',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());return [now,'23:59'];}
+let visitDpiSeq=0;
 async function visit(u,role,name,extra={}){
-  const [start,end]=visitWindow();return visits.createVisit(u,role,{nombre:name,fecha:today,hora_inicio:start,hora_fin:end,tipo_visita:'VISITA',...extra});
+  const [start,end]=visitWindow();const dpi=`${Date.now()}`.slice(-9)+String(++visitDpiSeq).padStart(4,'0');
+  return visits.createVisit(u,role,{nombre:name,dpi,fecha:today,hora_inicio:start,hora_fin:end,tipo_visita:'VISITA',...extra});
 }
 const range={desde:today,hasta:today};
 async function listedAndExported(access){
@@ -229,7 +232,7 @@ test('R3-E inquilino privado autorizado figura como actor real',async()=>{
 });
 test('R3-F filtros equivalentes y exportación no duplican accesos',async()=>{
   const u=await user('residente','Filtros final'),h=await configured(u),tag=randomUUID().slice(0,8);
-  const one=await visit(u,'residente',tag+' Uno',{placa:'FINAL123'}),two=await visit(u,'residente',tag+' Dos',{placa:'FINAL123'});await visits.registerQrEntry(one.token_qr);
+  const one=await visit(u,'residente',tag+' Uno',{placa:'FINAL123'}),two=await visit(u,'residente',tag+' Dos',{placa:'FINAL123',hora_fin:'23:58',confirmar_actualizacion:true});// HU-C03.3/C03.8: misma placa con confirmacion explicita y otra ventanaawait visits.registerQrEntry(one.token_qr);
   await query("UPDATE ACCESO SET estado_acceso='CANCELADA' WHERE id_acceso=?",[two.id_acceso]);
   const filters={...range,search:tag,house:(await query('SELECT numero FROM CASA WHERE id_casa=?',[h]))[0].numero,plate:'FINAL123',type:'VISITANTE'};
   const rows=await accesses.listAdminAccesses(filters,range);assert.deepEqual(rows,await reports.rows('accesos',filters));assert.deepEqual(new Set(rows.map(r=>r.id_acceso)),new Set([one.id_acceso,two.id_acceso]));assert.equal(rows.length,2);
