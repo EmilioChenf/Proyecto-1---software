@@ -1,0 +1,27 @@
+Ejecucion 2026-10-27, MySQL 8.4 desechable (runner scripts/run-isolated-tests.js)
+
+Suite | Estado actual | main original (800cb81)
+sprint10 | # pass 13 # fail 0  |
+huc08 | # pass 9 # fail 0  |
+huc01 | # pass 14 # fail 0  |
+hu13 | # pass 27 # fail 0  |
+hu14 | # pass 74 # fail 0  |
+hu15 | # pass 54 # fail 0  |
+hu32 | # pass 10 # fail 0  |
+property | # pass 54 # fail 0  |
+n1 | # pass 8 # fail 0  |
+n2 | # pass 22 # fail 0  |
+n2a1 | # pass 21 # fail 0  |
+viviendas | # pass 19 # fail 0  |
+correlation | # pass 33 # fail 0  |
+precision | # pass 17 # fail 0  |
+phase0 | # pass 25 # fail 0  |
+sprint9-finance | # pass 4 # fail 0  |
+sprint9-history | # pass 5 # fail 0  |
+sprint9-exports | # pass 4 # fail 0  |
+postaudit | # pass 16 # fail 0  | # pass 16 # fail 0 
+finalaudit | # pass 18 # fail 1  | # pass 12 # fail 7 
+hu18 | # pass 63 # fail 1  | # pass 63 # fail 1 
+hu19 | # pass 50 # fail 1  | # pass 50 # fail 1 
+hu16, hu17 | no ejecutan: exigen la evidencia manual (PAGO 395, cuotas 171/998) de la base compartida del equipo |
+integration, regression | no ejecutan: test/integration/tarea5.mysql.test.js no esta versionado |

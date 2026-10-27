@@ -52,6 +52,11 @@ Observación (no corregida, no afecta la seguridad): un cambio propio y un resta
 | `POST /auth/password/forgot` | 5 / 15 min | IP |
 | `POST /auth/password/reset` | 10 / 15 min (nuevo) | IP |
 | `POST /auth/password/change` | 5 / 15 min (nuevo) | usuario del token (IP si no hay token) |
+| `POST /public/solicitudes-demo` (formulario público, sin sesión) | 10 / 15 min | IP |
+| Inicio de pagos: `POST /residente\|inquilino/pagos/recurrente/checkout`, `.../reintentar`, `POST /residente\|inquilino/pagos-simulados` | 20 / 15 min, compartido por las 6 rutas | usuario del token (IP si no hay token) |
+| Garita: `POST /guardia/validar-qr`, `/guardia/registrar-ingreso`, `/guardia/registrar-salida` | 60 lecturas **rechazadas** / 15 min | usuario del token (IP si no hay token) |
+
+Uso normal (C01.6): en la garita solo cuentan las respuestas ≥ 400 (QR inexistente, vencido, ya usado), así que un guardia puede registrar cualquier cantidad de ingresos válidos; el límite frena a quien prueba códigos. Un pago legítimo usa 1–3 de los 20 intentos (crear, reintentar, consultar es GET y no cuenta).
 
 En el cambio de contraseña, los errores de formulario (confirmación, política, campos) no consumen el límite: solo la contraseña actual incorrecta, los éxitos y las peticiones sin sesión. Respuesta: `429 { message, code: "RATE_LIMITED" }` con `Retry-After` y encabezados `RateLimit`.
 
@@ -81,7 +86,7 @@ Ninguna. Se reutilizan `USUARIO`, `SESION_ACTIVA`, `PASSWORD_RESET_TOKEN` y `AUD
 
 ## Pruebas
 
-- `backend/test/authSecurity.test.js` (sin BD, dentro de `npm test`): límites y 429 de los 4 POST, contadores por instancia, GET que no consumen límite, 401 estandarizados y validaciones.
+- `backend/test/authSecurity.test.js` (sin BD, dentro de `npm test`): límites y 429 de los 7 grupos de POST (incluidos formulario público, pagos y garita; las lecturas de QR aceptadas no consumen el límite), contadores por instancia, GET que no consumen límite, 401 estandarizados y validaciones.
 - `backend/test/integration/huc01.mysql.test.js` (`npm run test:huc01:mysql`): flujo completo con login y Bearer reales, más las carreras de C-1/M-1: la prueba detiene `bcrypt.compare` justo después de que el login verifica la contraseña anterior y confirma el cambio o el restablecimiento antes de dejarlo continuar; también cubre la espera sobre una fila bloqueada, una sesión revocada en vuelo, un cambio externo durante la verificación y 16 rondas de estrés con tiempos reales.
 - `frontend/src/components/auth/ChangePasswordCard.test.tsx`: formulario → servicio → `AuthProvider` con `fetch` simulado.
 

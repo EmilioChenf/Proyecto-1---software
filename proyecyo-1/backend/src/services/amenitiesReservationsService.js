@@ -1,6 +1,8 @@
 const { pool, query } = require("../database/mysql");
 const { ensureValidDate, ensureValidTime } = require("../utils/dateTimeValidation");
 const { ensureBoolean } = require("../utils/booleanValidation");
+const { recordAudit } = require("./auditService");
+const { logger } = require("../utils/safeLogger");
 
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 const MAX_ACTIVE_RESERVATIONS_PER_USER = 3;
@@ -250,6 +252,12 @@ function mapReservation(row, includeUserDetails) {
     mapped.usuario_nombre = row.usuario_nombre;
     mapped.usuario_rol = row.usuario_rol;
     mapped.unidad = row.unidad || "Sin unidad";
+    // HU-C05.5/C05.9: autoria de la creacion y de la cancelacion.
+    mapped.creada_por_nombre = row.creada_por_nombre || null;
+    mapped.creada_por_admin = Boolean(row.creada_por_admin);
+    mapped.cancelada_por_nombre = row.cancelada_por_nombre || null;
+    mapped.cancelada_en = row.cancelada_en || null;
+    mapped.motivo_cancelacion = row.motivo_cancelacion || null;
   }
 
   return mapped;
@@ -313,8 +321,11 @@ function validateReservationRange(amenity, fecha, horaInicio, horaFin) {
     fecha < currentDateTime.date ||
     (fecha === currentDateTime.date && horaInicio <= currentDateTime.time)
   ) {
-    const error = new Error("No se pueden registrar reservas en horarios pasados.");
+    // HU-C05.1/C05.2: codigo estable para que el frontend lo muestre de forma visible.
+    const error = new Error("No se pueden registrar reservas en horarios pasados. Elige una fecha y hora futuras.");
     error.status = 400;
+    error.code = "RESERVATION_IN_PAST";
+    error.errores = [{ field: fecha < currentDateTime.date ? "fecha" : "hora_inicio", message: error.message }];
     throw error;
   }
 }
@@ -365,17 +376,19 @@ async function getReservationForChange(connection, key, viewer, lockRow) {
         AND r.id_amenidad = ?
         AND r.fecha = ?
         AND r.hora_inicio = ?
-        AND r.id_usuario = ?
+        ${viewer.role === "admin" ? "" : "AND r.id_usuario = ?"}
       LIMIT 1
       ${lockRow ? "FOR UPDATE" : ""}
     `,
-    [key.id_usuario, key.id_amenidad, key.fecha, key.hora_inicio, viewer.id],
+    viewer.role === "admin"
+      ? [key.id_usuario, key.id_amenidad, key.fecha, key.hora_inicio]
+      : [key.id_usuario, key.id_amenidad, key.fecha, key.hora_inicio, viewer.id],
   );
 
   const reservation = rows[0];
 
   if (!reservation) {
-    const error = new Error("Reserva no encontrada para el residente autenticado.");
+    const error = new Error(viewer.role === "admin" ? "Reserva no encontrada." : "Reserva no encontrada para el residente autenticado.");
     error.status = 404;
     throw error;
   }
@@ -383,12 +396,46 @@ async function getReservationForChange(connection, key, viewer, lockRow) {
   return reservation;
 }
 
-async function insertReservationHistory(connection, before, after, action, viewer) {
+function describeSlot(fecha, horaInicio, horaFin) {
+  return `${fecha} ${String(horaInicio).slice(0, 5)}-${String(horaFin).slice(0, 5)}`;
+}
+
+// HU-C05.3: detalle legible de que cambio en una modificacion.
+function describeReservationChanges(before, after) {
+  const changes = [];
+  if (after.amenidad_nombre && after.amenidad_nombre !== before.amenidad_nombre) {
+    changes.push(`amenidad ${before.amenidad_nombre} -> ${after.amenidad_nombre}`);
+  }
+  if (after.fecha !== before.fecha) changes.push(`fecha ${before.fecha} -> ${after.fecha}`);
+  const beforeHours = `${String(before.hora_inicio).slice(0, 5)}-${String(before.hora_fin).slice(0, 5)}`;
+  const afterHours = `${String(after.hora_inicio).slice(0, 5)}-${String(after.hora_fin).slice(0, 5)}`;
+  if (afterHours !== beforeHours) changes.push(`horario ${beforeHours} -> ${afterHours}`);
+  return changes.length ? changes.join("; ") : "sin cambios de amenidad, fecha u horario";
+}
+
+function buildHistoryDetail(action, before, after, viewer, motivo) {
+  const reason = motivo ? ` Motivo: ${motivo}` : "";
+  const slot = describeSlot(before.fecha, before.hora_inicio, before.hora_fin);
+  if (action === "CANCELACION_ADMIN") {
+    return `Administración (${viewer.nombre}) canceló la reserva de ${before.amenidad_nombre} del ${slot}.${reason}`;
+  }
+  if (action === "CANCELACION") {
+    return `${viewer.nombre} canceló la reserva de ${before.amenidad_nombre} del ${slot}.${reason}`;
+  }
+  if (action === "CREACION_ADMIN") {
+    return `Administración (${viewer.nombre}) creó la reserva de ${before.amenidad_nombre} del ${slot} en nombre de ${before.usuario_nombre}.`;
+  }
+  return `${viewer.nombre} modificó la reserva de ${before.amenidad_nombre}: ${describeReservationChanges(before, after)}.`;
+}
+
+async function insertReservationHistory(connection, before, after, action, viewer, { motivo = null } = {}) {
+  const detail = buildHistoryDetail(action, before, after || before, viewer, motivo).slice(0, 255);
   await connection.execute(
     `
       INSERT INTO HISTORIAL_RESERVA (
         id_usuario,
         id_amenidad,
+        id_amenidad_nueva,
         fecha_anterior,
         hora_inicio_anterior,
         hora_fin_anterior,
@@ -399,14 +446,17 @@ async function insertReservationHistory(connection, before, after, action, viewe
         estado_nuevo,
         accion,
         detalle,
+        motivo,
         realizado_por,
-        realizado_por_nombre
+        realizado_por_nombre,
+        realizado_por_rol
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       before.id_usuario,
       before.id_amenidad,
+      after?.id_amenidad || before.id_amenidad,
       before.fecha,
       before.hora_inicio,
       before.hora_fin,
@@ -416,13 +466,41 @@ async function insertReservationHistory(connection, before, after, action, viewe
       before.estado,
       after?.estado || before.estado,
       action,
-      action === "CANCELACION"
-        ? `${viewer.nombre} cancelo la reserva de ${before.amenidad_nombre}.`
-        : `${viewer.nombre} modifico la reserva de ${before.amenidad_nombre}.`,
+      detail,
+      motivo,
       viewer.id,
       viewer.nombre,
+      viewer.role || null,
     ],
   );
+  return detail;
+}
+
+// HU-C05.11: auditoria general (AUDITORIA) en la misma transaccion que el cambio.
+function reservationAudit(connection, viewer, action, reservation, newData, previousData) {
+  return recordAudit(
+    {
+      userId: viewer.id,
+      action,
+      entity: "RESERVA",
+      entityId: createReservationKey(reservation),
+      previousData,
+      newData: { ...newData, ejecutado_por_rol: viewer.role || null },
+    },
+    (sql, params) => connection.execute(sql, params),
+  );
+}
+
+function normalizeCancellationReason(value) {
+  const motivo = normalizeString(value);
+  if (motivo.length > 255) {
+    const error = new Error("El motivo de cancelación no puede superar 255 caracteres.");
+    error.status = 400;
+    error.code = "INVALID_CANCELLATION_REASON";
+    error.errores = [{ field: "motivo", message: error.message }];
+    throw error;
+  }
+  return motivo || null;
 }
 
 async function ensureAmenityCatalog(connection) {
@@ -802,7 +880,12 @@ async function listReservationsByRange(fromDate, toDate, options = {}) {
         COALESCE(r.estado, 'CONFIRMADA') AS estado,
         u.nombre AS usuario_nombre,
         tu.nombre AS usuario_rol,
-        COALESCE(unidad.unidad, 'Sin unidad') AS unidad
+        COALESCE(unidad.unidad, 'Sin unidad') AS unidad,
+        creador.nombre AS creada_por_nombre,
+        (r.creada_por IS NOT NULL AND r.creada_por <> r.id_usuario) AS creada_por_admin,
+        cancelador.nombre AS cancelada_por_nombre,
+        DATE_FORMAT(r.cancelada_en, '%Y-%m-%d %H:%i:%s') AS cancelada_en,
+        r.motivo_cancelacion
       FROM RESERVA r
       INNER JOIN AMENIDAD a
         ON a.id_amenidad = r.id_amenidad
@@ -812,6 +895,10 @@ async function listReservationsByRange(fromDate, toDate, options = {}) {
         ON tu.id_tipo_usuario = u.id_tipo_usuario
       LEFT JOIN (${USER_UNIT_SUBQUERY}) unidad
         ON unidad.id_usuario = u.id_usuario
+      LEFT JOIN USUARIO creador
+        ON creador.id_usuario = r.creada_por
+      LEFT JOIN USUARIO cancelador
+        ON cancelador.id_usuario = r.cancelada_por
       WHERE r.fecha BETWEEN ? AND ?
         ${options.includeCanceled ? "" : "AND COALESCE(r.estado, 'CONFIRMADA') <> 'CANCELADA'"}
         ${filtersSql}
@@ -840,6 +927,8 @@ async function listReservationHistory(userId) {
         h.estado_anterior,
         h.estado_nuevo,
         h.realizado_por_nombre,
+        h.realizado_por_rol,
+        h.motivo,
         DATE_FORMAT(h.creado_en, '%Y-%m-%d %H:%i:%s') AS creado_en
       FROM HISTORIAL_RESERVA h
       INNER JOIN AMENIDAD a
@@ -865,6 +954,8 @@ async function listReservationHistory(userId) {
     estado_anterior: row.estado_anterior,
     estado_nuevo: row.estado_nuevo,
     realizado_por_nombre: row.realizado_por_nombre,
+    realizado_por_rol: row.realizado_por_rol || null,
+    motivo: row.motivo || null,
     creado_en: row.creado_en,
   }));
 }
@@ -942,18 +1033,19 @@ async function updateAmenityReservation(viewer, reservationKey, payload = {}) {
     );
 
     const viewerName = await getUserName(connection, viewer.id);
-    await insertReservationHistory(
-      connection,
-      current,
-      {
-        fecha: next.fecha,
-        hora_inicio: next.hora_inicio,
-        hora_fin: next.hora_fin,
-        estado: "CONFIRMADA",
-      },
-      "MODIFICACION",
-      { id: viewer.id, nombre: viewerName },
-    );
+    const after = {
+      id_amenidad: next.id_amenidad,
+      amenidad_nombre: amenity.nombre,
+      fecha: next.fecha,
+      hora_inicio: next.hora_inicio.slice(0, 5),
+      hora_fin: next.hora_fin.slice(0, 5),
+      estado: "CONFIRMADA",
+    };
+    const actor = { id: viewer.id, nombre: viewerName, role: viewer.role || "residente" };
+    const detail = await insertReservationHistory(connection, current, after, "MODIFICACION", actor);
+    await reservationAudit(connection, actor, "RESERVATION_UPDATED", { ...current, ...after },
+      { cambios: detail, id_usuario_reserva: current.id_usuario },
+      { id_amenidad: current.id_amenidad, fecha: current.fecha, hora_inicio: current.hora_inicio, hora_fin: current.hora_fin });
 
     await connection.commit();
 
@@ -971,38 +1063,115 @@ async function updateAmenityReservation(viewer, reservationKey, payload = {}) {
   }
 }
 
-async function cancelAmenityReservation(viewer, reservationKey) {
+async function applyReservationCancellation(connection, current, actor, action, motivo) {
+  const [result] = await connection.execute(
+    `
+      UPDATE RESERVA
+      SET estado = 'CANCELADA',
+          cancelada_por = ?,
+          cancelada_en = UTC_TIMESTAMP(),
+          motivo_cancelacion = ?
+      WHERE id_usuario = ?
+        AND id_amenidad = ?
+        AND fecha = ?
+        AND hora_inicio = ?
+        AND COALESCE(estado, 'CONFIRMADA') <> 'CANCELADA'
+    `,
+    [actor.id, motivo, current.id_usuario, current.id_amenidad, current.fecha, `${current.hora_inicio}:00`],
+  );
+  if (result.affectedRows !== 1) {
+    const error = new Error("La reserva ya fue cancelada.");
+    error.status = 409;
+    throw error;
+  }
+
+  await insertReservationHistory(connection, current, { ...current, estado: "CANCELADA" }, action, actor, { motivo });
+  await reservationAudit(connection, actor, "RESERVATION_CANCELLED", current,
+    { estado: "CANCELADA", motivo, id_usuario_reserva: current.id_usuario, cancelacion_administrativa: action === "CANCELACION_ADMIN" },
+    { estado: current.estado });
+}
+
+async function cancelAmenityReservation(viewer, reservationKey, payload = {}) {
   const key = parseReservationKey(reservationKey);
+  const motivo = normalizeCancellationReason(payload.motivo);
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
-    const current = await getReservationForChange(connection, key, viewer, true);
+    const current = await getReservationForChange(connection, key, { ...viewer, role: "residente" }, true);
     assertReservationChangeAllowed(current);
 
-    await connection.execute(
-      `
-        UPDATE RESERVA
-        SET estado = 'CANCELADA'
-        WHERE id_usuario = ?
-          AND id_amenidad = ?
-          AND fecha = ?
-          AND hora_inicio = ?
-      `,
-      [current.id_usuario, current.id_amenidad, current.fecha, `${current.hora_inicio}:00`],
-    );
-
     const viewerName = await getUserName(connection, viewer.id);
-    await insertReservationHistory(
+    await applyReservationCancellation(
       connection,
       current,
-      { ...current, estado: "CANCELADA" },
+      { id: viewer.id, nombre: viewerName, role: viewer.role || "residente" },
       "CANCELACION",
-      { id: viewer.id, nombre: viewerName },
+      motivo,
     );
 
     await connection.commit();
     return mapReservation({ ...current, estado: "CANCELADA" }, false);
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+// HU-C05.4-C05.8: un administrador activo (requireAdmin valida rol y cuenta) cancela
+// cualquier reserva vigente. Queda registrado quien, cuando y por que; el residente o
+// inquilino lo ve en su historial y recibe una notificacion; el horario se libera
+// porque disponibilidad, conflictos y limites ignoran las reservas CANCELADA.
+async function adminCancelAmenityReservation(viewer, reservationKey, payload = {}) {
+  const key = parseReservationKey(reservationKey);
+  const motivo = normalizeCancellationReason(payload.motivo);
+  const adminId = ensurePositiveInteger(viewer?.id, "id_usuario");
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+    const current = await getReservationForChange(connection, key, { id: adminId, role: "admin" }, true);
+
+    if (String(current.estado || "").toUpperCase() === "CANCELADA") {
+      const error = new Error("La reserva ya fue cancelada.");
+      error.status = 409;
+      throw error;
+    }
+    if (getCurrentReservationStatus(current) === "FINALIZADA") {
+      const error = new Error("La reserva ya finalizó; no puede cancelarse.");
+      error.status = 409;
+      error.code = "RESERVATION_FINISHED";
+      throw error;
+    }
+
+    const adminName = await getUserName(connection, adminId);
+    const actor = { id: adminId, nombre: adminName, role: "admin" };
+    await applyReservationCancellation(connection, current, actor, "CANCELACION_ADMIN", motivo);
+
+    await connection.execute(
+      `
+        INSERT INTO NOTIFICACION (id_usuario, tipo, titulo, mensaje)
+        VALUES (?, 'RESERVA_CANCELADA', ?, ?)
+      `,
+      [
+        current.id_usuario,
+        "Reserva cancelada por administración",
+        `Tu reserva de ${current.amenidad_nombre} del ${describeSlot(current.fecha, current.hora_inicio, current.hora_fin)} fue cancelada.${motivo ? ` Motivo: ${motivo}` : ""}`.slice(0, 255),
+      ],
+    );
+
+    await connection.commit();
+    return mapReservation(
+      {
+        ...current,
+        estado: "CANCELADA",
+        cancelada_por_nombre: adminName,
+        motivo_cancelacion: motivo,
+      },
+      true,
+    );
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -1269,13 +1438,18 @@ async function createAmenityReservation(viewer, payload) {
           hora_inicio,
           hora_fin,
           estado,
-          creado_en
+          creado_en,
+          creada_por
         )
-        VALUES (?, ?, ?, ?, ?, 'CONFIRMADA', NOW())
+        VALUES (?, ?, ?, ?, ?, 'CONFIRMADA', NOW(), ?)
         ON DUPLICATE KEY UPDATE
           hora_fin = VALUES(hora_fin),
           estado = 'CONFIRMADA',
-          creado_en = NOW()
+          creado_en = NOW(),
+          creada_por = VALUES(creada_por),
+          cancelada_por = NULL,
+          cancelada_en = NULL,
+          motivo_cancelacion = NULL
       `,
       [
         userId,
@@ -1283,8 +1457,36 @@ async function createAmenityReservation(viewer, payload) {
         normalizedPayload.fecha,
         normalizedPayload.hora_inicio,
         normalizedPayload.hora_fin,
+        normalizedViewer.id,
       ],
     );
+
+    // HU-C05.9/C05.11: quien creo la reserva y, si fue un administrador, en nombre de quien.
+    const created = {
+      id_usuario: userId,
+      id_amenidad: normalizedPayload.id_amenidad,
+      amenidad_nombre: amenity.nombre,
+      usuario_nombre: reservableUser.nombre,
+      fecha: normalizedPayload.fecha,
+      hora_inicio: normalizedPayload.hora_inicio.slice(0, 5),
+      hora_fin: normalizedPayload.hora_fin.slice(0, 5),
+      estado: "CONFIRMADA",
+    };
+    const actor = {
+      id: normalizedViewer.id,
+      nombre: isAdmin ? await getUserName(connection, normalizedViewer.id) : reservableUser.nombre,
+      role: normalizedViewer.role || "residente",
+    };
+    if (isAdmin) {
+      await insertReservationHistory(connection, created, created, "CREACION_ADMIN", actor);
+    }
+    await reservationAudit(connection, actor, "RESERVATION_CREATED", created, {
+      id_usuario_reserva: userId,
+      en_nombre_de_otro: isAdmin,
+      fecha: created.fecha,
+      hora_inicio: created.hora_inicio,
+      hora_fin: created.hora_fin,
+    });
 
     await connection.commit();
 
@@ -1311,6 +1513,7 @@ async function createAmenityReservation(viewer, payload) {
       usuario_nombre: reservableUser.nombre,
       usuario_rol: reservableUser.rol,
       unidad: reservableUser.unidad,
+      creada_por_admin: isAdmin,
     };
   } catch (error) {
     await connection.rollback();
@@ -1438,6 +1641,7 @@ module.exports = {
   createAmenityReservation,
   updateAmenityReservation,
   cancelAmenityReservation,
+  adminCancelAmenityReservation,
   getAmenityStats,
   updateAmenitySchedule,
   __private__: {

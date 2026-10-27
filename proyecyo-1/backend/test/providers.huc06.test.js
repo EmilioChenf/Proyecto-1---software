@@ -41,7 +41,10 @@ test("sin medio de ingreso se deduce de la placa y nunca queda sin identificador
 
 test("visitas de proveedor usan la regla del proveedor; las demas conservan HU-C03", () => {
   rejectsWith(() => __private__.ensureVisitIdentifiers({ placa: "" , dpi: "", medio_ingreso: "VEHICULO" }, "PROVEEDOR"), "PROVIDER_PLATE_REQUIRED");
-  assert.deepEqual(__private__.ensureVisitIdentifiers({ placa: "", dpi: "" }, "VISITA"), { dpi: "", placa: "" });
+  // HU-C03.1: la visita personal exige DPI; delivery conserva la regla anterior.
+  rejectsWith(() => __private__.ensureVisitIdentifiers({ placa: "", dpi: "" }, "VISITA"), "VISITOR_DOCUMENT_REQUIRED");
+  assert.deepEqual(__private__.ensureVisitIdentifiers({ placa: "", dpi: "1234567890123" }, "VISITA"), { dpi: "1234567890123", placa: "" });
+  assert.deepEqual(__private__.ensureVisitIdentifiers({ placa: "", dpi: "" }, "DELIVERY"), { dpi: "", placa: "" });
 });
 
 test("bloquea fechas pasadas", () => {

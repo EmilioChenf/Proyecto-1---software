@@ -34,6 +34,7 @@ const typeLabels: Record<string, string> = {
   ACCESO_ESPECIAL: "Acceso especial",
   SOLICITUD_AUTORIZACION: "Autorización",
   RECORDATORIO_RESERVA: "Reserva",
+  RESERVA_CANCELADA: "Reserva cancelada",
   RECORDATORIO_PAGO: "Cuota",
   CUOTA_PROXIMA: "Cuota próxima",
   CUOTA_HOY: "Vence hoy",

@@ -160,6 +160,14 @@ export function createAdminAmenitiesReservationRequest(payload: CreateAmenityRes
   });
 }
 
+/** HU-C05.4: cancelacion administrativa con motivo opcional. */
+export function adminCancelAmenitiesReservationRequest(reservationKey: string, motivo?: string) {
+  return apiRequest<AmenityReservation>(
+    `/admin/reservas/amenidades/${encodeURIComponent(reservationKey)}/cancelar`,
+    { method: "PATCH", body: motivo ? { motivo } : {} },
+  );
+}
+
 export function getAdminAmenityStatsRequest(filters: ReservationFilters) {
   return apiRequest<AmenityStatsResponse>(
     `/admin/amenidades/estadisticas?${buildReservationQuery(filters)}`,

@@ -57,7 +57,7 @@ async function launch() {
   const profile = mkdtempSync(path.join(tmpdir(), "nexus-ui-check-"));
   const port = 9300 + Math.floor(Math.random() * 500);
   const child = spawn(browserPath, [
-    "--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
+    "--headless=new", ...(process.getuid?.() === 0 ? ["--no-sandbox"] : []), `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
     "--no-first-run", "--no-default-browser-check", "--disable-extensions", "about:blank",
   ], { stdio: "ignore" });
   for (let attempt = 0; attempt < 60; attempt++) {

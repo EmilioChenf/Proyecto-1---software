@@ -37,7 +37,9 @@ import {
 } from "@/utils/visitSchedule";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
 import { getVisitAccessRuleError, providerEntryModeLabels } from "@/utils/providerAccess";
-import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
+import { confirmAction, notifyError, notifySuccess, notifyWarning } from "@/utils/feedback";
+import { getApiErrorCode, getExistingVisitor } from "@/utils/apiErrorDetails";
+import { getDpiError, normalizeDpi, VISITOR_DOCUMENT_REQUIRED_MESSAGE } from "@/utils/providerAccess";
 
 type VisitFormState = VisitPayload & { confirmar_actualizacion?: boolean };
 
@@ -153,8 +155,6 @@ export function ResidenteVisitsView() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [authorizingVisitorId, setAuthorizingVisitorId] = useState<number | null>(null);
   const [visitSchedule, setVisitSchedule] = useState<VisitScheduleConfig | null>(null);
-  const [conflictVisitor, setConflictVisitor] = useState<{ id_visitante: number; nombre: string; dpi: string; placa: string } | null>(null);
-  const [pendingPayload, setPendingPayload] = useState<VisitPayload | null>(null);
   const [editingVisitor, setEditingVisitor] = useState<FrequentVisitor | null>(null);
   const [editForm, setEditForm] = useState<EditVisitorForm>({ nombre: "", dpi: "", placa: "" });
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
@@ -282,7 +282,7 @@ export function ResidenteVisitsView() {
       const accessRuleError = getVisitAccessRuleError(form);
       if (accessRuleError) {
         setErrorMessage(
-          form.tipo_visita === "PROVEEDOR" && /placa|DPI/.test(accessRuleError)
+          form.tipo_visita !== "DELIVERY" && /placa|DPI/.test(accessRuleError)
             ? `${accessRuleError} Regresa al paso 1 para completarlo.`
             : accessRuleError,
         );
@@ -335,19 +335,31 @@ export function ResidenteVisitsView() {
       });
       setVisits((current) => [createdVisit, ...current]);
       setSuccessMessage(message);
-      setConflictVisitor(null);
-      setPendingPayload(null);
       setForm(createInitialForm());
       setPhotoPreview("");
       setStep(1);
       await refreshFrequentVisitors();
     } catch (error: unknown) {
-      const apiError = error as { status?: number; code?: string; message?: string; existing?: { id_visitante: number; nombre: string; dpi: string; placa: string } };
-      if (apiError?.code === "VISITOR_DATA_CONFLICT" && apiError?.existing) {
-        setConflictVisitor(apiError.existing);
-        setPendingPayload(payload);
+      const code = getApiErrorCode(error);
+      if (code === "VISITOR_DATA_CONFLICT" && !payload.confirmar_actualizacion) {
+        // HU-C03.2/C03.3: nunca se sobrescriben en silencio los datos del visitante.
         setErrorMessage("");
-      } else if (apiError?.code === "DUPLICATE_VISIT") {
+        const existing = getExistingVisitor(error);
+        const matched = [existing?.dpi ? `DPI ${existing.dpi}` : "", existing?.placa ? `placa ${existing.placa}` : ""]
+          .filter(Boolean)
+          .join(" y ");
+        const confirmed = await confirmAction({
+          title: "Visitante existente detectado",
+          text:
+            `Ya existe un visitante registrado${matched ? ` con ${matched}` : " con esos datos"}: ` +
+            `${existing?.nombre || "sin nombre"}. Si continúas, sus datos se actualizarán con los que ingresaste.`,
+          confirmText: "Actualizar datos y autorizar",
+          tone: "warning",
+        });
+        if (confirmed) {
+          await createVisit({ ...payload, confirmar_actualizacion: true }, message);
+        }
+      } else if (code === "DUPLICATE_VISIT") {
         setErrorMessage("Ya existe una visita autorizada para este visitante en la misma fecha y horario. Por favor elige un horario diferente.");
       } else {
         setErrorMessage(error instanceof Error ? error.message : "No fue posible autorizar la visita.");
@@ -364,6 +376,12 @@ export function ResidenteVisitsView() {
 
   async function handleEditVisitorSubmit() {
     if (!editingVisitor) {
+      return;
+    }
+    // HU-C03.1: el visitante frecuente conserva siempre un DPI valido.
+    const dpiError = normalizeDpi(editForm.dpi.trim()) ? getDpiError(editForm.dpi) : VISITOR_DOCUMENT_REQUIRED_MESSAGE;
+    if (!editForm.nombre.trim() || dpiError) {
+      void notifyWarning(dpiError || "El nombre del visitante es obligatorio.", "Revisa los datos del visitante");
       return;
     }
     try {
@@ -383,18 +401,6 @@ export function ResidenteVisitsView() {
     } finally {
       setIsEditSubmitting(false);
     }
-  }
-
-  async function handleConfirmConflict(confirm: boolean) {
-    if (!pendingPayload) {
-      return;
-    }
-    if (!confirm) {
-      setConflictVisitor(null);
-      setPendingPayload(null);
-      return;
-    }
-    await createVisit({ ...pendingPayload, confirmar_actualizacion: true }, "Visita autorizada correctamente.");
   }
 
   async function handleSubmit() {
@@ -419,9 +425,21 @@ export function ResidenteVisitsView() {
     const horaInicio = getTimeInTimezone(now);
     const horaFin = getTimeInTimezone(finish);
 
+    if (!visitor.dpi) {
+      void notifyWarning(
+        `${visitor.nombre} no tiene DPI registrado. Edita el visitante frecuente y agrega su documento antes de autorizarlo.`,
+        "Falta el DPI del visitante",
+      );
+      return;
+    }
+
+    // HU-C03.5: visitante, vivienda y vigencia antes de emitir el QR.
     const confirmed = await confirmAction({
       title: "Confirmar acceso rápido",
-      text: `${visitor.nombre} — ${fecha} de ${horaInicio} a ${horaFin}. ¿Autorizar ingreso inmediato?`,
+      text:
+        `Visitante: ${visitor.nombre} (DPI ${visitor.dpi}). ` +
+        `Vivienda: ${visitor.casa || "tu vivienda"}. ` +
+        `Vigencia: ${fecha} de ${horaInicio} a ${horaFin}. ¿Autorizar el ingreso?`,
       confirmText: "Autorizar",
       tone: "info",
     });
@@ -452,7 +470,9 @@ export function ResidenteVisitsView() {
   async function handleDelete(visit: VisitRecord) {
     const confirmed = await confirmAction({
       title: "¿Eliminar la visita?",
-      text: `Se eliminará la visita autorizada de ${visit.nombre}.`,
+      text:
+        `Se retirará la visita de ${visit.nombre} de tu lista. ` +
+        "Si ya tiene entradas, salidas o lecturas de QR registradas, su historial se conserva y su QR deja de ser válido.",
       confirmText: "Eliminar visita",
       tone: "danger",
     });
@@ -462,9 +482,13 @@ export function ResidenteVisitsView() {
     }
 
     try {
-      await deleteVisitRequest(visit.id_acceso);
+      const result = await deleteVisitRequest(visit.id_acceso);
       setVisits((current) => current.filter((item) => item.id_acceso !== visit.id_acceso));
-      void notifySuccess("Visita eliminada correctamente.");
+      void notifySuccess(
+        result?.desactivada
+          ? "La visita se retiró de tu lista. Su historial de accesos se conserva."
+          : "Visita eliminada correctamente.",
+      );
     } catch (error) {
       void notifyError(error, "No fue posible eliminar la visita.");
     }
@@ -473,7 +497,7 @@ export function ResidenteVisitsView() {
   async function handleDeleteFrequentVisitor(visitor: FrequentVisitor) {
     const confirmed = await confirmAction({
       title: `¿Eliminar a ${visitor.nombre} de tus visitantes frecuentes?`,
-      text: "También se eliminarán todas sus visitas asociadas.",
+      text: "Si tiene accesos registrados se desactivará y su historial se conservará; si no, se eliminarán sus visitas sin uso.",
       confirmText: "Eliminar visitante",
       tone: "danger",
     });
@@ -483,14 +507,21 @@ export function ResidenteVisitsView() {
     }
 
     try {
-      await deleteFrequentVisitorRequest(visitor.id_visitante);
+      const result = await deleteFrequentVisitorRequest(visitor.id_visitante);
       setFrequentVisitors((current) =>
         current.filter((item) => item.id_visitante !== visitor.id_visitante),
       );
-      setVisits((current) =>
-        current.filter((item) => item.id_visitante !== visitor.id_visitante),
+      // HU-C03.7: con historial solo se desactiva el visitante; sus visitas siguen visibles.
+      if (!result?.desactivado) {
+        setVisits((current) =>
+          current.filter((item) => item.id_visitante !== visitor.id_visitante),
+        );
+      }
+      void notifySuccess(
+        result?.desactivado
+          ? `${visitor.nombre} se desactivó; su historial de visitas se conserva.`
+          : `Visitante frecuente ${visitor.nombre} eliminado correctamente.`,
       );
-      void notifySuccess(`Visitante frecuente ${visitor.nombre} eliminado correctamente.`);
     } catch (error) {
       void notifyError(error, "No fue posible eliminar el visitante frecuente.");
     }
@@ -556,38 +587,6 @@ export function ResidenteVisitsView() {
           </Alert>
         ) : null}
 
-        {conflictVisitor ? (
-          <Alert className="border-amber-200 bg-amber-50 text-amber-800">
-            <AlertTitle>Visitante existente detectado</AlertTitle>
-            <AlertDescription>
-              <p>
-                Ya existe un visitante registrado con ese DPI o placa:{" "}
-                <strong>{conflictVisitor.nombre}</strong>
-                {conflictVisitor.dpi ? ` (DPI: ${conflictVisitor.dpi})` : ""}
-                {conflictVisitor.placa ? ` — Placa: ${conflictVisitor.placa}` : ""}.
-              </p>
-              <p className="mt-1">¿Deseas actualizar sus datos al crear esta visita?</p>
-              <div className="mt-3 flex gap-2">
-                <Button
-                  type="button"
-                  onClick={() => handleConfirmConflict(true)}
-                  disabled={isSubmitting}
-                  className="rounded-xl bg-amber-600 px-4 text-sm text-white hover:bg-amber-700"
-                >
-                  Actualizar datos y autorizar
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleConfirmConflict(false)}
-                  className="rounded-xl border-amber-300 px-4 text-sm text-amber-800"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        ) : null}
 
         {editingVisitor ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -777,7 +776,7 @@ export function ResidenteVisitsView() {
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-800">DPI / Documento de Identidad <span className="text-slate-400 text-xs">(requerido si no hay placa)</span></span>
+                  <span className="text-sm font-medium text-slate-800">DPI / Documento de Identidad <span className="text-slate-400 text-xs">(obligatorio en visitas personales)</span></span>
                   <Input
                     value={form.dpi}
                     onChange={(event) => updateForm("dpi", event.target.value)}
@@ -1057,6 +1056,11 @@ export function ResidenteVisitsView() {
                       <p className="mt-3 text-xs text-slate-400">
                         Estado: {getVisitStatusLabel(visit)}
                       </p>
+                      {visit.hora_ingreso || visit.hora_salida ? (
+                        <p className="text-xs text-slate-500">
+                          Movimientos: ingreso {visit.hora_ingreso || "--:--"} · salida {visit.hora_salida || "--:--"}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                   {visit.qr_value ? (

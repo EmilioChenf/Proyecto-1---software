@@ -16,6 +16,7 @@ const {
   patchAmenityReservation,
   patchCancelAmenityReservation,
   postAdminAmenityReservation,
+  patchAdminCancelAmenityReservation,
   putAdminAmenitySchedule,
 } = require("../controllers/amenitiesReservationsController");
 const { requireResident } = require("../middlewares/requireResident");
@@ -45,5 +46,10 @@ router.get(
 );
 router.get("/admin/reservas/amenidades/conflicto", requireAdmin, getAdminAmenitiesConflict);
 router.post("/admin/reservas/amenidades", requireAdmin, postAdminAmenityReservation);
+router.patch(
+  "/admin/reservas/amenidades/:key/cancelar",
+  requireAdmin,
+  patchAdminCancelAmenityReservation,
+);
 
 module.exports = router;

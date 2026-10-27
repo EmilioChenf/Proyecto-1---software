@@ -6,7 +6,7 @@ const { env } = require("./config/env");
 const { mountRecurrenteWebhook } = require("./middlewares/recurrenteRawBody");
 const { createWebhookHandler } = require("./controllers/recurrenteWebhookController");
 const { logger, sanitizeText } = require("./utils/safeLogger");
-const { createSecurityRateLimiters } = require("./middlewares/securityRateLimits");
+const { createSecurityRateLimiters, PAYMENT_START_PATHS, GUARD_QR_PATHS } = require("./middlewares/securityRateLimits");
 const authRoutes = require("./routes/authRoutes");
 const activeSessionsRoutes = require("./routes/activeSessionsRoutes");
 const auditRoutes = require("./routes/auditRoutes");
@@ -42,6 +42,17 @@ const { recurrenteCheckoutRoutes } = require("./routes/recurrenteCheckoutRoutes"
 const { adminRecurrenteReconciliationRoutes } = require("./routes/adminRecurrenteReconciliationRoutes");
 const { adminRecurrenteRefundRoutes } = require("./routes/adminRecurrenteRefundRoutes");
 
+function sanitizeExisting(existing) {
+  const id = Number(existing.id_visitante);
+  return {
+    id_visitante: Number.isInteger(id) && id > 0 ? id : null,
+    nombre: existing.nombre ? sanitizeText(String(existing.nombre)) : null,
+    // El DPI ya viene validado (13 digitos); sanitizeText lo confundiria con un PAN.
+    dpi: /^\d{13}$/.test(String(existing.dpi || "")) ? String(existing.dpi) : null,
+    placa: existing.placa ? sanitizeText(String(existing.placa)) : null,
+  };
+}
+
 function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurrenteReconciliationService, recurrenteRefundService } = {}) {
   const app = express();
   // Sin TRUST_PROXY (por defecto) req.ip es la conexion directa, como hasta ahora.
@@ -69,6 +80,10 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
   app.post("/auth/password/forgot", securityLimits.passwordForgot);
   app.post("/auth/password/reset", securityLimits.passwordReset);
   app.post("/auth/password/change", securityLimits.passwordChange);
+  // HU-C01.5: tambien el formulario publico, el inicio de pagos y las lecturas de QR.
+  app.post("/public/solicitudes-demo", securityLimits.publicForm);
+  app.post(PAYMENT_START_PATHS, securityLimits.paymentStart);
+  app.post(GUARD_QR_PATHS, securityLimits.guardQr);
   app.use(authRoutes);
   app.use(activeSessionsRoutes);
   app.use(auditRoutes);
@@ -130,6 +145,10 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
       // Errores por campo (formato que el frontend ya interpreta en getFieldErrors).
       ...(status < 500 && Array.isArray(error.errores)
         ? { errores: error.errores.map(({ field, message: fieldMessage }) => ({ field: sanitizeText(field), message: sanitizeText(fieldMessage) })) }
+        : {}),
+      // HU-C03.2: registro existente que el usuario debe confirmar antes de actualizarlo.
+      ...(status < 500 && error.existing && typeof error.existing === "object"
+        ? { existing: sanitizeExisting(error.existing) }
         : {}),
     });
   });

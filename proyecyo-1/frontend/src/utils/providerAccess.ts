@@ -13,6 +13,8 @@ export const providerEntryModeLabels: Record<ProviderEntryMode, string> = {
 /** Margen para la hora de inicio, igual que el backend. */
 export const START_GRACE_MINUTES = 10;
 
+export const VISITOR_DOCUMENT_REQUIRED_MESSAGE = "El DPI/documento del visitante es obligatorio (13 dígitos).";
+
 export function normalizeDpi(value: string) {
   return value.replace(/[\s-]/g, "");
 }
@@ -127,6 +129,13 @@ export function getVisitAccessRuleError(
   payload: VisitScheduleInput,
   options: { now?: Date; allowStartedWindow?: boolean } = {},
 ) {
+  // HU-C03.1: la visita personal (la que forma visitantes frecuentes) exige DPI.
+  if (payload.tipo_visita === "VISITA") {
+    if (!normalizeDpi(payload.dpi.trim())) return VISITOR_DOCUMENT_REQUIRED_MESSAGE;
+    const dpiError = getDpiError(payload.dpi);
+    if (dpiError) return dpiError;
+  }
+
   if (payload.tipo_visita === "PROVEEDOR") {
     const errors = getProviderIdentifierErrors({
       medio_ingreso: payload.medio_ingreso ?? (payload.placa.trim() ? "VEHICULO" : "PEATONAL"),

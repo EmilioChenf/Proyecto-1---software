@@ -33,8 +33,9 @@ export async function updateVisitRequest(id: number, payload: VisitPayload) {
   return visit;
 }
 
+/** HU-C04: `desactivada` indica que la visita tenia historial y solo se retiro de la lista. */
 export async function deleteVisitRequest(id: number) {
-  const visit = await apiRequest<VisitRecord>(`/visitas/${id}`, {
+  const visit = await apiRequest<VisitRecord & { desactivada?: boolean }>(`/visitas/${id}`, {
     method: "DELETE",
   });
   notifyAccessCountersChanged();

@@ -1,5 +1,6 @@
 const { query } = require("../database/mysql");
 const { sqlUtcTimeToGuatemala } = require("../utils/guatemalaTime");
+const { isVisitWindowExpired } = require("../utils/visitWindow");
 
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
@@ -107,6 +108,16 @@ function buildAuthorizerLabel(row) {
   return normalizeString(row.autorizado_por) || "Sin registro";
 }
 
+// HU-C04.5: estado operativo exacto, sin perder los movimientos. "estado" conserva
+// la agrupacion historica (APROBADO/PENDIENTE/RECHAZADO) que usan filtros y graficas.
+function describeAccessDetail(row) {
+  const normalized = normalizeString(row.estado_acceso).toUpperCase();
+  if (normalized === "AUTORIZADA" && row.fecha && row.hora_fin && isVisitWindowExpired(row.fecha, row.hora_fin)) {
+    return "VENCIDA";
+  }
+  return normalized || "PENDIENTE_APROBACION";
+}
+
 function mapAdminAccess(row) {
   return {
     id_acceso: row.id_acceso,
@@ -118,6 +129,10 @@ function mapAdminAccess(row) {
     casa_unidad: buildHouseLabel(row),
     placa: normalizeString(row.placa) || "-",
     estado: mapAccessStatus(row.estado_acceso),
+    estado_detalle: describeAccessDetail(row),
+    hora_ingreso: row.hora_ingreso || null,
+    cancelado_por: row.cancelado_por || null,
+    eliminado_por_residente: Boolean(row.eliminado_en),
     autorizado_por: buildAuthorizerLabel(row),
     es_acceso_especial: Boolean(row.es_acceso_especial),
     fuera_horario: Boolean(row.fuera_horario),
@@ -438,10 +453,14 @@ async function listAdminAccesses(filters = {}, reportRange = null) {
           '--:--'
         ) AS hora,
         TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_salida")}, '%H:%i') AS hora_salida,
+        TIME_FORMAT(${sqlUtcTimeToGuatemala("ra.hora_ingreso")}, '%H:%i') AS hora_ingreso,
+        TIME_FORMAT(a.hora_fin, '%H:%i') AS hora_fin,
         a.tipo_visita,
         a.estado_acceso,
         a.es_acceso_especial,
         a.fuera_horario,
+        a.eliminado_en,
+        cancelador.nombre AS cancelado_por,
         v.nombre,
         v.placa,
         c.numero,
@@ -456,6 +475,8 @@ async function listAdminAccesses(filters = {}, reportRange = null) {
         ON c.id_casa = a.id_casa
       LEFT JOIN USUARIO autorizante
         ON autorizante.id_usuario = a.id_usuario_autoriza
+      LEFT JOIN USUARIO cancelador
+        ON cancelador.id_usuario = a.id_usuario_cancela
       LEFT JOIN REGISTRO_ACCESO ra
         ON ra.id_acceso = a.id_acceso
       -- HU-C08: guardia ejecutor de la entrada/salida (NULL en registros historicos).

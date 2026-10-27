@@ -25,6 +25,13 @@ const ALLOWED_ACTIONS = [
   "HOUSE_DEACTIVATED",
   "VISIT_ENTRY_REGISTERED",
   "VISIT_EXIT_REGISTERED",
+  // HU-C04: cancelacion y eliminacion logica de visitas.
+  "VISIT_CANCELLED",
+  "VISIT_ARCHIVED",
+  // HU-C05: auditoria de reservas de amenidades.
+  "RESERVATION_CREATED",
+  "RESERVATION_UPDATED",
+  "RESERVATION_CANCELLED",
 ];
 
 function sanitizeAuditData(value, depth = 0) {

@@ -1,0 +1,13 @@
+    ok 1 - esquema aditivo: REGISTRO_ACCESO conserva el guardia ejecutor sin perder registros
+    ok 2 - A/C/D: visita de Residente visible para ambos guardias; A registra ingreso, B ve el estado y registra la salida
+    ok 3 - B: visita creada por Inquilino visible para ambos guardias y operable por cualquiera
+    ok 4 - visitas abiertas no quedan fuera por la ventana de 20 recientes
+    ok 5 - K: dos guardias validando el mismo QR a la vez generan un solo ingreso
+    ok 6 - E/F: lo que crea y modifica Admin A lo ve Admin B, y la auditoria conserva a Admin A
+    ok 7 - G/H: Residentes e Inquilinos conservan su privacidad
+    ok 8 - I/HU-C08.18: la visibilidad compartida no se extiende a roles no autorizados
+    ok 9 - HU-C08.5/.11: cada guardia y administrador mantiene su propia cuenta y sesion
+ok 1 - HU-C08 guardias y administradores comparten la operacion del residencial
+# tests 9
+# pass 9
+# fail 0

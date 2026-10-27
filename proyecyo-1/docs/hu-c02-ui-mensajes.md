@@ -90,6 +90,26 @@ Ya no queda ningún `window.confirm` en la aplicación. Los demás mensajes hist
 - `feedback.test.ts` (SweetAlert2 real en jsdom), `UsersManagement.c02.test.tsx`, `ResidenteVisitsView.c02.test.tsx`, `InquilinoAccountView.payment.test.tsx` (confirmaciones, éxito y error);
 - `UserFormModal.c02.test.tsx` + `ui-feedback-check.mjs` (errores dentro del modal y campos inválidos).
 
+### Re-ejecución en el Sprint 10 (C02.9)
+
+Los identificadores REG-UI-03 y REG-UI-04 solo aparecen en el CSV del Sprint 10; su definición original no está en el repositorio. Se ejecutaron como los casos de regresión que corresponden a los dos defectos de esta historia, con los scripts de navegador real ya versionados:
+
+| Caso | Qué verifica | Script | Resultado (27-10-2026, Chromium headless) |
+|---|---|---|---|
+| REG-UI-03 | Un único control funcional del sidebar en 4 roles × 8 tamaños (375 a 1920 px, zoom 125/150/200 %), con el menú cerrado y abierto | `ui-responsive-check.mjs` | **32/32 casos sin controles duplicados**, 0 sin renderizar |
+| REG-UI-04 | Mensajes visibles en formularios y modales: confirmación SweetAlert2, error del servidor sin duplicar, éxito como toast, campos inválidos marcados en el modal, error junto a su campo (escritorio y móvil) | `ui-feedback-check.mjs` | **16/16 comprobaciones** |
+
+Evidencia: `hu-c02-evidencias/sprint10/` (`reg-ui-03-resultados.json`, `reg-ui-04-resultados.json` y una muestra de capturas).
+
+```bash
+cd frontend
+VITE_API_URL=http://127.0.0.1:9 npx vite --port 5192 --strictPort --host 127.0.0.1
+node scripts/ui-responsive-check.mjs --url http://127.0.0.1:5192 --out ../docs/hu-c02-evidencias/sprint10 --label sprint10 --browser <ruta de Chrome>
+node scripts/ui-feedback-check.mjs --url http://127.0.0.1:5192 --out ../docs/hu-c02-evidencias/sprint10 --browser <ruta de Chrome>
+```
+
+Ambos scripts aceptan `--browser` y agregan `--no-sandbox` solo cuando se ejecutan como root (contenedores/CI), donde Chrome no arranca sin esa opción.
+
 ## Riesgos conocidos
 
 - Algunas versiones antiguas de `sweetalert2` incluyeron comportamiento dirigido a dominios concretos. Se revisó el build instalado (11.26.25, `dist/sweetalert2.esm.all.js` y `dist/sweetalert2.all.js`): no contiene comprobaciones de `location.host`, de idioma ni de audio. Al actualizar la dependencia conviene repetir esa revisión.

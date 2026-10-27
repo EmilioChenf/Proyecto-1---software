@@ -25,6 +25,11 @@ const actions = [
   ["HOUSE_DEACTIVATED", "Vivienda desactivada"],
   ["VISIT_ENTRY_REGISTERED", "Ingreso de visita registrado"],
   ["VISIT_EXIT_REGISTERED", "Salida de visita registrada"],
+  ["VISIT_CANCELLED", "Visita cancelada"],
+  ["VISIT_ARCHIVED", "Visita con historial retirada (eliminacion logica)"],
+  ["RESERVATION_CREATED", "Reserva creada"],
+  ["RESERVATION_UPDATED", "Reserva modificada"],
+  ["RESERVATION_CANCELLED", "Reserva cancelada"],
 ];
 
 function formatData(value: Record<string, unknown> | null) {

@@ -271,9 +271,16 @@ CREATE TABLE ACCESO (
     estado_acceso VARCHAR(30) NOT NULL DEFAULT 'AUTORIZADA',
     es_acceso_especial BOOLEAN NOT NULL DEFAULT FALSE,
     fuera_horario BOOLEAN NOT NULL DEFAULT FALSE,
+    -- HU-C04: cancelacion y eliminacion logicas; nunca se borran movimientos.
+    cancelado_en DATETIME NULL,
+    id_usuario_cancela INT NULL,
+    eliminado_en DATETIME NULL,
+    id_usuario_elimina INT NULL,
     FOREIGN KEY (id_visitante) REFERENCES VISITANTE(id_visitante),
     FOREIGN KEY (id_casa) REFERENCES CASA(id_casa),
     FOREIGN KEY (id_usuario_autoriza) REFERENCES USUARIO(id_usuario),
+    CONSTRAINT fk_acceso_usuario_cancela FOREIGN KEY (id_usuario_cancela) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_acceso_usuario_elimina FOREIGN KEY (id_usuario_elimina) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
     CHECK (tipo_visita IN ('VISITA', 'DELIVERY', 'PROVEEDOR')),
     CHECK (estado_acceso IN ('AUTORIZADA', 'INGRESO_REGISTRADO', 'SALIDA_REGISTRADA', 'CANCELADA', 'PENDIENTE_APROBACION', 'RECHAZADA'))
 );
@@ -323,9 +330,16 @@ CREATE TABLE RESERVA (
     hora_fin TIME,
     estado VARCHAR(20) NOT NULL DEFAULT 'CONFIRMADA',
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- HU-C05: autoria de la creacion y de la cancelacion.
+    creada_por INT NULL,
+    cancelada_por INT NULL,
+    cancelada_en DATETIME NULL,
+    motivo_cancelacion VARCHAR(255) NULL,
     PRIMARY KEY (id_usuario, id_amenidad, fecha, hora_inicio),
     FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario),
     FOREIGN KEY (id_amenidad) REFERENCES AMENIDAD(id_amenidad),
+    CONSTRAINT fk_reserva_creada_por FOREIGN KEY (creada_por) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_reserva_cancelada_por FOREIGN KEY (cancelada_por) REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
     CHECK (estado IN ('PENDIENTE', 'CONFIRMADA', 'CANCELADA'))
 );
 

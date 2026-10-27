@@ -12,7 +12,24 @@ const SECURITY_RATE_LIMITS = {
   passwordForgot: { windowMs: WINDOW_MS, limit: 5, message: "Demasiadas solicitudes de recuperacion. Intenta de nuevo mas tarde." },
   passwordReset: { windowMs: WINDOW_MS, limit: 10, message: "Demasiados intentos de restablecer la contrasena. Intenta de nuevo mas tarde." },
   passwordChange: { windowMs: WINDOW_MS, limit: 5, message: "Demasiados intentos de cambio de contrasena. Intenta de nuevo mas tarde." },
+  // HU-C01.5: otros POST sensibles. El formulario publico no requiere sesion (abuso
+  // por IP); iniciar un pago crea operaciones con la pasarela (por usuario); las
+  // lecturas de QR del guardia solo cuentan cuando se rechazan, para no frenar la
+  // garita en horas pico pero si un intento de adivinar codigos.
+  publicForm: { windowMs: WINDOW_MS, limit: 10, message: "Demasiadas solicitudes enviadas. Intenta de nuevo mas tarde." },
+  paymentStart: { windowMs: WINDOW_MS, limit: 20, message: "Demasiados intentos de pago en poco tiempo. Espera unos minutos e intenta de nuevo." },
+  guardQr: { windowMs: WINDOW_MS, limit: 60, onlyFailures: true, message: "Demasiadas lecturas de QR rechazadas. Espera unos minutos e intenta de nuevo." },
 };
+
+const PAYMENT_START_PATHS = [
+  "/residente/pagos/recurrente/checkout",
+  "/residente/pagos/recurrente/reintentar",
+  "/inquilino/pagos/recurrente/checkout",
+  "/inquilino/pagos/recurrente/reintentar",
+  "/residente/pagos-simulados",
+  "/inquilino/pagos-simulados",
+];
+const GUARD_QR_PATHS = ["/guardia/validar-qr", "/guardia/registrar-ingreso", "/guardia/registrar-salida"];
 
 function sessionUserKey(req) {
   const token = String(req.header("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
@@ -26,14 +43,16 @@ function countsTowardLimit(_req, res) {
   return res.locals.rateLimitNotCounted !== true;
 }
 
-function createLimiter({ windowMs, limit, message }, keyGenerator) {
+function createLimiter({ windowMs, limit, message, onlyFailures = false }, keyGenerator) {
   return rateLimit({
     windowMs,
     limit,
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true,
-    requestWasSuccessful: (req, res) => !countsTowardLimit(req, res),
+    requestWasSuccessful: onlyFailures
+      ? (_req, res) => res.statusCode < 400
+      : (req, res) => !countsTowardLimit(req, res),
     ...(keyGenerator ? { keyGenerator } : {}),
     // Mismo formato de error que el resto de la API: { message, code }.
     handler: (_req, res) => {
@@ -49,7 +68,10 @@ function createSecurityRateLimiters() {
     passwordForgot: createLimiter(SECURITY_RATE_LIMITS.passwordForgot),
     passwordReset: createLimiter(SECURITY_RATE_LIMITS.passwordReset),
     passwordChange: createLimiter(SECURITY_RATE_LIMITS.passwordChange, sessionUserKey),
+    publicForm: createLimiter(SECURITY_RATE_LIMITS.publicForm),
+    paymentStart: createLimiter(SECURITY_RATE_LIMITS.paymentStart, sessionUserKey),
+    guardQr: createLimiter(SECURITY_RATE_LIMITS.guardQr, sessionUserKey),
   };
 }
 
-module.exports = { SECURITY_RATE_LIMITS, createSecurityRateLimiters };
+module.exports = { SECURITY_RATE_LIMITS, PAYMENT_START_PATHS, GUARD_QR_PATHS, createSecurityRateLimiters };

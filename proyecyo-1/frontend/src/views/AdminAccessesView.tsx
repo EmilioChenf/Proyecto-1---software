@@ -89,6 +89,17 @@ const statusStyles: Record<
   },
 };
 
+// HU-C04.5: estado exacto del acceso; los movimientos (ingreso/salida) siguen en sus columnas.
+const accessDetailLabels: Record<string, string> = {
+  AUTORIZADA: "Autorizada",
+  VENCIDA: "Vencida (sin ingreso)",
+  INGRESO_REGISTRADO: "Visitante adentro",
+  SALIDA_REGISTRADA: "Salida registrada",
+  CANCELADA: "Cancelada",
+  RECHAZADA: "Rechazada",
+  PENDIENTE_APROBACION: "Pendiente de aprobación",
+};
+
 const cardAccentStyles = {
   total: "text-slate-950",
   approved: "text-emerald-600",
@@ -733,6 +744,15 @@ export function AdminAccessesView() {
                           <StatusIcon className={`size-3.5 ${statusMeta.iconClassName}`} />
                           {statusMeta.label}
                         </span>
+                        {access.estado_detalle && accessDetailLabels[access.estado_detalle] ? (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {accessDetailLabels[access.estado_detalle]}
+                            {access.cancelado_por ? ` por ${access.cancelado_por}` : ""}
+                          </p>
+                        ) : null}
+                        {access.eliminado_por_residente ? (
+                          <p className="text-xs text-slate-400">Retirada por el residente; historial conservado</p>
+                        ) : null}
                       </td>
                       <td className="px-5 py-3 text-sm text-slate-500">{access.autorizado_por}</td>
                     </tr>

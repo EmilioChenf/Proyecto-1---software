@@ -24,6 +24,8 @@ const {
   ensureSimulatedPaymentsSchema,
   ensureDemoRequestsSchema,
   ensureHousesSchema,
+  ensureAccessHistoryPreservationSchema,
+  ensureReservationAuditSchema,
   pool,
   query,
 } = require("./src/database/mysql");
@@ -81,6 +83,8 @@ async function startServer() {
   await ensureRemindersSchema();
   await ensureSimulatedPaymentsSchema();
   await ensureHousesSchema();
+  await ensureAccessHistoryPreservationSchema();
+  await ensureReservationAuditSchema();
   const migrationConnection = await pool.getConnection();
   try { await applyRecurrentePreparation(migrationConnection); await applyRecurrenteCheckoutMigration(migrationConnection); await applyRecurrenteConfirmationMigration(migrationConnection); await applyRecurrenteAttemptsMigration(migrationConnection); await applyRecurrenteRefundsMigration(migrationConnection); await applyRecurrenteIntentHistoryMigration(migrationConnection); await applyRecurrenteReviewPrecisionMigration(migrationConnection); await applyFinancialNotificationsMigration(migrationConnection); }
   finally { migrationConnection.release(); }

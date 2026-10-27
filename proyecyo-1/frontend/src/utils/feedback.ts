@@ -36,8 +36,8 @@ type ConfirmOptions = {
   text?: string;
   confirmText?: string;
   cancelText?: string;
-  /** "danger" para acciones destructivas o irreversibles. */
-  tone?: "danger" | "warning" | "primary";
+  /** "danger" para acciones destructivas o irreversibles; "info" para confirmar datos. */
+  tone?: "danger" | "warning" | "primary" | "info";
 };
 
 /** Opciones de SweetAlert2 para una confirmacion (separadas para poder verificarlas). */
@@ -51,11 +51,11 @@ export function buildConfirmOptions({
   return {
     titleText: title,
     text,
-    icon: tone === "primary" ? "question" : "warning",
+    icon: tone === "primary" ? "question" : tone === "info" ? "info" : "warning",
     showCancelButton: true,
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,
-    confirmButtonColor: COLORS[tone],
+    confirmButtonColor: tone === "info" ? COLORS.primary : COLORS[tone],
     reverseButtons: true,
     // En acciones destructivas el foco inicial queda en "Cancelar".
     focusCancel: tone === "danger",
@@ -66,6 +66,30 @@ export function buildConfirmOptions({
 export async function confirmAction(options: ConfirmOptions): Promise<boolean> {
   const result = await base.fire(buildConfirmOptions(options));
   return result.isConfirmed;
+}
+
+type PromptOptions = ConfirmOptions & {
+  label: string;
+  placeholder?: string;
+  maxLength?: number;
+};
+
+/**
+ * Confirmacion con un texto opcional (por ejemplo, el motivo de una cancelacion).
+ * Devuelve el texto (puede ser "") si el usuario confirma, o null si cancela.
+ * inputLabel/inputPlaceholder se asignan como texto plano en SweetAlert2.
+ */
+export async function promptText({ label, placeholder, maxLength = 255, ...options }: PromptOptions): Promise<string | null> {
+  const result = await base.fire({
+    ...buildConfirmOptions(options),
+    input: "textarea",
+    inputLabel: label,
+    inputPlaceholder: placeholder,
+    inputAttributes: { maxlength: String(maxLength), "aria-label": label },
+    inputValidator: (value: string) =>
+      value && value.length > maxLength ? `Máximo ${maxLength} caracteres.` : undefined,
+  });
+  return result.isConfirmed ? String(result.value ?? "").trim() : null;
 }
 
 /** Exito de una accion: aviso breve que no bloquea la pantalla. */
