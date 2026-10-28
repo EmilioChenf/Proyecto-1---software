@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -83,8 +84,8 @@ export function AdminSpecialAccessView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
 
   const outsideSchedule = useMemo(
     () => isOutsideSchedule(form.hora_inicio, form.hora_fin, schedule),

@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useState, type FormEvent } from "react";
 import { KeyRound } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -13,8 +14,8 @@ export function ResetPasswordView() {
   const token = searchParams.get("token") || "";
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState(token ? "" : "El enlace de recuperacion no contiene un token valido.");
+  const [message, setMessage] = useFeedbackState("info", "");
+  const [error, setError] = useFeedbackState("error", token ? "" : "El enlace de recuperacion no contiene un token valido.");
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

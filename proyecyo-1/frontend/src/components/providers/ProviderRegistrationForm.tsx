@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { BriefcaseBusiness } from "lucide-react";
 
@@ -138,8 +139,8 @@ export function ProviderRegistrationForm({
     ...readDraft(storageKey),
   }));
   const [errors, setErrors] = useState<FormErrors>({});
-  const [formError, setFormError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [formError, setFormError] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {

@@ -151,7 +151,7 @@ function getCurrentDateTimeInTimezone() {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(new Date());
 
   const values = Object.fromEntries(
@@ -425,10 +425,14 @@ function buildHistoryDetail(action, before, after, viewer, motivo) {
   if (action === "CREACION_ADMIN") {
     return `Administración (${viewer.nombre}) creó la reserva de ${before.amenidad_nombre} del ${slot} en nombre de ${before.usuario_nombre}.`;
   }
+  if (action === "CREACION") {
+    return `${viewer.nombre} creó la reserva de ${before.amenidad_nombre} del ${slot}.`;
+  }
   return `${viewer.nombre} modificó la reserva de ${before.amenidad_nombre}: ${describeReservationChanges(before, after)}.`;
 }
 
 async function insertReservationHistory(connection, before, after, action, viewer, { motivo = null } = {}) {
+  const isCreation = action === "CREACION" || action === "CREACION_ADMIN";
   const detail = buildHistoryDetail(action, before, after || before, viewer, motivo).slice(0, 255);
   await connection.execute(
     `
@@ -457,13 +461,13 @@ async function insertReservationHistory(connection, before, after, action, viewe
       before.id_usuario,
       before.id_amenidad,
       after?.id_amenidad || before.id_amenidad,
-      before.fecha,
-      before.hora_inicio,
-      before.hora_fin,
+      isCreation ? null : before.fecha,
+      isCreation ? null : before.hora_inicio,
+      isCreation ? null : before.hora_fin,
       after?.fecha || before.fecha,
       after?.hora_inicio || before.hora_inicio,
       after?.hora_fin || before.hora_fin,
-      before.estado,
+      isCreation ? null : before.estado,
       after?.estado || before.estado,
       action,
       detail,
@@ -1089,6 +1093,15 @@ async function applyReservationCancellation(connection, current, actor, action, 
   await reservationAudit(connection, actor, "RESERVATION_CANCELLED", current,
     { estado: "CANCELADA", motivo, id_usuario_reserva: current.id_usuario, cancelacion_administrativa: action === "CANCELACION_ADMIN" },
     { estado: current.estado });
+
+  // Return the same UTC timestamp persisted by the transaction, not the browser's
+  // clock or a missing value that requires a second page load to become visible.
+  const [[metadata]] = await connection.execute(
+    `SELECT DATE_FORMAT(cancelada_en, '%Y-%m-%d %H:%i:%s') AS cancelada_en
+     FROM RESERVA WHERE id_usuario = ? AND id_amenidad = ? AND fecha = ? AND hora_inicio = ?`,
+    [current.id_usuario, current.id_amenidad, current.fecha, `${current.hora_inicio}:00`],
+  );
+  return { cancelada_en: metadata?.cancelada_en || null, cancelada_por_nombre: actor.nombre, motivo_cancelacion: motivo };
 }
 
 async function cancelAmenityReservation(viewer, reservationKey, payload = {}) {
@@ -1102,7 +1115,7 @@ async function cancelAmenityReservation(viewer, reservationKey, payload = {}) {
     assertReservationChangeAllowed(current);
 
     const viewerName = await getUserName(connection, viewer.id);
-    await applyReservationCancellation(
+    const cancellation = await applyReservationCancellation(
       connection,
       current,
       { id: viewer.id, nombre: viewerName, role: viewer.role || "residente" },
@@ -1111,7 +1124,7 @@ async function cancelAmenityReservation(viewer, reservationKey, payload = {}) {
     );
 
     await connection.commit();
-    return mapReservation({ ...current, estado: "CANCELADA" }, false);
+    return { ...mapReservation({ ...current, estado: "CANCELADA" }, false), ...cancellation };
   } catch (error) {
     await connection.rollback();
     throw error;
@@ -1148,7 +1161,7 @@ async function adminCancelAmenityReservation(viewer, reservationKey, payload = {
 
     const adminName = await getUserName(connection, adminId);
     const actor = { id: adminId, nombre: adminName, role: "admin" };
-    await applyReservationCancellation(connection, current, actor, "CANCELACION_ADMIN", motivo);
+    const cancellation = await applyReservationCancellation(connection, current, actor, "CANCELACION_ADMIN", motivo);
 
     await connection.execute(
       `
@@ -1167,6 +1180,7 @@ async function adminCancelAmenityReservation(viewer, reservationKey, payload = {
       {
         ...current,
         estado: "CANCELADA",
+        ...cancellation,
         cancelada_por_nombre: adminName,
         motivo_cancelacion: motivo,
       },
@@ -1477,9 +1491,7 @@ async function createAmenityReservation(viewer, payload) {
       nombre: isAdmin ? await getUserName(connection, normalizedViewer.id) : reservableUser.nombre,
       role: normalizedViewer.role || "residente",
     };
-    if (isAdmin) {
-      await insertReservationHistory(connection, created, created, "CREACION_ADMIN", actor);
-    }
+    await insertReservationHistory(connection, created, created, isAdmin ? "CREACION_ADMIN" : "CREACION", actor);
     await reservationAudit(connection, actor, "RESERVATION_CREATED", created, {
       id_usuario_reserva: userId,
       en_nombre_de_otro: isAdmin,

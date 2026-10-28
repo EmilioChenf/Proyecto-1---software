@@ -1,0 +1,78 @@
+{
+  "api": "simulated",
+  "origin": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "role": "admin",
+      "width": 1440,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "admin",
+      "width": 375,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "residente",
+      "width": 1440,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "residente",
+      "width": 375,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "inquilino",
+      "width": 1440,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "inquilino",
+      "width": 375,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "guardia",
+      "width": 1440,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    },
+    {
+      "role": "guardia",
+      "width": 375,
+      "successToast": true,
+      "errorToast": true,
+      "keyboardDismiss": true,
+      "fitsViewport": true,
+      "pageErrors": []
+    }
+  ]
+}

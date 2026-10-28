@@ -1,3 +1,5 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, CheckCircle2, Clock3, Download, RefreshCw, Search, XCircle } from "lucide-react";
 import {
@@ -405,7 +407,7 @@ export function AdminAccessesView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isChartLoading, setIsChartLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const latestRequestRef = useRef(0);
   const [isExporting, setIsExporting] = useState(false);
@@ -415,6 +417,7 @@ export function AdminAccessesView() {
     setErrorMessage("");
     try {
       await downloadReport({ reporte: "accesos", formato: "pdf", vista: "hoy", search, house, plate, type: selectedType, status: selectedStatus });
+      void notifySuccess("Descarga del reporte de accesos iniciada.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No fue posible exportar el reporte.");
     } finally {

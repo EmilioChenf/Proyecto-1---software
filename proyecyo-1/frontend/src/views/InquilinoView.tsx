@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
@@ -252,8 +253,8 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
   const [isUpdatingAccess, setIsUpdatingAccess] = useState(false);
   const [isLoadingProviderHistory, setIsLoadingProviderHistory] = useState(false);
   const [updatingProviderId, setUpdatingProviderId] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
   const [authorizingVisitorId, setAuthorizingVisitorId] = useState<number | null>(null);
   const [visitToCancel, setVisitToCancel] = useState<VisitRecord | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);

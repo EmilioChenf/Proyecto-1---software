@@ -1,3 +1,5 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -25,12 +27,12 @@ function errorText(error: unknown, fallback: string) {
 
 export function FinancialRulesSettings() {
   const [rule, setRule] = useState(initial);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useFeedbackState("info", "");
   const [busy, setBusy] = useState(false);
   const [confirmingApply, setConfirmingApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
-  const [applyError, setApplyError] = useState("");
+  const [applyError, setApplyError] = useFeedbackState("error", "");
 
   useEffect(() => {
     apiRequest<Rule>("/admin/configuracion-financiera").then(setRule).catch((e) => setMessage(errorText(e, "No fue posible cargar la regla.")));
@@ -53,7 +55,9 @@ export function FinancialRulesSettings() {
     try {
       setApplying(true);
       setApplyError("");
-      setApplyResult(await apiRequest<ApplyResult>("/admin/recargos/aplicar", { method: "POST" }));
+      const result = await apiRequest<ApplyResult>("/admin/recargos/aplicar", { method: "POST" });
+      setApplyResult(result);
+      void notifySuccess(`Revisión completada: ${result.aplicados} recargos aplicados.`);
     } catch (e) {
       setApplyError(errorText(e, "No fue posible aplicar los recargos."));
     } finally {

@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { TenantAmenitiesHistoryView } from "@/views/TenantAmenitiesHistoryView";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PublicRoute } from "@/components/auth/PublicRoute";
@@ -127,6 +128,7 @@ export function AppRouter() {
           <Route path="/inquilino/visitas" element={<InquilinoView section="visitas" />} />
           <Route path="/inquilino/proveedores" element={<InquilinoView section="proveedores" />} />
           <Route path="/inquilino/permisos" element={<InquilinoView section="permisos" />} />
+          <Route path="/inquilino/reservas" element={<TenantAmenitiesHistoryView />} />
           <Route path="/inquilino/notificaciones" element={<ResidentNotificationsView role="inquilino" />} />
           <Route path="/inquilino/comunicados" element={<ResidentNotificationsView role="inquilino" initialFilter="COMUNICADOS" />} />
           <Route path="/inquilino/sesiones" element={<ActiveSessionsView />} />

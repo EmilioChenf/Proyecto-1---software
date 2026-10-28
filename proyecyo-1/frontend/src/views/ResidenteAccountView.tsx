@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -88,9 +89,9 @@ export function ResidenteAccountView() {
   const [selectedFilter, setSelectedFilter] = useState<AccountFilter>("TODAS");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
   const [payingQuotaId, setPayingQuotaId] = useState<number | null>(null);
-  const [checkoutError, setCheckoutError] = useState("");
+  const [checkoutError, setCheckoutError] = useFeedbackState("error", "");
   const checkoutInProgress = useRef(false);
 
   async function payQuota(quota: AccountQuota) {

@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from 'react';
 import { ResidentLayout } from '@/components/residente/ResidentLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ export function ResidentActivityView() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState<ActivityPage | null>(null);
   const [busy, setBusy] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useFeedbackState("error", '');
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const controller = new AbortController();

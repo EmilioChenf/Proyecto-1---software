@@ -23,6 +23,8 @@ const calls = {
   listAdminAccesses: mock.fn((...args) => behavior.listAdminAccesses(...args)),
   registerProvider: mock.fn((...args) => behavior.registerProvider(...args)),
   adminCancelAmenityReservation: mock.fn((...args) => behavior.adminCancelAmenityReservation(...args)),
+  listReservationsByRange: mock.fn((...args) => behavior.listReservationsByRange(...args)),
+  listReservationHistory: mock.fn((...args) => behavior.listReservationHistory(...args)),
 };
 
 const noop = async () => {
@@ -45,8 +47,8 @@ const serviceFakes = {
   "amenitiesReservationsService.js": {
     listAmenities: noop,
     listReservableUsers: noop,
-    listReservationsByRange: noop,
-    listReservationHistory: noop,
+    listReservationsByRange: calls.listReservationsByRange,
+    listReservationHistory: calls.listReservationHistory,
     getAmenityAvailability: noop,
     validateAmenityReservationConflict: calls.validateAmenityReservationConflict,
     createAmenityReservation: noop,
@@ -135,6 +137,8 @@ beforeEach(() => {
   behavior.listAdminAccesses = noop;
   behavior.registerProvider = noop;
   behavior.adminCancelAmenityReservation = noop;
+  behavior.listReservationsByRange = noop;
+  behavior.listReservationHistory = noop;
 });
 
 function authenticated(agent, role, userId = 7) {
@@ -142,6 +146,26 @@ function authenticated(agent, role, userId = 7) {
 }
 
 describe("Rutas reales de NexusResidencial", () => {
+  it("HU-C05.6: el historial del inquilino usa su identidad, aunque envíe otro usuario", async () => {
+    behavior.listReservationsByRange = async () => [{ estado: "CANCELADA" }];
+    behavior.listReservationHistory = async () => [{ accion: "CANCELACION_ADMIN" }];
+    const response = await authenticated(request(app).get("/inquilino/reservas/amenidades?from=2099-01-01&to=2099-01-31&id_usuario=999"), "inquilino", 7);
+    assert.equal(response.status, 200);
+    assert.deepEqual(calls.listReservationsByRange.mock.calls[0].arguments, ["2099-01-01", "2099-01-31", { id_usuario: 7, includeUserDetails: true, includeCanceled: true }]);
+    const history = await authenticated(request(app).get("/inquilino/reservas/amenidades/historial?id_usuario=999"), "inquilino", 7);
+    assert.equal(history.status, 200);
+    assert.deepEqual(calls.listReservationHistory.mock.calls[0].arguments, [7]);
+  });
+
+  it("HU-C05.12: otros roles no entran al historial privado del inquilino", async () => {
+    for (const path of ["/inquilino/reservas/amenidades", "/inquilino/reservas/amenidades/historial"]) {
+      assert.equal((await request(app).get(path)).status, 401);
+      for (const role of ["guardia", "residente", "admin"]) assert.equal((await authenticated(request(app).get(path), role)).status, 403);
+    }
+    assert.equal(calls.listReservationsByRange.mock.callCount(), 0);
+    assert.equal(calls.listReservationHistory.mock.callCount(), 0);
+  });
+
   it("consulta las notificaciones del usuario autenticado", async () => {
     const notifications = [
       {

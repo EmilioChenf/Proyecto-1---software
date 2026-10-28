@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { guatemalaToday } from "@/utils/guatemalaTime";
 
 import {
   adminCancelAmenitiesReservationRequest,
@@ -35,9 +36,7 @@ vi.mock("@/utils/feedback", () => ({
 }));
 
 function localDate(offsetDays = 0) {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+  return guatemalaToday(offsetDays, new Date("2026-07-13T22:30:00Z"));
 }
 
 const today = localDate();
@@ -81,6 +80,8 @@ const cancelled = reservation({
 describe("HU-C05 administracion de reservas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-07-13T22:30:00Z"));
     vi.mocked(getAdminAmenitiesRequest).mockResolvedValue([amenity]);
     vi.mocked(getAdminAmenitiesUsersRequest).mockResolvedValue([user]);
     vi.mocked(getAdminAmenitiesReservationsRequest).mockResolvedValue([active, cancelled, upcoming]);
@@ -91,6 +92,7 @@ describe("HU-C05 administracion de reservas", () => {
       reservas: [],
     });
   });
+  afterEach(() => vi.useRealTimers());
 
   it("HU-C05.7: el calendario no cuenta la reserva cancelada como ocupacion activa", async () => {
     render(<AdminAmenitiesReservationsView />);
@@ -112,7 +114,7 @@ describe("HU-C05 administracion de reservas", () => {
     vi.mocked(promptText).mockResolvedValue("Fuga de agua");
     vi.mocked(adminCancelAmenitiesReservationRequest).mockResolvedValue({ ...upcoming, estado: "CANCELADA", estado_actual: "CANCELADA" });
     render(<AdminAmenitiesReservationsView />);
-    await userEvent.click(await screen.findByRole("button", { name: "Cancelar reserva de Ana Lopez en Piscina" }));
+    await userEvent.click(await screen.findByRole("button", { name: `Cancelar reserva de Ana Lopez en Piscina el ${upcoming.fecha} ${upcoming.hora_inicio}` }));
     await waitFor(() => expect(adminCancelAmenitiesReservationRequest).toHaveBeenCalledWith(upcoming.reservation_key, "Fuga de agua"));
     expect(promptText).toHaveBeenCalledWith(expect.objectContaining({ tone: "danger", label: "Motivo de la cancelación (opcional)" }));
     await waitFor(() => expect(notifySuccess).toHaveBeenCalled());
@@ -122,7 +124,7 @@ describe("HU-C05 administracion de reservas", () => {
   it("HU-C05.4: si el administrador vuelve atras no se cancela nada; un error se informa", async () => {
     vi.mocked(promptText).mockResolvedValueOnce(null);
     render(<AdminAmenitiesReservationsView />);
-    const button = await screen.findByRole("button", { name: "Cancelar reserva de Ana Lopez en Piscina" });
+    const button = await screen.findByRole("button", { name: `Cancelar reserva de Ana Lopez en Piscina el ${upcoming.fecha} ${upcoming.hora_inicio}` });
     await userEvent.click(button);
     expect(adminCancelAmenitiesReservationRequest).not.toHaveBeenCalled();
 
@@ -159,5 +161,18 @@ describe("HU-C05 administracion de reservas", () => {
         expect.objectContaining({ id_usuario: 7, id_amenidad: 1, hora_inicio: "10:00", hora_fin: "11:00" }),
       ),
     );
+  });
+
+  it("conserva la cancelación guardada si falla la actualización posterior del calendario", async () => {
+    vi.mocked(promptText).mockResolvedValue("Mantenimiento");
+    vi.mocked(adminCancelAmenitiesReservationRequest).mockResolvedValue({ ...upcoming, estado: "CANCELADA", estado_actual: "CANCELADA" });
+    render(<AdminAmenitiesReservationsView />);
+    const button = await screen.findByRole("button", { name: `Cancelar reserva de Ana Lopez en Piscina el ${upcoming.fecha} ${upcoming.hora_inicio}` });
+    vi.mocked(getAdminAmenitiesRequest).mockRejectedValueOnce(new Error("Sin conexión"));
+    await userEvent.click(button);
+    expect(await screen.findByText(/El cambio se guardó, pero no fue posible actualizar/)).toBeInTheDocument();
+    expect(notifySuccess).toHaveBeenCalled();
+    expect(notifyError).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: `Cancelar reserva de Ana Lopez en Piscina el ${upcoming.fecha} ${upcoming.hora_inicio}` })).not.toBeInTheDocument();
   });
 });

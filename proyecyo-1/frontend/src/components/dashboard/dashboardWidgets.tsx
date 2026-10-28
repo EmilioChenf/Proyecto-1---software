@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState, type DependencyList, type ReactNode } from "react";
 import { ArrowRight, Bell, CheckCheck, Clock3, UserRoundCheck, Wallet, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -238,7 +239,7 @@ export function useNotificationCenter() {
   // Total real de no leidas (misma fuente que el badge del sidebar). El listado
   // solo trae las 20 notificaciones mas recientes y sirve como vista previa.
   const unreadTotal = useUnreadNotificationsCount();
-  const [actionError, setActionError] = useState("");
+  const [actionError, setActionError] = useFeedbackState("error", "");
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {

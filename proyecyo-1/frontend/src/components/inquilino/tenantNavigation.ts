@@ -1,5 +1,6 @@
 import {
   BriefcaseBusiness,
+  CalendarDays,
   LayoutDashboard,
   Megaphone,
   MonitorSmartphone,
@@ -17,8 +18,8 @@ import {
 export type TenantBadgeKey = "unreadNotifications";
 
 // Solo modulos que el backend autoriza al rol inquilino (requireTenant /
-// requireResidentOrTenant / requireNotificationUser). Amenidades, reglamentos,
-// resumen mensual y validacion de proveedores son exclusivos del residente.
+// requireResidentOrTenant / requireNotificationUser). El historial de reservas es
+// de consulta propia; crear/modificar reservas sigue reservado al residente/admin.
 export const tenantNavSections: RoleNavSection<TenantBadgeKey>[] = [
   {
     title: "General",
@@ -28,6 +29,7 @@ export const tenantNavSections: RoleNavSection<TenantBadgeKey>[] = [
     title: "Mi unidad",
     items: [
       { label: "Mis visitas", icon: UserRoundCheck, to: "/inquilino/visitas" },
+      { label: "Mis reservas", icon: CalendarDays, to: "/inquilino/reservas" },
       { label: "Proveedores", icon: BriefcaseBusiness, to: "/inquilino/proveedores" },
       { label: "Permisos y solicitudes", icon: ShieldCheck, to: "/inquilino/permisos" },
     ],

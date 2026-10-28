@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { BarChart3, CalendarDays, Clock3, KeyRound, UserRoundCheck, type LucideIcon } from "lucide-react";
 
@@ -22,7 +23,7 @@ export function ResidentMonthlySummaryView() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [data, setData] = useState<MonthlySummary>();
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ export function RecurrenteReceipts({ totalPaid }: { totalPaid?: number }) {
   const navigate = useNavigate();
   const [receipts, setReceipts] = useState<PaymentReceipt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   useEffect(() => {
     let active = true;
     setLoading(true); setError(""); setReceipts([]);

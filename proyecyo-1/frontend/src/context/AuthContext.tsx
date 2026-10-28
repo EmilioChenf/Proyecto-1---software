@@ -1,6 +1,8 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ApiError } from "@/services/api";
+import { notifyInfo, notifySuccess } from "@/utils/feedback";
+import { clearToasts } from "@/utils/toastStore";
 import { changePasswordRequest, getSessionRequest, loginRequest, logoutRequest } from "@/services/authService";
 import type { AuthUser, ChangePasswordPayload, ChangePasswordResponse, LoginPayload, LoginResponse } from "@/types/auth";
 
@@ -28,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearSession = useCallback(() => {
+    clearToasts();
     window.localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   }, []);
@@ -35,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     void logoutRequest().catch(() => undefined);
     clearSession();
+    clearToasts();
+    void notifyInfo("Sesión cerrada.");
   }, [clearSession]);
 
   // Consulta al backend el rol y estado actuales del usuario y actualiza la sesion
@@ -116,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: LoginPayload) => {
       const response = await loginRequest(payload);
       persistSession(response);
+      clearToasts();
+      void notifySuccess("Sesión iniciada correctamente.");
       return response;
     },
     [persistSession],

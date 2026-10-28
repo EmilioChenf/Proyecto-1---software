@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { Download, Loader2, Play } from "lucide-react";
 import { apiDownload, apiRequest, ApiError } from "@/services/api";
@@ -11,7 +12,7 @@ export function AutomaticBackupsSettings() {
   const [config, setConfig] = useState<Config>(initial);
   const [records, setRecords] = useState<Record[]>([]);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useFeedbackState("info", "");
 
   async function load() {
     try {
@@ -44,6 +45,7 @@ export function AutomaticBackupsSettings() {
     catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible descargar el respaldo."); return; }
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
+    setMessage("Descarga del respaldo iniciada.");
   }
 
   return (

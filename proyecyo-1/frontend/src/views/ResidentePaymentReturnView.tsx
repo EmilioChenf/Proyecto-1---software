@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
@@ -20,7 +21,7 @@ export function ResidentePaymentReturnView({tenant=false}:{tenant?:boolean}) {
   const [status, setStatus] = useState<RecurrenteCheckoutStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useFeedbackState<string | null>("error", null);
   const retrying = useRef(false);
   const mounted = useRef(false);
   const requestVersion = useRef(0);

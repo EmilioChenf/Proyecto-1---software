@@ -47,6 +47,7 @@ describe("TenantLayout", () => {
     const expected: Array<[RegExp, string]> = [
       [/^Dashboard$/, "/inquilino"],
       [/^Mis visitas$/, "/inquilino/visitas"],
+      [/^Mis reservas$/, "/inquilino/reservas"],
       [/^Proveedores$/, "/inquilino/proveedores"],
       [/^Permisos y solicitudes$/, "/inquilino/permisos"],
       [/^Estado de cuenta$/, "/inquilino/estado-cuenta"],

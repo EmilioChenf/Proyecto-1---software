@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ type Report = {
 const money = (value:number) => new Intl.NumberFormat("es-GT", { style:"currency", currency:"GTQ" }).format(value);
 export function AdminMonthlyFinancialReportView() {
   const now = new Date(); const [mes,setMes]=useState(now.getMonth()+1); const [anio,setAnio]=useState(now.getFullYear());
-  const [report,setReport]=useState<Report|null>(null); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
+  const [report,setReport]=useState<Report|null>(null); const [loading,setLoading]=useState(true); const [error, setError] = useFeedbackState("error", "");
   async function load(){try{setLoading(true);setError("");setReport(await apiRequest<Report>(`/admin/reportes/financiero-mensual?mes=${mes}&anio=${anio}`));}catch(e){setError(e instanceof Error?e.message:"No fue posible cargar el reporte.");}finally{setLoading(false);}}
   useEffect(()=>{void load();},[]);
   return <AdminLayout title="Reporte financiero mensual" subtitle="Pagos y mora del residencial por periodo.">

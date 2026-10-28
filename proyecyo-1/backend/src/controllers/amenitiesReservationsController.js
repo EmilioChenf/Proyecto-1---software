@@ -64,6 +64,16 @@ async function getAmenitiesReservationHistory(req, res, next) {
   }
 }
 
+async function getOwnAmenitiesReservations(req, res, next) {
+  try {
+    res.status(200).json(await listReservationsByRange(req.query.from, req.query.to, {
+      id_usuario: req.authUser.id,
+      includeUserDetails: true,
+      includeCanceled: true,
+    }));
+  } catch (error) { next(error); }
+}
+
 async function getAdminAmenitiesReservations(req, res, next) {
   try {
     const reservations = await listReservationsByRange(req.query.from, req.query.to, {
@@ -206,6 +216,7 @@ async function putAdminAmenitySchedule(req, res, next) {
 }
 
 module.exports = {
+  getOwnAmenitiesReservations,
   getAmenities,
   getReservableAmenitiesUsers,
   getAmenitiesReservations,

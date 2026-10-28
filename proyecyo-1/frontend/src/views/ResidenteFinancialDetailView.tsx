@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useState } from "react";
 import { Download, LoaderCircle } from "lucide-react";
 
@@ -28,8 +29,8 @@ export function ResidenteFinancialDetailView() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [downloadError, setDownloadError] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [downloadError, setDownloadError] = useFeedbackState("error", "");
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   async function downloadReceipt(id: number, reference: string) {

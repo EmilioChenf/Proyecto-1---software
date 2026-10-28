@@ -1,3 +1,5 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifyWarning } from "@/utils/feedback";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -91,7 +93,7 @@ export function LoginView() {
   const [shake, setShake] = useState(0);
   const [toastIdx, setToastIdx] = useState(0);
   const [toastIn, setToastIn] = useState(true);
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useFeedbackState("error", "");
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -124,6 +126,7 @@ export function LoginView() {
     if (phase !== "idle") return;
     setServerError("");
     if (v.emailErr || v.passErr) {
+      void notifyWarning("Revisa el correo y la contraseña antes de continuar.");
       setSubmitted(true);
       setShake((s) => s + 1);
       return;

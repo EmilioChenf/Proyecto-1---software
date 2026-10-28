@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 ﻿import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,12 @@ export function AdminReportsView() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const [catalog, setCatalog] = useState<ReportCapability[]>([]);
   const [catalogBusy, setCatalogBusy] = useState(true);
   const [catalogRetry, setCatalogRetry] = useState(0);
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useFeedbackState("info", '');
   const downloadController = useRef<AbortController | null>(null);
   const selected = catalog.find(item => item.id === report);
   useEffect(() => {

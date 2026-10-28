@@ -1,5 +1,6 @@
 import Swal from "sweetalert2";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { clearToasts, toastStore } from "./toastStore";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/services/api";
 import { buildConfirmOptions, confirmAction, notifyError, notifySuccess, notifyWarning } from "./feedback";
@@ -10,6 +11,8 @@ const button = (selector: string) => document.querySelector(selector) as HTMLBut
 const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeAll(() => {
+  // SweetAlert restores scroll position when a real browser closes a dialog.
+  window.scrollTo = vi.fn();
   // jsdom no implementa innerText: SweetAlert2 lo usa para titleText (texto plano).
   // En un navegador, asignar innerText equivale a asignar textContent (no interpreta HTML).
   if (!Object.getOwnPropertyDescriptor(HTMLElement.prototype, "innerText")) {
@@ -31,6 +34,7 @@ beforeAll(() => {
 
 afterEach(async () => {
   Swal.close();
+  clearToasts();
   await new Promise((resolve) => setTimeout(resolve, 20));
 });
 
@@ -72,45 +76,32 @@ describe("HU-C02 confirmaciones", () => {
   });
 });
 
-describe("HU-C02 exito, advertencia y error", () => {
-  it("el exito es un aviso breve (toast) que no bloquea la pantalla", async () => {
-    void notifySuccess("Usuario creado correctamente.");
-    await nextTick();
-    expect(popup()?.classList.contains("swal2-toast")).toBe(true);
-    expect(Swal.getTitle()?.textContent).toBe("Usuario creado correctamente.");
-    expect(document.querySelector(".swal2-icon.swal2-success")).not.toBeNull();
-  });
-
-  it("la advertencia usa su icono y un boton para continuar", async () => {
-    void notifyWarning("Revisa la fecha antes de continuar.");
-    await nextTick();
-    expect(document.querySelector(".swal2-icon.swal2-warning")).not.toBeNull();
-    expect(button(".swal2-confirm").textContent).toBe("Entendido");
-  });
-
-  it("el error muestra el mensaje del servidor si es claro", async () => {
-    void notifyError(new ApiError("No fue posible eliminar la visita porque ya ingreso.", 409));
-    await nextTick();
-    expect(document.querySelector(".swal2-icon.swal2-error")).not.toBeNull();
-    expect(Swal.getHtmlContainer()?.textContent).toBe("No fue posible eliminar la visita porque ya ingreso.");
-  });
-
-  it("nunca muestra detalles tecnicos: usa el mensaje de respaldo", async () => {
-    void notifyError(new Error("ER_DUP_ENTRY: insert into USUARIO ... at query.js:12"), "No fue posible guardar el usuario.");
-    await nextTick();
-    expect(Swal.getHtmlContainer()?.textContent).toBe("No fue posible guardar el usuario.");
-  });
-
-  it("un 401 no abre ninguna alerta (la app ya cierra la sesion)", async () => {
-    await notifyError(new ApiError("Tu sesion ha expirado.", 401));
+describe("Resultados flotantes globales", () => {
+  it("publica éxito, advertencia y error sin abrir un diálogo", async () => {
+    await notifySuccess("Usuario creado correctamente.");
+    await notifyWarning("Revisa la fecha antes de continuar.");
+    await notifyError(new ApiError("La visita ya ingresó.", 409));
+    expect(toastStore.getSnapshot().map((item) => item.tone)).toEqual(["success", "warning", "error"]);
     expect(popup()).toBeNull();
   });
 
-  it("no apila el mismo error dos veces", async () => {
-    void notifyError("La visita ya no existe.");
-    await nextTick();
-    const second = await notifyError("La visita ya no existe.");
-    expect(second).toBeNull();
-    expect(document.querySelectorAll(".swal2-popup")).toHaveLength(1);
+  it("sanea detalles técnicos del servidor", async () => {
+    await notifyError(new Error("ER_DUP_ENTRY: insert into USUARIO ... at query.js:12"), "No fue posible guardar el usuario.");
+    expect(toastStore.getSnapshot()[0].message).toBe("No fue posible guardar el usuario.");
+  });
+
+  it("un 401 deja que la app cierre la sesión", async () => {
+    await notifyError(new ApiError("Tu sesión ha expirado.", 401));
+    expect(toastStore.getSnapshot()).toHaveLength(0);
+  });
+
+  it("deduplica resultados y no cierra una confirmación pendiente", async () => {
+    const pending = confirmAction({ title: "¿Cancelar reserva?" });
+    await notifyError("La visita ya no existe.");
+    await notifyError("La visita ya no existe.");
+    expect(toastStore.getSnapshot()).toHaveLength(1);
+    expect(Swal.getTitle()?.textContent).toBe("¿Cancelar reserva?");
+    button(".swal2-cancel").click();
+    await expect(pending).resolves.toBe(false);
   });
 });

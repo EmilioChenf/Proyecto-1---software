@@ -1,4 +1,7 @@
 import { apiRequest } from "@/services/api";
+import { publishReservationChange } from "@/hooks/useReservationUpdates";
+
+function changed<T>(result: T) { publishReservationChange(); return result; }
 import type {
   Amenity,
   AmenityAvailabilityResponse,
@@ -93,7 +96,7 @@ export function createAmenitiesReservationRequest(payload: CreateAmenityReservat
   return apiRequest<AmenityReservation>("/reservas/amenidades", {
     method: "POST",
     body: payload,
-  });
+  }).then(changed);
 }
 
 export function updateAmenitiesReservationRequest(
@@ -103,18 +106,26 @@ export function updateAmenitiesReservationRequest(
   return apiRequest<AmenityReservation>(`/reservas/amenidades/${encodeURIComponent(reservationKey)}`, {
     method: "PATCH",
     body: payload,
-  });
+  }).then(changed);
 }
 
 export function cancelAmenitiesReservationRequest(reservationKey: string) {
   return apiRequest<AmenityReservation>(
     `/reservas/amenidades/${encodeURIComponent(reservationKey)}/cancelar`,
     { method: "PATCH" },
-  );
+  ).then(changed);
 }
 
 export function getAmenitiesReservationHistoryRequest() {
   return apiRequest<AmenityReservationHistory[]>("/reservas/amenidades/historial");
+}
+
+export function getTenantAmenitiesReservationsRequest(filters: Pick<ReservationFilters, "from" | "to">) {
+  return apiRequest<AmenityReservation[]>(`/inquilino/reservas/amenidades?${buildReservationQuery(filters)}`);
+}
+
+export function getTenantAmenitiesHistoryRequest() {
+  return apiRequest<AmenityReservationHistory[]>("/inquilino/reservas/amenidades/historial");
 }
 
 export function getAdminAmenitiesRequest() {
@@ -132,7 +143,7 @@ export function updateAmenityScheduleRequest(
   return apiRequest<Amenity>(`/admin/amenidades/${idAmenidad}/horario`, {
     method: "PUT",
     body: payload,
-  });
+  }).then(changed);
 }
 
 export function getAdminAmenitiesReservationsRequest(filters: ReservationFilters) {
@@ -157,7 +168,7 @@ export function createAdminAmenitiesReservationRequest(payload: CreateAmenityRes
   return apiRequest<AmenityReservation>("/admin/reservas/amenidades", {
     method: "POST",
     body: payload,
-  });
+  }).then(changed);
 }
 
 /** HU-C05.4: cancelacion administrativa con motivo opcional. */
@@ -165,7 +176,7 @@ export function adminCancelAmenitiesReservationRequest(reservationKey: string, m
   return apiRequest<AmenityReservation>(
     `/admin/reservas/amenidades/${encodeURIComponent(reservationKey)}/cancelar`,
     { method: "PATCH", body: motivo ? { motivo } : {} },
-  );
+  ).then(changed);
 }
 
 export function getAdminAmenityStatsRequest(filters: ReservationFilters) {

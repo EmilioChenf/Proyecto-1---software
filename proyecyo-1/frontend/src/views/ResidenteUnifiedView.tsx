@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, KeyRound } from "lucide-react";
 
@@ -52,7 +53,7 @@ export function ResidenteUnifiedView() {
   const [reservations, setReservations] = useState<AmenityReservation[]>([]);
   const [filter, setFilter] = useState<UnifiedFilter>("TODOS");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
 
   useEffect(() => {
     let active = true;

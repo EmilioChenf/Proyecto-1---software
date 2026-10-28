@@ -1,10 +1,11 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import {useEffect,useState} from 'react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {getGlobalMaintenanceRequest,saveGlobalMaintenanceRequest} from '@/services/propertyContractsService';
 import type {MaintenanceTariff} from '@/types/propertyContracts';
 export function GlobalMaintenanceSettings(){
-  const [history,setHistory]=useState<MaintenanceTariff[]>([]),[amount,setAmount]=useState(''),[since,setSince]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+  const [history,setHistory]=useState<MaintenanceTariff[]>([]),[amount,setAmount]=useState(''),[since,setSince]=useState(''),[message, setMessage] = useFeedbackState("info", ''),[busy,setBusy]=useState(false);
   useEffect(()=>{getGlobalMaintenanceRequest().then(v=>setHistory(v.historial)).catch(e=>setMessage(e.message));},[]);
   async function save(){setBusy(true);setMessage('');try{const tariff=await saveGlobalMaintenanceRequest({monto:amount,vigente_desde:since});setHistory([tariff,...history]);setMessage('Tarifa global programada. Los períodos emitidos conservan sus importes.');}catch(e){setMessage(e instanceof Error?e.message:'No fue posible guardar.');}finally{setBusy(false);}}
   return <section className="mb-5 space-y-4 rounded-[20px] border bg-background p-5"><h2 className="text-lg font-semibold">Mantenimiento global</h2><p className="text-sm text-muted-foreground">Una tarifa para todas las casas activas con contrato. Cada cambio comienza el primer día de un mes futuro.</p>

@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   AlertCircle,
@@ -60,9 +61,9 @@ export function AdminSettingsView() {
   const [backup, setBackup] = useState<BackupPayload | null>(null);
   const [validation, setValidation] = useState<BackupValidation | null>(null);
   const [history, setHistory] = useState<RestoreHistoryRecord[]>([]);
-  const [historyError, setHistoryError] = useState("");
+  const [historyError, setHistoryError] = useFeedbackState("error", "");
   const [status, setStatus] = useState<ProcessStatus>("idle");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useFeedbackState("info", "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const affectedTables = useMemo(() => {

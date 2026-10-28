@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BellRing,
@@ -93,8 +94,8 @@ export function AdminRemindersView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

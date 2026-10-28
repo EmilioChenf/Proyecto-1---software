@@ -1,4 +1,5 @@
 import {useEffect,useState} from 'react';
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import {Dialog,DialogContent,DialogDescription,DialogHeader,DialogTitle} from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
@@ -34,7 +35,7 @@ export function PropertyContractWizard({open,onClose,onSaved,initialHouse=null}:
   const [person,setPerson]=useState<ContractPerson>({}),[tenant,setTenant]=useState<ContractPerson>({}),[privateTenant,setPrivateTenant]=useState(false),[lives,setLives]=useState(false);
   const [personMode,setPersonMode]=useState<PersonMode>('existing'),[tenantMode,setTenantMode]=useState<PersonMode>('existing'),[occupantsChanged,setOccupantsChanged]=useState(false);
   const [users,setUsers]=useState<UserRecord[]>([]),[tariff,setTariff]=useState<MaintenanceTariff|null>(null),[confirmed,setConfirmed]=useState(false);
-  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[failure,setFailure]=useState(''),[operation,setOperation]=useState(()=>crypto.randomUUID());
+  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[failure,setFailure]=useFeedbackState('error', ''),[operation,setOperation]=useState(()=>crypto.randomUUID());
   const hasPrivateTenant=type==='PROPIEDAD_PRIVADA'&&privateTenant;
   const period=firstBillingPeriod(start),total=Number(type==='PROPIEDAD_PRIVADA'?0:amount)+(Number(tariff?.monto)||0);
   useEffect(()=>{if(!open)return;let active=true;getUsersRequest().then(v=>{if(active)setUsers(v);}).catch(e=>{if(active)setFailure(e.message);});return()=>{active=false;};},[open]);

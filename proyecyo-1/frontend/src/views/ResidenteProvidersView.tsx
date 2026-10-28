@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Clock3, Search, ShieldCheck } from "lucide-react";
 
@@ -21,8 +22,8 @@ const statusFilters: { value: StatusFilter; label: string }[] = [
 export function ResidenteProvidersView() {
   const [providers, setProviders] = useState<AdminProviderRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
+  const [success, setSuccess] = useFeedbackState("success", "");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("TODOS");
   const [validatingKey, setValidatingKey] = useState<string | null>(null);

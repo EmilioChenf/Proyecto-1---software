@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState, type FormEvent } from "react";
 import { Filter, ShieldCheck } from "lucide-react";
 
@@ -40,7 +41,7 @@ export function AdminAuditView() {
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [filters, setFilters] = useState<AuditFilters>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
 
   async function load(nextFilters: AuditFilters = filters) {
     try {

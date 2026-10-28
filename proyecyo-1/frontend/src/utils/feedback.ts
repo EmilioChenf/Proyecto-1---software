@@ -1,11 +1,12 @@
-import Swal, { type SweetAlertIcon, type SweetAlertOptions } from "sweetalert2";
+import Swal, { type SweetAlertOptions } from "sweetalert2";
 
 import { ApiError } from "@/services/api";
 import { getErrorMessage } from "@/utils/errorMessages";
+import { pushToast } from "@/utils/toastStore";
 
-// HU-C02: mensajes flotantes globales (SweetAlert2) para el resultado de ACCIONES:
-// confirmar, exito, error y advertencia. Los errores de un formulario o modal NO van
-// aqui: se muestran junto al campo correspondiente (FieldError / aria-invalid).
+// HU-C02: mensajes flotantes globales para el resultado de ACCIONES:
+// éxito, error y advertencia. SweetAlert2 conserva las confirmaciones y prompts.
+// Los errores de campo también se conservan junto al campo (FieldError / aria-invalid).
 //
 // Seguridad: en SweetAlert2 "title" y "html" se interpretan como HTML. Aqui SOLO se usan
 // "titleText" y "text" (texto plano), porque los mensajes incluyen datos de usuarios
@@ -20,15 +21,6 @@ const base = Swal.mixin({
   returnFocus: true,
   confirmButtonColor: COLORS.primary,
   cancelButtonColor: COLORS.cancel,
-});
-
-const toast = Swal.mixin({
-  toast: true,
-  position: "top-end",
-  showConfirmButton: false,
-  timer: 3500,
-  timerProgressBar: true,
-  heightAuto: false,
 });
 
 type ConfirmOptions = {
@@ -94,12 +86,19 @@ export async function promptText({ label, placeholder, maxLength = 255, ...optio
 
 /** Exito de una accion: aviso breve que no bloquea la pantalla. */
 export function notifySuccess(message: string, title?: string) {
-  return toast.fire({ icon: "success", titleText: title ?? message, text: title ? message : undefined });
+  pushToast("success", message, title);
+  return Promise.resolve(null);
 }
 
 /** Advertencia que el usuario debe leer antes de continuar. */
 export function notifyWarning(message: string, title = "Atencion") {
-  return showOnce("warning", title, message);
+  pushToast("warning", message, title);
+  return Promise.resolve(null);
+}
+
+export function notifyInfo(message: string, title?: string) {
+  pushToast("info", message, title);
+  return Promise.resolve(null);
 }
 
 /**
@@ -110,17 +109,6 @@ export function notifyWarning(message: string, title = "Atencion") {
 export function notifyError(error: unknown, fallback = "No fue posible completar la operacion.", title = "No se pudo completar la accion") {
   if (error instanceof ApiError && error.status === 401) return Promise.resolve(null);
   const message = typeof error === "string" ? getErrorMessage(new Error(error), fallback) : getErrorMessage(error, fallback);
-  return showOnce("error", title, message);
-}
-
-// Evita apilar el mismo mensaje dos veces si la accion se reintenta rapido.
-function showOnce(icon: SweetAlertIcon, title: string, text: string) {
-  const open = Swal.getPopup();
-  // Se comprueba el DOM (popup conectado y no cerrandose); Swal.isVisible() depende del
-  // tamano renderizado y no es fiable en todos los entornos.
-  const showing = Boolean(open?.isConnected) && !open?.classList.contains("swal2-hide");
-  if (showing && Swal.getTitle()?.textContent === title && Swal.getHtmlContainer()?.textContent === text) {
-    return Promise.resolve(null);
-  }
-  return base.fire({ icon, titleText: title, text, confirmButtonText: "Entendido" });
+  pushToast("error", message, title);
+  return Promise.resolve(null);
 }
