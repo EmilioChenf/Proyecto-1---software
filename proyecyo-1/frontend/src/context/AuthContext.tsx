@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearSession = useCallback(() => {
+    clearToasts();
     window.localStorage.removeItem(STORAGE_KEY);
     setUser(null);
   }, []);

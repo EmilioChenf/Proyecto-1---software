@@ -143,7 +143,7 @@ export function updateAmenityScheduleRequest(
   return apiRequest<Amenity>(`/admin/amenidades/${idAmenidad}/horario`, {
     method: "PUT",
     body: payload,
-  });
+  }).then(changed);
 }
 
 export function getAdminAmenitiesReservationsRequest(filters: ReservationFilters) {

@@ -162,13 +162,13 @@ export function ResidenteAmenitiesView() {
     if (!selectedAmenityId || !selectedDate) {
       return;
     }
-
+    const amenityId = selectedAmenityId;
     let active = true;
 
     async function loadAvailability() {
       try {
         setIsLoadingAvailability(true);
-        const response = await getAmenityAvailabilityRequest(selectedAmenityId, selectedDate);
+        const response = await getAmenityAvailabilityRequest(amenityId, selectedDate);
 
         if (active) {
           setAvailability(response);

@@ -9,7 +9,7 @@ const emit = () => listeners.forEach((listener) => listener());
 // A separate surface from SweetAlert confirmations: background feedback must never
 // dismiss a confirmation or an optional cancellation-reason prompt.
 export function pushToast(tone: ToastTone, message: string, title?: string) {
-  const duplicate = messages.find((item) => item.tone === tone && item.message === message && item.title === title);
+  const duplicate = messages.find((item) => item.tone === tone && item.message === message);
   if (duplicate) return duplicate.id;
   const id = ++sequence;
   messages = [...messages, { id, tone, message, title }].slice(-4);

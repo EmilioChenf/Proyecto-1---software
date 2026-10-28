@@ -593,7 +593,7 @@ export function AdminAmenitiesReservationsView() {
   );
 
   const weeklyStats = useMemo(() => {
-    const currentWeek = getWeekRange(new Date());
+    const currentWeek = getWeekRange(parseDate(today));
     const previousWeekStart = addDays(parseDate(currentWeek.from), -7);
     const previousWeek = getWeekRange(previousWeekStart);
 

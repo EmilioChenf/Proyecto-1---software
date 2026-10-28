@@ -13,6 +13,7 @@ const current = {
   fecha: "2099-01-10", hora_inicio: "10:00", hora_fin: "11:00", estado: "CONFIRMADA",
 };
 const payload = { id_amenidad: 2, fecha: current.fecha, hora_inicio: "10:00", hora_fin: "11:00" };
+afterEach(() => jest.useRealTimers());
 beforeEach(() => {
   jest.clearAllMocks();
   mockConnection.execute.mockImplementation(async (sql, params) => {
@@ -67,4 +68,16 @@ test("HU-C05.11 un fallo de auditoría revierte la creación y no confirma", asy
   expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
   expect(mockConnection.commit).not.toHaveBeenCalled();
   expect(mockConnection.release).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  { fecha: "2026-07-12", hora_inicio: "11:00", hora_fin: "12:00" },
+  { fecha: "2026-07-13", hora_inicio: "09:00", hora_fin: "10:00" },
+])("HU-C05.2 no escribe una reserva vencida: $fecha $hora_inicio", async (range) => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-07-13T16:30:00Z"));
+  await expect(createAmenityReservation({ id: 7, role: "residente" }, { ...payload, ...range }))
+    .rejects.toMatchObject({ status: 400, code: "RESERVATION_IN_PAST" });
+  expect(mockConnection.execute.mock.calls.some(([sql]) => sql.includes("INSERT INTO RESERVA"))).toBe(false);
+  expect(recordAudit).not.toHaveBeenCalled();
+  expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
 });

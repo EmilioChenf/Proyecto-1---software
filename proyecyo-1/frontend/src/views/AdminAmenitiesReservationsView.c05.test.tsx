@@ -162,4 +162,17 @@ describe("HU-C05 administracion de reservas", () => {
       ),
     );
   });
+
+  it("conserva la cancelación guardada si falla la actualización posterior del calendario", async () => {
+    vi.mocked(promptText).mockResolvedValue("Mantenimiento");
+    vi.mocked(adminCancelAmenitiesReservationRequest).mockResolvedValue({ ...upcoming, estado: "CANCELADA", estado_actual: "CANCELADA" });
+    render(<AdminAmenitiesReservationsView />);
+    const button = await screen.findByRole("button", { name: `Cancelar reserva de Ana Lopez en Piscina el ${upcoming.fecha} ${upcoming.hora_inicio}` });
+    vi.mocked(getAdminAmenitiesRequest).mockRejectedValueOnce(new Error("Sin conexión"));
+    await userEvent.click(button);
+    expect(await screen.findByText(/El cambio se guardó, pero no fue posible actualizar/)).toBeInTheDocument();
+    expect(notifySuccess).toHaveBeenCalled();
+    expect(notifyError).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: `Cancelar reserva de Ana Lopez en Piscina el ${upcoming.fecha} ${upcoming.hora_inicio}` })).not.toBeInTheDocument();
+  });
 });
