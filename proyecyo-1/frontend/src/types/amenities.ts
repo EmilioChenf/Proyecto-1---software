@@ -21,7 +21,7 @@ export interface AmenityReservation {
   usuario_nombre?: string;
   usuario_rol?: "residente" | "inquilino" | "admin" | "guardia";
   unidad?: string;
-  /** HU-C05.5/C05.9: autoria (solo en vistas de administrador). */
+  /** HU-C05.5/C05.9: autoría (administración y consulta propia del inquilino). */
   creada_por_nombre?: string | null;
   creada_por_admin?: boolean;
   cancelada_por_nombre?: string | null;
@@ -34,13 +34,13 @@ export interface AmenityReservationHistory {
   accion: string;
   detalle: string;
   amenidad_nombre: string;
-  fecha_anterior: string;
-  hora_inicio_anterior: string;
-  hora_fin_anterior: string;
+  fecha_anterior: string | null;
+  hora_inicio_anterior: string | null;
+  hora_fin_anterior: string | null;
   fecha_nueva: string;
   hora_inicio_nueva: string;
   hora_fin_nueva: string;
-  estado_anterior: string;
+  estado_anterior: string | null;
   estado_nuevo: string;
   realizado_por_nombre: string;
   realizado_por_rol?: string | null;

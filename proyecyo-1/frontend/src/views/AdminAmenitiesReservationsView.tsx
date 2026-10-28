@@ -1,4 +1,7 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { useReservationUpdates } from "@/hooks/useReservationUpdates";
+import { formatUtcTimestamp, guatemalaToday } from "@/utils/guatemalaTime";
+import { guatemalaCurrentTime } from "@/utils/providerAccess";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   CalendarDays,
@@ -153,11 +156,7 @@ function formatMonthLabel(referenceDate: Date) {
 }
 
 function getCurrentTime() {
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date());
+  return guatemalaCurrentTime();
 }
 
 function toMinutes(time: string) {
@@ -265,8 +264,9 @@ function OverlayPanel({
 }
 
 export function AdminAmenitiesReservationsView() {
-  const today = useMemo(() => formatDate(new Date()), []);
-  const [monthReference, setMonthReference] = useState(new Date());
+  const reservationRevision = useReservationUpdates();
+  const today = guatemalaToday();
+  const [monthReference, setMonthReference] = useState(() => parseDate(guatemalaToday()));
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [users, setUsers] = useState<ReservableUserOption[]>([]);
   const [reservations, setReservations] = useState<AmenityReservation[]>([]);
@@ -359,7 +359,7 @@ export function AdminAmenitiesReservationsView() {
     return () => {
       active = false;
     };
-  }, [fetchRange, selectedAmenityFilter, selectedUserFilter, unitFilter, statusFilter]);
+  }, [fetchRange, selectedAmenityFilter, selectedUserFilter, unitFilter, statusFilter, reservationRevision]);
 
   useEffect(() => {
     if (amenities.length === 0) {
@@ -437,7 +437,7 @@ export function AdminAmenitiesReservationsView() {
     return () => {
       active = false;
     };
-  }, [availabilityForm, isAvailabilityModalOpen]);
+  }, [availabilityForm, isAvailabilityModalOpen, reservationRevision]);
 
   useEffect(() => {
     if (!isReservationModalOpen || !reservationForm.id_amenidad || !reservationForm.fecha) {
@@ -476,7 +476,7 @@ export function AdminAmenitiesReservationsView() {
     return () => {
       active = false;
     };
-  }, [isReservationModalOpen, reservationForm.id_amenidad, reservationForm.fecha]);
+  }, [isReservationModalOpen, reservationForm.id_amenidad, reservationForm.fecha, reservationRevision]);
 
   const monthReservations = useMemo(
     () =>
@@ -617,12 +617,20 @@ export function AdminAmenitiesReservationsView() {
     const [amenitiesResponse, usersResponse, reservationsResponse] = await Promise.all([
       getAdminAmenitiesRequest(),
       getAdminAmenitiesUsersRequest(),
-      getAdminAmenitiesReservationsRequest(fetchRange),
+      getAdminAmenitiesReservationsRequest({ ...fetchRange,
+        id_amenidad: selectedAmenityFilter === "all" ? null : selectedAmenityFilter,
+        id_usuario: selectedUserFilter === "all" ? null : selectedUserFilter,
+        unidad: unitFilter || undefined, estado: statusFilter || undefined }),
     ]);
 
     setAmenities(amenitiesResponse);
     setUsers(usersResponse);
     setReservations(reservationsResponse);
+  }
+
+  async function refreshAfterSaved() {
+    try { await refreshDashboard(); }
+    catch { setErrorMessage("El cambio se guardó, pero no fue posible actualizar el calendario. Actualiza la vista para consultar su estado."); }
   }
 
   function openReservationModal(prefill?: Partial<ReservationFormState>) {
@@ -724,9 +732,9 @@ export function AdminAmenitiesReservationsView() {
       }
 
       await createAdminAmenitiesReservationRequest(payload);
-      await refreshDashboard();
       setSuccessMessage("La reserva se registro correctamente en la base de datos.");
       setIsReservationModalOpen(false);
+      await refreshAfterSaved();
 
       if (isAvailabilityModalOpen && availabilityForm.id_amenidad === payload.id_amenidad) {
         openAvailabilityModal({
@@ -764,9 +772,10 @@ export function AdminAmenitiesReservationsView() {
 
     try {
       setCancellingKey(reservation.reservation_key);
-      await adminCancelAmenitiesReservationRequest(reservation.reservation_key, motivo || undefined);
-      await refreshDashboard();
+      const cancelled = await adminCancelAmenitiesReservationRequest(reservation.reservation_key, motivo || undefined);
+      setReservations((current) => current.map((item) => item.reservation_key === reservation.reservation_key ? cancelled : item));
       void notifySuccess(`Reserva de ${reservation.usuario_nombre || "el usuario"} cancelada; el horario quedó libre.`);
+      await refreshAfterSaved();
     } catch (error) {
       void notifyError(error, "No fue posible cancelar la reserva.");
     } finally {
@@ -790,9 +799,9 @@ export function AdminAmenitiesReservationsView() {
         intervalo_minutos: scheduleForm.intervalo_minutos,
         activo: scheduleForm.activo,
       });
-      await refreshDashboard();
       setSuccessMessage("El horario de la amenidad fue actualizado.");
       setIsScheduleModalOpen(false);
+      await refreshAfterSaved();
     } catch (error) {
       setScheduleError(
         error instanceof Error ? error.message : "No fue posible actualizar el horario.",
@@ -1177,7 +1186,7 @@ export function AdminAmenitiesReservationsView() {
                                   variant="link"
                                   className="h-auto px-0 text-rose-600"
                                   disabled={cancellingKey === reservation.reservation_key}
-                                  aria-label={`Cancelar reserva de ${reservation.usuario_nombre || "residente"} en ${reservation.amenidad_nombre}`}
+                                  aria-label={`Cancelar reserva de ${reservation.usuario_nombre || "residente"} en ${reservation.amenidad_nombre} el ${reservation.fecha} ${reservation.hora_inicio}`}
                                   onClick={() => void handleAdminCancel(reservation)}
                                 >
                                   {cancellingKey === reservation.reservation_key ? "Cancelando..." : "Cancelar"}
@@ -1212,7 +1221,7 @@ export function AdminAmenitiesReservationsView() {
                   </p>
                   <p>
                     Cancelada por {reservation.cancelada_por_nombre || "registro anterior sin autor"}
-                    {reservation.cancelada_en ? ` el ${reservation.cancelada_en} (UTC)` : ""}
+                    {reservation.cancelada_en ? ` el ${formatUtcTimestamp(reservation.cancelada_en)} (Guatemala)` : ""}
                     {reservation.motivo_cancelacion ? ` · Motivo: ${reservation.motivo_cancelacion}` : ""}
                   </p>
                 </div>

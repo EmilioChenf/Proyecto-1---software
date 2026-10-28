@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { useReservationUpdates } from "@/hooks/useReservationUpdates";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, History, Pencil, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -27,7 +28,7 @@ import type {
 import { formatUtcTimestamp, guatemalaToday } from "@/utils/guatemalaTime";
 import { guatemalaCurrentTime } from "@/utils/providerAccess";
 import { getApiErrorCode } from "@/utils/apiErrorDetails";
-import { notifyError } from "@/utils/feedback";
+import { confirmAction, notifyError } from "@/utils/feedback";
 
 // HU-C05.1: un bloque que ya empezo (o de un dia pasado) no se puede reservar.
 function isPastSlot(fecha: string, horaInicio: string, now = new Date()) {
@@ -37,6 +38,7 @@ function isPastSlot(fecha: string, horaInicio: string, now = new Date()) {
 }
 
 const historyActionLabels: Record<string, string> = {
+  CREACION: "Creada",
   MODIFICACION: "Modificada",
   CANCELACION: "Cancelada",
   CANCELACION_ADMIN: "Cancelada por administración",
@@ -78,6 +80,7 @@ function getWeekDates(baseDate: Date) {
 }
 
 export function ResidenteAmenitiesView() {
+  const reservationRevision = useReservationUpdates();
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -92,7 +95,7 @@ export function ResidenteAmenitiesView() {
     const horaFin = initialParams.get("fin");
     return horaInicio && horaFin ? { hora_inicio: horaInicio, hora_fin: horaFin } : null;
   });
-  const [weekReference, setWeekReference] = useState(new Date());
+  const [weekReference, setWeekReference] = useState(() => new Date(`${guatemalaToday()}T12:00:00`));
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,7 +108,7 @@ export function ResidenteAmenitiesView() {
 
   useEffect(() => {
     if (!selectedDate && weekDates.length > 0) {
-      setSelectedDate(weekDates[0]);
+      setSelectedDate(weekDates.includes(guatemalaToday()) ? guatemalaToday() : weekDates[0]);
     }
   }, [selectedDate, weekDates]);
 
@@ -153,7 +156,7 @@ export function ResidenteAmenitiesView() {
     return () => {
       active = false;
     };
-  }, [weekDates]);
+  }, [weekDates, reservationRevision]);
 
   useEffect(() => {
     if (!selectedAmenityId || !selectedDate) {
@@ -189,7 +192,7 @@ export function ResidenteAmenitiesView() {
     return () => {
       active = false;
     };
-  }, [selectedAmenityId, selectedDate]);
+  }, [selectedAmenityId, selectedDate, reservationRevision]);
 
   const selectedAmenity = useMemo(
     () => amenities.find((item) => item.id_amenidad === selectedAmenityId) || null,
@@ -272,12 +275,11 @@ export function ResidenteAmenitiesView() {
       });
 
       setReservations((current) => [...current, created]);
-      const nextAvailability = await getAmenityAvailabilityRequest(selectedAmenityId, selectedDate);
-      setAvailability(nextAvailability);
       setSuccessMessage(
         `Reserva confirmada para ${created.amenidad_nombre} el ${formatLongDate(created.fecha)} a las ${created.hora_inicio}.`,
       );
       setSelectedSlot(null);
+      await refreshAfterSaved();
     } catch (error) {
       // HU-C05.1: el error de la accion se muestra flotante, visible aunque la
       // cuadricula este lejos del encabezado de la pagina.
@@ -292,7 +294,7 @@ export function ResidenteAmenitiesView() {
   }
 
   function canChangeReservation(reservation: AmenityReservation) {
-    const start = new Date(`${reservation.fecha}T${reservation.hora_inicio}:00`);
+    const start = new Date(`${reservation.fecha}T${reservation.hora_inicio}:00-06:00`);
     return (
       reservation.id_usuario === user?.id &&
       reservation.estado_actual !== "CANCELADA" &&
@@ -318,6 +320,11 @@ export function ResidenteAmenitiesView() {
     }
   }
 
+  async function refreshAfterSaved() {
+    try { await refreshReservations(); }
+    catch { setErrorMessage("La reserva se guardó, pero no fue posible actualizar el calendario. Actualiza la vista para consultar su estado."); }
+  }
+
   async function handleUpdateReservation() {
     if (!editingReservation || !selectedSlot) {
       setErrorMessage("Selecciona un nuevo horario para modificar la reserva.");
@@ -334,10 +341,11 @@ export function ResidenteAmenitiesView() {
         hora_inicio: selectedSlot.hora_inicio,
         hora_fin: selectedSlot.hora_fin,
       });
-      await refreshReservations();
+      setReservations((current) => current.map((item) => item.reservation_key === editingReservation.reservation_key ? updated : item));
       setEditingReservation(null);
       setSelectedSlot(null);
       setSuccessMessage(`Reserva modificada para ${updated.amenidad_nombre} el ${formatLongDate(updated.fecha)}.`);
+      await refreshAfterSaved();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No fue posible modificar la reserva.");
     } finally {
@@ -346,13 +354,16 @@ export function ResidenteAmenitiesView() {
   }
 
   async function handleCancelReservation(reservation: AmenityReservation) {
+    if (!await confirmAction({ title: "¿Cancelar esta reserva?", text: `${reservation.amenidad_nombre} · ${reservation.fecha} ${reservation.hora_inicio}-${reservation.hora_fin}. El horario quedará libre.`, confirmText: "Cancelar reserva", cancelText: "Volver", tone: "danger" })) return;
     try {
       setUpdatingReservationKey(reservation.reservation_key);
       setErrorMessage("");
       setSuccessMessage("");
       await cancelAmenitiesReservationRequest(reservation.reservation_key);
-      await refreshReservations();
+      setReservations((current) => current.map((item) => item.reservation_key === reservation.reservation_key ? { ...item, estado: "CANCELADA", estado_actual: "CANCELADA" } : item));
+      if (editingReservation?.reservation_key === reservation.reservation_key) { setEditingReservation(null); setSelectedSlot(null); }
       setSuccessMessage(`Reserva de ${reservation.amenidad_nombre} cancelada correctamente.`);
+      await refreshAfterSaved();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No fue posible cancelar la reserva.");
     } finally {

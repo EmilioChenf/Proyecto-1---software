@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
 import { ResidenteAmenitiesView } from "@/views/ResidenteAmenitiesView";
+import { confirmAction } from "@/utils/feedback";
+vi.mock("@/utils/feedback", () => ({ confirmAction: vi.fn(), notifyError: vi.fn() }));
 import {
   cancelAmenitiesReservationRequest,
   getAmenityAvailabilityRequest,
@@ -43,6 +45,7 @@ const amenity = {
 
 describe("Reservas de amenidades del residente", () => {
   beforeEach(() => {
+    vi.mocked(confirmAction).mockResolvedValue(true);
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-07-13T06:00:00Z"));
     vi.mocked(getAmenitiesRequest).mockResolvedValue([amenity]);
