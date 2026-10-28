@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useState, type FormEvent } from "react";
 import { Building2, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -10,8 +11,8 @@ import { requestPasswordReset } from "@/services/passwordResetService";
 
 export function ForgotPasswordView() {
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useFeedbackState("info", "");
+  const [error, setError] = useFeedbackState("error", "");
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

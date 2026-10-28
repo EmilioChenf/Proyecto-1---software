@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import { BellRing, CheckCircle2, History, Megaphone, Send } from "lucide-react";
 
@@ -42,8 +43,8 @@ export function AdminCommunicationsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
 
   const selectedRecipientLabel = useMemo(() => recipientLabels[tipoUsuario], [tipoUsuario]);
 

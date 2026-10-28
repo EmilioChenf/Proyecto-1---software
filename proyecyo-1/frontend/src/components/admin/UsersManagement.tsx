@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 
@@ -23,7 +24,7 @@ export function UsersManagement() {
   const [userTypes, setUserTypes] = useState<UserTypeOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [search, setSearch] = useState("");

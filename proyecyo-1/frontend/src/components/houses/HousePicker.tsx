@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Home, RefreshCw } from "lucide-react";
 
@@ -42,7 +43,7 @@ function HouseSummaryRows({ house, role }: { house: HouseRecord; role: HouseSele
 export function HousePicker({ role, userId, value, onChange, refreshKey = 0, initialHouseId = null }: HousePickerProps) {
   const [data, setData] = useState<HouseList | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const [candidate, setCandidate] = useState<HouseRecord | null>(null);
   const [open, setOpen] = useState(!value);
 

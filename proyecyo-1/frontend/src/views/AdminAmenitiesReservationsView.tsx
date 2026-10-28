@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   CalendarDays,
@@ -286,11 +287,11 @@ export function AdminAmenitiesReservationsView() {
     useState<AmenityAvailabilityResponse | null>(null);
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const [isLoadingReservationAvailability, setIsLoadingReservationAvailability] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [reservationError, setReservationError] = useState("");
-  const [scheduleError, setScheduleError] = useState("");
-  const [availabilityError, setAvailabilityError] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
+  const [reservationError, setReservationError] = useFeedbackState("error", "");
+  const [scheduleError, setScheduleError] = useFeedbackState("error", "");
+  const [availabilityError, setAvailabilityError] = useFeedbackState("error", "");
   const [reservationForm, setReservationForm] = useState<ReservationFormState>({
     id_usuario: "",
     id_amenidad: "",

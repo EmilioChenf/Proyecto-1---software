@@ -1,3 +1,5 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess, notifyWarning } from "@/utils/feedback";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { Link } from "react-router-dom";
 
@@ -156,7 +158,7 @@ function DemoForm() {
   const [tried, setTried] = useState(false);
   const [shake, setShake] = useState(0);
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useFeedbackState("error", "");
   const [sent, setSent] = useState<{ nombre: string; correo: string; residencial: string } | null>(null);
   const errors = tried ? validateDemo(form) : {};
   const update = (field: keyof DemoRequestPayload, value: string | number | boolean) => setForm((current) => ({ ...current, [field]: value }));
@@ -167,6 +169,7 @@ function DemoForm() {
     if (status === "sending") return;
     setTried(true);
     if (Object.keys(validateDemo(form)).length) {
+      void notifyWarning("Revisa los campos indicados antes de enviar la solicitud.");
       setShake((value) => value + 1);
       return;
     }
@@ -174,6 +177,7 @@ function DemoForm() {
     setServerError("");
     try {
       await createDemoRequest({ ...form, cantidadViviendas: Number(form.cantidadViviendas) });
+      void notifySuccess("Solicitud de demostración enviada correctamente.");
       setSent({ nombre: form.nombre.trim(), correo: form.correo.trim(), residencial: form.residencial.trim() });
       setStatus("success");
       setForm(initialForm);

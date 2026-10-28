@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useState } from "react";
 import { Check, ShieldCheck, X } from "lucide-react";
 
@@ -28,12 +29,12 @@ function errorText(error: unknown, fallback: string) {
 export function TenantRequestsPanel({company=false}:{company?:boolean}={}) {
   const [requests, setRequests] = useState<OwnerAuthorizationRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
+  const [actionError, setActionError] = useFeedbackState("error", "");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [lastResult, setLastResult] = useState("");
+  const [lastResult, setLastResult] = useFeedbackState("success", "");
 
   const load = useCallback(async () => {
     try {

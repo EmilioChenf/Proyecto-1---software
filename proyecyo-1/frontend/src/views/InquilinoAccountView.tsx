@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -200,13 +201,13 @@ export function InquilinoAccountView() {
   const [selectedFilter, setSelectedFilter] = useState<TenantAccountFilter>("TODAS");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [downloadMessage, setDownloadMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [downloadMessage, setDownloadMessage] = useFeedbackState("info", "");
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [payingId, setPayingId] = useState<number | null>(null);
-  const [paymentMessage, setPaymentMessage] = useState("");
+  const [paymentMessage, setPaymentMessage] = useFeedbackState("success", "");
   // HU-C07.4: un solo envio por vez, aunque el usuario haga doble clic antes de que
   // React vuelva a renderizar el boton deshabilitado.
   const paymentInProgress = useRef(false);

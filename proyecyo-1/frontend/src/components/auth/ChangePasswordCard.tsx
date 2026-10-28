@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useState, type FormEvent } from "react";
 import { KeyRound } from "lucide-react";
 
@@ -39,8 +40,8 @@ export function ChangePasswordCard({ onChanged }: { onChanged?: () => void }) {
   const { changePassword } = useAuth();
   const [values, setValues] = useState(EMPTY);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<Field, string>>>({});
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
+  const [message, setMessage] = useFeedbackState("info", "");
   const [submitting, setSubmitting] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

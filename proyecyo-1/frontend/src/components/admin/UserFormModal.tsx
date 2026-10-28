@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 
@@ -57,7 +58,7 @@ export function UserFormModal({
   const [values, setValues] = useState<UserFormValues>(emptyValues);
   const [house, setHouse] = useState<HouseRecord | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useFeedbackState("error", "");
   const [refreshKey, setRefreshKey] = useState(0);
   const titleId = useId();
   const serverErrorRef = useRef<HTMLDivElement>(null);

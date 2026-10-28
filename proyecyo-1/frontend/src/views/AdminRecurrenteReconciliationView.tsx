@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useRef, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ const text = (value: unknown) => value == null ? 'Sin dato' : String(value);
 export function AdminRecurrenteReconciliationView() {
   const [filters, setFilters] = useState<ReconciliationFilters>({});
   const [discover, setDiscover] = useState(false), [data, setData] = useState<ReconciliationResponse | null>(null);
-  const [busy, setBusy] = useState<'local' | 'external' | null>(null), [error, setError] = useState('');
+  const [busy, setBusy] = useState<'local' | 'external' | null>(null), [error, setError] = useFeedbackState("error", '');
   const pending = useRef(false), mounted = useRef(true);
   async function query(external = false, selected = filters) {
     if (pending.current) return;

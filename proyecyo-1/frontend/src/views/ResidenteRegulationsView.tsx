@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Search } from "lucide-react";
 
@@ -14,7 +15,7 @@ export function ResidenteRegulationsView() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
 
   useEffect(() => {
     let active = true;

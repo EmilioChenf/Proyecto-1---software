@@ -1,3 +1,5 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useEffect, useMemo, useState } from "react";
 import { Bell, Check, CheckCheck, Clock3 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -84,7 +86,7 @@ export function ResidentNotificationsView({ initialFilter = "TODOS", role = "res
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | "all" | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
 
   // Primera pagina del filtro activo (los filtros se aplican en el backend) y
   // total real de no leidas. Las recargas por evento/foco fusionan la pagina
@@ -149,6 +151,7 @@ export function ResidentNotificationsView({ initialFilter = "TODOS", role = "res
       setUpdatingId(notification.id_notificacion);
       setError("");
       const updated = await markNotificationAsReadRequest(notification.id_notificacion);
+      void notifySuccess("Notificación marcada como leída.");
       setNotifications((current) => current.map((item) => (
         item.id_notificacion === updated.id_notificacion ? updated : item
       )));
@@ -165,6 +168,7 @@ export function ResidentNotificationsView({ initialFilter = "TODOS", role = "res
       setUpdatingId("all");
       setError("");
       await markAllNotificationsAsReadRequest();
+      void notifySuccess("Todas las notificaciones se marcaron como leídas.");
       setNotifications((current) => current.map((item) => ({ ...item, leido: true })));
       notifyResidentBadgesChanged();
     } catch (reason) {

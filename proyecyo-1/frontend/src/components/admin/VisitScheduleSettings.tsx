@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ const INITIAL: VisitScheduleConfig = { hora_apertura: "06:00", hora_cierre: "22:
 
 export function VisitScheduleSettings() {
   const [form, setForm] = useState(INITIAL);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useFeedbackState("info", "");
   const [saving, setSaving] = useState(false);
   useEffect(() => { getAdminVisitScheduleConfigRequest().then(setForm).catch((e) => setMessage(e.message)); }, []);
   async function save() {

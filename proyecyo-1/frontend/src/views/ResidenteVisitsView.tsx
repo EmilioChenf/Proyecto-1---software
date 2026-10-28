@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import {
   CalendarDays,
@@ -150,8 +151,8 @@ export function ResidenteVisitsView() {
   const [frequentVisitors, setFrequentVisitors] = useState<FrequentVisitor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
   const [photoPreview, setPhotoPreview] = useState("");
   const [authorizingVisitorId, setAuthorizingVisitorId] = useState<number | null>(null);
   const [visitSchedule, setVisitSchedule] = useState<VisitScheduleConfig | null>(null);

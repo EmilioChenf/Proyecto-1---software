@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, History, Pencil, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -97,8 +98,8 @@ export function ResidenteAmenitiesView() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingReservation, setEditingReservation] = useState<AmenityReservation | null>(null);
   const [updatingReservationKey, setUpdatingReservationKey] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
 
   const weekDates = useMemo(() => getWeekDates(weekReference), [weekReference]);
 

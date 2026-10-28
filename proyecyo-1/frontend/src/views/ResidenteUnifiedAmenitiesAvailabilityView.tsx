@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -16,7 +17,7 @@ export function ResidenteUnifiedAmenitiesAvailabilityView() {
   const [fecha, setFecha] = useState(today());
   const [data, setData] = useState<AmenityAvailabilityResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const [selected, setSelected] = useState<{ id: number; slot: AmenityAvailabilitySlot } | null>(null);
 
   useEffect(() => {

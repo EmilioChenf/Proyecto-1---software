@@ -4,9 +4,9 @@ import { ApiError } from "@/services/api";
 import { getErrorMessage } from "@/utils/errorMessages";
 import { pushToast } from "@/utils/toastStore";
 
-// HU-C02: mensajes flotantes globales (SweetAlert2) para el resultado de ACCIONES:
-// confirmar, exito, error y advertencia. Los errores de un formulario o modal NO van
-// aqui: se muestran junto al campo correspondiente (FieldError / aria-invalid).
+// HU-C02: mensajes flotantes globales para el resultado de ACCIONES:
+// éxito, error y advertencia. SweetAlert2 conserva las confirmaciones y prompts.
+// Los errores de campo también se conservan junto al campo (FieldError / aria-invalid).
 //
 // Seguridad: en SweetAlert2 "title" y "html" se interpretan como HTML. Aqui SOLO se usan
 // "titleText" y "text" (texto plano), porque los mensajes incluyen datos de usuarios

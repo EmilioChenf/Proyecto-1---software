@@ -1,3 +1,5 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Clock3, Power, RefreshCw, Search } from "lucide-react";
 
@@ -71,7 +73,7 @@ export function AdminProvidersView() {
   const [activity, setActivity] = useState<AdminProviderActivityFilter>("TODOS");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
   const [updatingProviderKey, setUpdatingProviderKey] = useState("");
   const [houseOptions, setHouseOptions] = useState<ProviderHouseOption[]>([]);
 
@@ -140,6 +142,7 @@ export function AdminProvidersView() {
         estado: nextStatus,
         activo: provider.activo,
       });
+      void notifySuccess("Estado del proveedor actualizado correctamente.");
       await loadData({ silent: true });
     } catch (error) {
       setErrorMessage(
@@ -161,6 +164,7 @@ export function AdminProvidersView() {
         estado: provider.estado,
         activo: !provider.activo,
       });
+      void notifySuccess(provider.activo ? "Proveedor desactivado." : "Proveedor activado.");
       await loadData({ silent: true });
     } catch (error) {
       setErrorMessage(

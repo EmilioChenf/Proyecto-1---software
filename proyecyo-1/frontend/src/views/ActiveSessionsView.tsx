@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { Clock3, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -12,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { closeActiveSessionRequest, getActiveSessionsRequest } from "@/services/sessionsService";
 import type { ActiveSession } from "@/types/sessions";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
+import { notifySuccess } from "@/utils/feedback";
 
 // Las marcas de sesion (NOW()) son instantes UTC; se muestran en hora de Guatemala.
 function formatDate(value: string) {
@@ -23,7 +25,7 @@ export function ActiveSessionsView() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   // Tras cambiar la contrasena las sesiones previas quedan revocadas: se recarga la lista.
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -47,6 +49,7 @@ export function ActiveSessionsView() {
       setClosing(session.id_sesion);
       setError("");
       const result = await closeActiveSessionRequest(session.id_sesion);
+      void notifySuccess("Sesión cerrada correctamente.");
       if (result.actual) {
         logout();
         return;

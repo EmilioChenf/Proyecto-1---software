@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import jsQR from "jsqr";
 import {
@@ -175,8 +176,8 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
   const [specialNotifications, setSpecialNotifications] = useState<NotificationRecord[]>([]);
   const [accessHistory, setAccessHistory] = useState<GuardAccessHistoryRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState("");
-  const [alertsError, setAlertsError] = useState("");
+  const [historyError, setHistoryError] = useFeedbackState("error", "");
+  const [alertsError, setAlertsError] = useFeedbackState("error", "");
   const [historyDate, setHistoryDate] = useState(() => guatemalaToday());
   const [historyStatus, setHistoryStatus] = useState("TODOS");
   const [historySearch, setHistorySearch] = useState("");
@@ -186,8 +187,8 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [scanAction, setScanAction] = useState<GuardScanAction>("INGRESO");
   const [exitingAccessId, setExitingAccessId] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
+  const [successMessage, setSuccessMessage] = useFeedbackState("success", "");
   const [manualCode, setManualCode] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [validationResult, setValidationResult] = useState<{

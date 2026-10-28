@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
@@ -13,7 +14,7 @@ export function ResidentePaymentReceiptView() {
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const downloadInProgress = useRef(false);
   useEffect(() => {
     let active = true;

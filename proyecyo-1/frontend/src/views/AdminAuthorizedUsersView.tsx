@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState } from "react";
 import { Search, ShieldCheck, UserCheck } from "lucide-react";
 
@@ -10,7 +11,7 @@ export function AdminAuthorizedUsersView() {
   const [users, setUsers] = useState<AuthorizedUserRecord[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
 
   async function loadData() {
     try {

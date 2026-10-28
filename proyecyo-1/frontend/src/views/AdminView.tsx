@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -219,7 +220,7 @@ export function AdminView() {
   const [statsFrom, setStatsFrom] = useState(today);
   const [statsTo, setStatsTo] = useState(today);
   const [amenityStats, setAmenityStats] = useState<AmenityStatsResponse | null>(null);
-  const [amenityStatsError, setAmenityStatsError] = useState("");
+  const [amenityStatsError, setAmenityStatsError] = useFeedbackState("error", "");
   const [now, setNow] = useState(() => new Date());
   const [grown, setGrown] = useState(false);
   const [accessFilter, setAccessFilter] = useState<"TODOS" | AdminAccessType>("TODOS");

@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useCallback, useEffect, useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 
@@ -22,14 +23,14 @@ export function AdminHousesView({ webglSupported }: { webglSupported?: boolean }
   const [contractOpen,setContractOpen]=useState(false);
   const [data, setData] = useState<HouseList | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
   const [selected, setSelected] = useState<HouseRecord | null>(null);
   const [detail, setDetail] = useState<HouseDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState("");
+  const [detailError, setDetailError] = useFeedbackState("error", "");
   const [modal, setModal] = useState<{ open: boolean; editing: HouseDetail | null }>({ open: false, editing: null });
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useFeedbackState("info", "");
 
   const loadList = useCallback(async () => {
     setLoading(true);

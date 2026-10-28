@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, CalendarClock, Receipt, Search, TriangleAlert } from "lucide-react";
 
@@ -56,9 +57,9 @@ export function AdminPaymentsView() {
   const [date, setDate] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useFeedbackState("error", "");
   const [recent, setRecent] = useState<RecentPaymentRecord[]>([]);
-  const [recentError, setRecentError] = useState("");
+  const [recentError, setRecentError] = useFeedbackState("error", "");
   const [recentLoading, setRecentLoading] = useState(true);
   const [recentFilters, setRecentFilters] = useState({ usuario: "", unidad: "", desde: "", hasta: "", estado: "TODOS", rol: "TODOS" });
 

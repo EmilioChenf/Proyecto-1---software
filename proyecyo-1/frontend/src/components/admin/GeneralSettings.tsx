@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useState, type FormEvent } from "react";
 import { Building2, CheckCircle2 } from "lucide-react";
 
@@ -20,8 +21,8 @@ export function GeneralSettings() {
   const [form, setForm] = useState(INITIAL);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useFeedbackState("error", "");
+  const [success, setSuccess] = useFeedbackState("success", "");
 
   useEffect(() => {
     let active = true;

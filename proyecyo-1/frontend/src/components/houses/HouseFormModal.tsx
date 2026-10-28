@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 
@@ -64,7 +65,7 @@ const FIELDS: Array<{ key: keyof HouseFormValues; label: string; placeholder?: s
 export function HouseFormModal({ open, editing, submitting, onClose, onSubmit }: HouseFormModalProps) {
   const [values, setValues] = useState<HouseFormValues>(empty);
   const [errors, setErrors] = useState<Errors>({});
-  const [serverError, setServerError] = useState("");
+  const [serverError, setServerError] = useFeedbackState("error", "");
   const titleId = useId();
 
   useEffect(() => {

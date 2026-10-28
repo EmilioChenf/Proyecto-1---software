@@ -1,3 +1,4 @@
+import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -10,7 +11,7 @@ export function AdminRecurrenteRefundView() {
   const [params] = useSearchParams();
   const [id, setId] = useState(params.get('transaccion') || '');
   const [data, setData] = useState<RefundEligibility | null>(null);
-  const [reason, setReason] = useState(''), [error,setError] = useState(''), [result,setResult] = useState('');
+  const [reason, setReason] = useState(''), [error, setError] = useFeedbackState("error", ''), [result, setResult] = useFeedbackState("success", '');
   const [busy,setBusy] = useState(false), [confirm,setConfirm] = useState(false);
   const pending = useRef(false), key = useRef<string | null>(null), mounted = useRef(true);
   async function load(transactionId: string = id) {
