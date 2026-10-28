@@ -20,6 +20,7 @@ vi.mock("@/views/InquilinoDashboardView", stub("InquilinoDashboardView"));
 vi.mock("@/views/InquilinoAccountView", stub("InquilinoAccountView"));
 vi.mock("@/views/GuardiaDashboardView", stub("GuardiaDashboardView"));
 vi.mock("@/views/ActiveSessionsView", stub("ActiveSessionsView"));
+vi.mock("@/views/TenantAmenitiesHistoryView", stub("TenantAmenitiesHistoryView"));
 vi.mock("@/views/InquilinoView", () => ({
   InquilinoView: ({ section }: { section: string }) => <p>vista:InquilinoView:{section}</p>,
 }));
@@ -49,6 +50,7 @@ describe("Rutas del inquilino", () => {
     ["/inquilino/visitas", "InquilinoView:visitas"],
     ["/inquilino/proveedores", "InquilinoView:proveedores"],
     ["/inquilino/permisos", "InquilinoView:permisos"],
+    ["/inquilino/reservas", "TenantAmenitiesHistoryView"],
     ["/inquilino/estado-cuenta", "InquilinoAccountView"],
     ["/inquilino/historial-financiero", "InquilinoAccountView"],
     ["/inquilino/notificaciones", "Notificaciones:inquilino:TODOS"],

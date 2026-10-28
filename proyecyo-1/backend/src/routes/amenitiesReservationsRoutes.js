@@ -5,6 +5,7 @@ const {
   getReservableAmenitiesUsers,
   getAmenitiesReservations,
   getAmenitiesReservationHistory,
+  getOwnAmenitiesReservations,
   getAdminAmenitiesReservations,
   getAdminAmenitiesStats,
   getAmenitiesAvailability,
@@ -19,10 +20,14 @@ const {
   patchAdminCancelAmenityReservation,
   putAdminAmenitySchedule,
 } = require("../controllers/amenitiesReservationsController");
-const { requireResident } = require("../middlewares/requireResident");
+const { requireResident, requireTenant } = require("../middlewares/requireResident");
 const { requireAdmin } = require("../middlewares/requireAdmin");
 
 const router = express.Router();
+
+// HU-C05.6: consulta propia sin ampliar los permisos de creación/cancelación.
+router.get("/inquilino/reservas/amenidades", requireTenant, getOwnAmenitiesReservations);
+router.get("/inquilino/reservas/amenidades/historial", requireTenant, getAmenitiesReservationHistory);
 
 router.get("/amenidades", requireResident, getAmenities);
 router.get("/reservas/amenidades", requireResident, getAmenitiesReservations);

@@ -403,12 +403,27 @@ else {
       const row = seenByB.body.find((item) => item.id_usuario === users.tenantB && item.id_amenidad === amenity.id_amenidad);
       assert.equal(row.creada_por_nombre, `${tag} adminA`);
       assert.equal(row.creada_por_admin, true);
+      const own = await http().get(`/inquilino/reservas/amenidades?from=${fecha}&to=${fecha}&id_usuario=${users.residentB}`).set(as("tenantB"));
+      assert.equal(own.status, 200);
+      assert(own.body.length > 0 && own.body.every((item) => item.id_usuario === users.tenantB));
       const [history] = await query("SELECT accion, realizado_por FROM HISTORIAL_RESERVA WHERE id_usuario=? AND accion='CREACION_ADMIN' ORDER BY id_historial DESC LIMIT 1", [users.tenantB]);
       assert.deepEqual(history, { accion: "CREACION_ADMIN", realizado_por: users.adminA });
       const [audit] = await query("SELECT id_usuario, datos_nuevos FROM AUDITORIA WHERE accion='RESERVATION_CREATED' AND id_usuario=? ORDER BY id_auditoria DESC LIMIT 1", [users.adminA]);
       assert.equal(audit.id_usuario, users.adminA);
       const data = typeof audit.datos_nuevos === "string" ? JSON.parse(audit.datos_nuevos) : audit.datos_nuevos;
       assert.equal(data.en_nombre_de_otro, true);
+
+      const cancelled = await http().patch(`/admin/reservas/amenidades/${encodeURIComponent(keyOf(created.body))}/cancelar`)
+        .set(as("adminB")).send({ motivo: "Mantenimiento preventivo" });
+      assert.equal(cancelled.status, 200);
+      assert(cancelled.body.cancelada_en);
+      const updated = await http().get(`/inquilino/reservas/amenidades?from=${fecha}&to=${fecha}`).set(as("tenantB"));
+      const cancelledRow = updated.body.find((item) => item.reservation_key === created.body.reservation_key);
+      assert.equal(cancelledRow.estado, "CANCELADA");
+      assert.equal(cancelledRow.motivo_cancelacion, "Mantenimiento preventivo");
+      const ownHistory = await http().get("/inquilino/reservas/amenidades/historial").set(as("tenantB"));
+      assert.equal(ownHistory.status, 200);
+      assert(ownHistory.body.some((item) => item.accion === "CANCELACION_ADMIN"));
     });
   });
 }
