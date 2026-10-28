@@ -1,0 +1,31 @@
+{
+  "date_guatemala": "2026-10-27",
+  "frontend": {
+    "command": "npm run test:run -- --maxWorkers=4",
+    "test_files": 94,
+    "passed": 555,
+    "failed": 0
+  },
+  "backend_node": {
+    "passed": 132,
+    "failed": 0
+  },
+  "backend_jest": {
+    "success": true,
+    "numPassedTests": 899,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 74,
+    "numFailedTestSuites": 0
+  },
+  "production_build": "passed",
+  "browser": {
+    "api": "simulated",
+    "role_viewport_cases": 8,
+    "screenshots": 18
+  },
+  "mysql_integration": "not_run_connection_unavailable",
+  "typecheck": {
+    "passed": false,
+    "diagnostics_on_source_lines_already_in_main": 37
+  }
+}
