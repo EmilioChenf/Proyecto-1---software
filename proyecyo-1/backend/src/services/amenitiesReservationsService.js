@@ -536,10 +536,17 @@ async function ensureAmenityCatalog(connection) {
     }
   }
 
+  // Solo se siembra una amenidad de ejemplo cuando el catalogo esta vacio; nunca se
+  // vuelven a crear las predeterminadas en una base que ya tiene amenidades.
+  const catalogWasEmpty = existingRows.length === 0;
+
   for (const amenity of DEFAULT_AMENITIES) {
     const normalizedName = amenity.nombre.toLowerCase();
 
     if (!names.has(normalizedName)) {
+      if (!catalogWasEmpty || names.size > 0) {
+        continue;
+      }
       await connection.execute(
         `
           INSERT INTO AMENIDAD (

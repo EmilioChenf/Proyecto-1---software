@@ -778,18 +778,6 @@ async function ensureSprintUserStoriesSchema() {
     SELECT 'Amenidades', 'Uso de amenidades', 'Las amenidades deben reservarse dentro de los horarios configurados. El uso queda sujeto a disponibilidad, estado de cuenta y normas de convivencia.'
     WHERE NOT EXISTS (SELECT 1 FROM REGLAMENTO WHERE titulo = 'Uso de amenidades')
   `);
-
-  await query(`
-    INSERT INTO REGLAMENTO (categoria, titulo, contenido)
-    SELECT 'Accesos', 'Ingreso de visitantes', 'Todo visitante debe contar con una autorizacion vigente, QR valido y registro en garita. Los accesos vencidos o cancelados no pueden utilizarse.'
-    WHERE NOT EXISTS (SELECT 1 FROM REGLAMENTO WHERE titulo = 'Ingreso de visitantes')
-  `);
-
-  await query(`
-    INSERT INTO REGLAMENTO (categoria, titulo, contenido)
-    SELECT 'Convivencia', 'Normas de convivencia', 'Se debe evitar ruido excesivo, respetar areas comunes y atender las indicaciones administrativas o de seguridad del residencial.'
-    WHERE NOT EXISTS (SELECT 1 FROM REGLAMENTO WHERE titulo = 'Normas de convivencia')
-  `);
 }
 
 async function ensureSanctionsSchema() {

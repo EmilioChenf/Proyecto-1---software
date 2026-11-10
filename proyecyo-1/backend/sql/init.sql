@@ -568,32 +568,20 @@ VALUES (
     (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B')
 );
 
+-- Datos de ejemplo minimos: un registro de cada cosa (una casa, un residente, un
+-- inquilino, un guardia, un admin, un proveedor, una cuota, un pago, una visita,
+-- una amenidad y una reserva).
 INSERT INTO SERVICIO (nombre, tipo_servicio, descripcion)
 VALUES
-    ('Energia electrica', 'Basico', 'Suministro electrico asociado a la unidad residencial.'),
-    ('Agua potable', 'Basico', 'Servicio de agua potable y control de consumo mensual.'),
-    ('Internet residencial', 'Telecomunicaciones', 'Proveedor de conectividad para la vivienda.'),
-    ('Limpieza y mantenimiento', 'Mantenimiento', 'Servicio programado de limpieza para areas de apoyo.'),
-    ('Seguridad privada', 'Seguridad', 'Servicio adicional de control y monitoreo residencial.'),
-    ('Alquiler residencial', 'Alquiler', 'Cuota mensual de alquiler asociada al inquilino.');
+    ('Agua potable', 'Basico', 'Servicio de agua potable y control de consumo mensual.');
 
 INSERT INTO CASA_SERVICIO (id_casa, id_servicio, activo, estado_validacion)
-SELECT
+VALUES (
     (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-    id_servicio,
+    (SELECT id_servicio FROM SERVICIO WHERE nombre = 'Agua potable'),
     TRUE,
     'VALIDADO'
-FROM SERVICIO
-WHERE nombre IN ('Energia electrica', 'Agua potable', 'Seguridad privada');
-
-INSERT INTO CASA_SERVICIO (id_casa, id_servicio, activo, estado_validacion)
-SELECT
-    (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-    id_servicio,
-    TRUE,
-    'VALIDADO'
-FROM SERVICIO
-WHERE nombre = 'Alquiler residencial';
+);
 
 INSERT INTO HISTORIAL_CAMBIO_PROVEEDOR (
     id_casa,
@@ -630,157 +618,44 @@ INNER JOIN USUARIO u
 WHERE c.numero = '302' AND c.torre = 'B';
 
 INSERT INTO CUOTA (id_servicio, id_casa, monto, fecha_limite)
-VALUES
-    (
-        (SELECT id_servicio FROM SERVICIO WHERE nombre = 'Agua potable'),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        350.00,
-        DATE_SUB(CURDATE(), INTERVAL 12 DAY)
-    ),
-    (
-        (SELECT id_servicio FROM SERVICIO WHERE nombre = 'Seguridad privada'),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        500.00,
-        DATE_SUB(CURDATE(), INTERVAL 5 DAY)
-    ),
-    (
-        (SELECT id_servicio FROM SERVICIO WHERE nombre = 'Energia electrica'),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        275.00,
-        DATE_ADD(CURDATE(), INTERVAL 8 DAY)
-    ),
-    (
-        (SELECT id_servicio FROM SERVICIO WHERE nombre = 'Alquiler residencial'),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        2200.00,
-        LAST_DAY(CURDATE())
-    );
+VALUES (
+    (SELECT id_servicio FROM SERVICIO WHERE nombre = 'Agua potable'),
+    (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
+    350.00,
+    DATE_ADD(CURDATE(), INTERVAL 8 DAY)
+);
 
 INSERT INTO PAGO (id_cuota, monto_pagado, fecha_pago)
-SELECT id_cuota, monto, DATE_SUB(CURDATE(), INTERVAL 2 DAY)
+SELECT id_cuota, monto, CURDATE()
 FROM CUOTA
-WHERE monto = 500.00
 LIMIT 1;
 
 INSERT INTO VISITANTE (nombre, dpi, placa)
-VALUES
-    ('Juan Perez', '1234567890123', 'P-456DEF'),
-    ('Ana Lopez', '9876543210987', 'P-789GHI'),
-    ('Maria Garcia', '2345678901234', 'P-123ABC');
+VALUES ('Juan Perez', '1234567890123', 'P-456DEF');
 
-INSERT INTO ACCESO (id_visitante, id_casa, fecha, hora_inicio, hora_fin, tipo_visita, token_qr, estado_acceso)
-VALUES
-    (
-        (SELECT id_visitante FROM VISITANTE WHERE dpi = '1234567890123' LIMIT 1),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        CURDATE(),
-        '10:00:00',
-        '12:00:00',
-        'VISITA',
-        'demoqrjuanperez001',
-        'AUTORIZADA'
-    ),
-    (
-        (SELECT id_visitante FROM VISITANTE WHERE dpi = '9876543210987' LIMIT 1),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        CURDATE(),
-        '14:00:00',
-        '16:00:00',
-        'VISITA',
-        'demoqranalopez002',
-        'AUTORIZADA'
-    ),
-    (
-        (SELECT id_visitante FROM VISITANTE WHERE dpi = '2345678901234' LIMIT 1),
-        (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
-        DATE_ADD(CURDATE(), INTERVAL 1 DAY),
-        '09:00:00',
-        '11:00:00',
-        'PROVEEDOR',
-        'demoqrmariagarcia003',
-        'AUTORIZADA'
-    );
+INSERT INTO ACCESO (id_visitante, id_casa, id_usuario_autoriza, fecha, hora_inicio, hora_fin, tipo_visita, token_qr, estado_acceso)
+VALUES (
+    (SELECT id_visitante FROM VISITANTE WHERE dpi = '1234567890123' LIMIT 1),
+    (SELECT id_casa FROM CASA WHERE numero = '302' AND torre = 'B'),
+    (SELECT id_usuario FROM USUARIO WHERE correo = 'residente@test.com'),
+    DATE_ADD(CURDATE(), INTERVAL 1 DAY),
+    '10:00:00',
+    '12:00:00',
+    'VISITA',
+    'demoqrjuanperez001',
+    'AUTORIZADA'
+);
 
 INSERT INTO AMENIDAD (nombre, descripcion, hora_apertura, hora_cierre, intervalo_minutos, activo)
-VALUES
-    ('Salon de eventos', 'Espacio para celebraciones privadas y reuniones.', '08:00:00', '22:00:00', 60, TRUE),
-    ('Cancha de tenis', 'Cancha al aire libre para entrenamientos y partidos.', '06:00:00', '21:00:00', 60, TRUE),
-    ('Piscina', 'Piscina familiar con control por bloques de uso.', '08:00:00', '20:00:00', 60, TRUE),
-    ('Gimnasio', 'Zona de entrenamiento con acceso por franjas horarias.', '05:00:00', '22:00:00', 60, TRUE),
-    ('Area de parrillas', 'Area social con estaciones de parrilla y mesas.', '09:00:00', '23:00:00', 60, TRUE),
-    ('Salon infantil', 'Salon recreativo para actividades infantiles.', '09:00:00', '19:00:00', 60, TRUE);
+VALUES ('Salon de eventos', 'Espacio para celebraciones privadas y reuniones.', '08:00:00', '22:00:00', 60, TRUE);
 
 INSERT INTO RESERVA (id_usuario, id_amenidad, fecha, hora_inicio, hora_fin, estado, creado_en)
-VALUES
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'residente@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Salon de eventos'),
-        CURDATE(),
-        '18:00:00',
-        '22:00:00',
-        'CONFIRMADA',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'inquilino@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Cancha de tenis'),
-        CURDATE(),
-        '16:00:00',
-        '18:00:00',
-        'CONFIRMADA',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'residente@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Piscina'),
-        DATE_ADD(CURDATE(), INTERVAL 1 DAY),
-        '14:00:00',
-        '16:00:00',
-        'CONFIRMADA',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'inquilino@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Gimnasio'),
-        DATE_ADD(CURDATE(), INTERVAL 2 DAY),
-        '07:00:00',
-        '08:00:00',
-        'PENDIENTE',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'residente@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Area de parrillas'),
-        DATE_ADD(CURDATE(), INTERVAL 3 DAY),
-        '19:00:00',
-        '22:00:00',
-        'CONFIRMADA',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'inquilino@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Salon infantil'),
-        DATE_ADD(CURDATE(), INTERVAL 4 DAY),
-        '10:00:00',
-        '12:00:00',
-        'CONFIRMADA',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'residente@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Cancha de tenis'),
-        DATE_SUB(CURDATE(), INTERVAL 5 DAY),
-        '16:00:00',
-        '18:00:00',
-        'CONFIRMADA',
-        NOW()
-    ),
-    (
-        (SELECT id_usuario FROM USUARIO WHERE correo = 'inquilino@test.com'),
-        (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Piscina'),
-        DATE_SUB(CURDATE(), INTERVAL 3 DAY),
-        '13:00:00',
-        '15:00:00',
-        'CONFIRMADA',
-        NOW()
-    );
+VALUES (
+    (SELECT id_usuario FROM USUARIO WHERE correo = 'residente@test.com'),
+    (SELECT id_amenidad FROM AMENIDAD WHERE nombre = 'Salon de eventos'),
+    DATE_ADD(CURDATE(), INTERVAL 2 DAY),
+    '18:00:00',
+    '20:00:00',
+    'CONFIRMADA',
+    NOW()
+);
