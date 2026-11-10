@@ -1,27 +1,17 @@
-import Swal, { type SweetAlertOptions } from "sweetalert2";
+import { type SweetAlertOptions } from "sweetalert2";
 
 import { ApiError } from "@/services/api";
+import { ALERT_COLORS, enqueueModal, modal } from "@/utils/alertQueue";
 import { getErrorMessage } from "@/utils/errorMessages";
 import { pushToast } from "@/utils/toastStore";
 
-// HU-C02: mensajes flotantes globales para el resultado de ACCIONES:
-// éxito, error y advertencia. SweetAlert2 conserva las confirmaciones y prompts.
+// HU-C02: ventanas de SweetAlert2 para el resultado de TODAS las acciones (éxito,
+// error, advertencia, información) y para las confirmaciones y prompts.
 // Los errores de campo también se conservan junto al campo (FieldError / aria-invalid).
 //
 // Seguridad: en SweetAlert2 "title" y "html" se interpretan como HTML. Aqui SOLO se usan
 // "titleText" y "text" (texto plano), porque los mensajes incluyen datos de usuarios
 // (nombres de visitantes, servicios, etc.).
-
-const COLORS = { primary: "#2563EB", danger: "#DC2626", warning: "#D97706", cancel: "#64748B" };
-
-// heightAuto:false evita que SweetAlert2 fuerce height:auto en html/body, lo que
-// rompe los layouts con min-h-screen y el sidebar fijo.
-const base = Swal.mixin({
-  heightAuto: false,
-  returnFocus: true,
-  confirmButtonColor: COLORS.primary,
-  cancelButtonColor: COLORS.cancel,
-});
 
 type ConfirmOptions = {
   title: string;
@@ -47,7 +37,9 @@ export function buildConfirmOptions({
     showCancelButton: true,
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,
-    confirmButtonColor: tone === "info" ? COLORS.primary : COLORS[tone],
+    // Mismo estilo en todo el sistema: confirmar en verde y cancelar en rojo.
+    confirmButtonColor: ALERT_COLORS.confirm,
+    cancelButtonColor: ALERT_COLORS.cancel,
     reverseButtons: true,
     // En acciones destructivas el foco inicial queda en "Cancelar".
     focusCancel: tone === "danger",
@@ -56,7 +48,7 @@ export function buildConfirmOptions({
 
 /** Confirmacion de una accion. Devuelve true solo si el usuario confirma. */
 export async function confirmAction(options: ConfirmOptions): Promise<boolean> {
-  const result = await base.fire(buildConfirmOptions(options));
+  const result = await enqueueModal(() => modal.fire(buildConfirmOptions(options)));
   return result.isConfirmed;
 }
 
@@ -72,7 +64,7 @@ type PromptOptions = ConfirmOptions & {
  * inputLabel/inputPlaceholder se asignan como texto plano en SweetAlert2.
  */
 export async function promptText({ label, placeholder, maxLength = 255, ...options }: PromptOptions): Promise<string | null> {
-  const result = await base.fire({
+  const result = await enqueueModal(() => modal.fire({
     ...buildConfirmOptions(options),
     input: "textarea",
     inputLabel: label,
@@ -80,18 +72,18 @@ export async function promptText({ label, placeholder, maxLength = 255, ...optio
     inputAttributes: { maxlength: String(maxLength), "aria-label": label },
     inputValidator: (value: string) =>
       value && value.length > maxLength ? `Máximo ${maxLength} caracteres.` : undefined,
-  });
+  }));
   return result.isConfirmed ? String(result.value ?? "").trim() : null;
 }
 
-/** Exito de una accion: aviso breve que no bloquea la pantalla. */
+/** Exito de una accion (creado, editado, eliminado...): ventana con boton OK. */
 export function notifySuccess(message: string, title?: string) {
   pushToast("success", message, title);
   return Promise.resolve(null);
 }
 
 /** Advertencia que el usuario debe leer antes de continuar. */
-export function notifyWarning(message: string, title = "Atencion") {
+export function notifyWarning(message: string, title = "Atención") {
   pushToast("warning", message, title);
   return Promise.resolve(null);
 }

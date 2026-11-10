@@ -22,7 +22,7 @@ import {createTenantCheckoutRequest,redirectToRecurrente} from '@/services/recur
 import type { AccountQuotaStatus } from "@/types/account";
 import { quotaStatusLabels, quotaStatusStyles } from "@/utils/quotaStatus";
 import type { TenantAccountQuota, TenantAccountStatement } from "@/types/tenantAccount";
-import { confirmAction } from "@/utils/feedback";
+import { confirmAction, notifyError, notifySuccess } from "@/utils/feedback";
 
 type TenantAccountFilter = "TODAS" | AccountQuotaStatus;
 
@@ -250,8 +250,10 @@ export function InquilinoAccountView() {
       setDownloadingId(id); setDownloadMessage("");
       savePaymentReceipt(await downloadTenantPaymentReceiptRequest(id), reference);
       setDownloadMessage("Comprobante descargado correctamente.");
+      void notifySuccess("Comprobante descargado correctamente.");
     } catch (error) {
       setDownloadMessage(error instanceof Error ? error.message : "No fue posible descargar el comprobante.");
+      void notifyError(error, "No fue posible descargar el comprobante.");
     } finally { setDownloadingId(null); }
   }
 

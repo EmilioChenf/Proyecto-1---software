@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useState, type FormEvent } from "react";
 import { KeyRound } from "lucide-react";
 
@@ -57,6 +58,7 @@ export function ChangePasswordCard({ onChanged }: { onChanged?: () => void }) {
       const response = await changePassword(values);
       setValues(EMPTY);
       setMessage(response.message);
+      void notifySuccess(response.message || "Contraseña actualizada correctamente.");
       onChanged?.();
     } catch (reason) {
       if (reason instanceof ApiError && reason.fieldErrors.length) {

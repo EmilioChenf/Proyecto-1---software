@@ -25,7 +25,7 @@ import {
 } from "@/services/restoresService";
 import type { BackupPayload, BackupValidation, RestoreHistoryRecord } from "@/types/restores";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
-import { confirmAction } from "@/utils/feedback";
+import { confirmAction, notifyError, notifySuccess, notifyWarning } from "@/utils/feedback";
 
 type ProcessStatus = "idle" | "selected" | "validating" | "valid" | "restoring" | "completed" | "error";
 
@@ -105,6 +105,7 @@ export function AdminSettingsView() {
       setBackup(null);
       setStatus("error");
       setMessage("Selecciona un respaldo con extension .sql.");
+      void notifyWarning("Selecciona un respaldo con extensión .sql.");
       return;
     }
 
@@ -112,6 +113,7 @@ export function AdminSettingsView() {
       setBackup(null);
       setStatus("error");
       setMessage("El respaldo supera el tamano maximo permitido de 2 MB.");
+      void notifyWarning("El respaldo supera el tamaño máximo permitido de 2 MB.");
       return;
     }
 
@@ -134,10 +136,12 @@ export function AdminSettingsView() {
       setValidation(result);
       setStatus("valid");
       setMessage(result.mensaje);
+      void notifySuccess(result.mensaje);
     } catch (error) {
       setValidation(null);
       setStatus("error");
       setMessage(error instanceof ApiError ? error.message : "No fue posible validar el respaldo.");
+      void notifyError(error, "No fue posible validar el respaldo.");
     }
   }
 
@@ -164,10 +168,12 @@ export function AdminSettingsView() {
       const result = await restoreBackupRequest(backup);
       setStatus("completed");
       setMessage(result.mensaje);
+      void notifySuccess(result.mensaje);
       await loadHistory();
     } catch (error) {
       setStatus("error");
       setMessage(error instanceof ApiError ? error.message : "No fue posible restaurar el respaldo.");
+      void notifyError(error, "No fue posible restaurar el respaldo.");
       await loadHistory();
     }
   }

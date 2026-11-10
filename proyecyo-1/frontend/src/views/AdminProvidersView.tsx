@@ -1,5 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
-import { notifySuccess } from "@/utils/feedback";
+import { confirmAction, notifySuccess } from "@/utils/feedback";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Clock3, Power, RefreshCw, Search } from "lucide-react";
 
@@ -133,6 +133,14 @@ export function AdminProvidersView() {
 
   async function handleReview(provider: AdminProviderRecord, nextStatus: TenantProviderStatus) {
     const providerKey = `${provider.id_casa}-${provider.id_servicio}`;
+    const confirmed = await confirmAction({
+      title: `¿Cambiar el estado de ${provider.nombre}?`,
+      text: `El proveedor quedará como ${nextStatus.toLowerCase()}.`,
+      confirmText: "Sí, cambiar estado",
+      cancelText: "No, cancelar",
+      tone: "primary",
+    });
+    if (!confirmed) return;
 
     try {
       setUpdatingProviderKey(providerKey);
@@ -155,6 +163,14 @@ export function AdminProvidersView() {
 
   async function handleToggle(provider: AdminProviderRecord) {
     const providerKey = `${provider.id_casa}-${provider.id_servicio}`;
+    const confirmed = await confirmAction({
+      title: provider.activo ? `¿Desactivar a ${provider.nombre}?` : `¿Activar a ${provider.nombre}?`,
+      text: provider.activo ? "El proveedor dejará de tener acceso a la vivienda." : "El proveedor volverá a estar activo para la vivienda.",
+      confirmText: provider.activo ? "Sí, desactivar" : "Sí, activar",
+      cancelText: "No, cancelar",
+      tone: provider.activo ? "danger" : "primary",
+    });
+    if (!confirmed) return;
 
     try {
       setUpdatingProviderKey(providerKey);

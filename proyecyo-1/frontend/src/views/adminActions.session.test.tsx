@@ -11,6 +11,11 @@ import { AdminSpecialAccessView } from "./AdminSpecialAccessView";
 
 // Flujo completo vista -> servicio -> apiRequest -> AuthProvider con fetch simulado.
 // Garantiza que un error funcional se muestra en pantalla y la sesión del administrador sigue viva.
+// La acción pide confirmación con SweetAlert2; en estas pruebas el usuario confirma.
+vi.mock("@/utils/feedback", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/feedback")>()),
+  confirmAction: vi.fn(async () => true),
+}));
 vi.mock("@/components/admin/AdminLayout", () => ({
   AdminLayout: ({ children, actions }: { children: ReactNode; actions?: ReactNode }) => <main>{actions}{children}</main>,
 }));

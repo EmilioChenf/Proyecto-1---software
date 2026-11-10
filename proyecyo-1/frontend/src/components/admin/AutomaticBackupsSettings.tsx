@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifyError, notifySuccess } from "@/utils/feedback";
 import { useEffect, useState } from "react";
 import { Download, Loader2, Play } from "lucide-react";
 import { apiDownload, apiRequest, ApiError } from "@/services/api";
@@ -21,20 +22,20 @@ export function AutomaticBackupsSettings() {
         apiRequest<Record[]>("/admin/respaldos"),
       ]);
       setConfig(next); setRecords(history);
-    } catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible cargar los respaldos."); }
+    } catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible cargar los respaldos."); void notifyError(error, "No fue posible cargar los respaldos."); }
   }
   useEffect(() => { void load(); }, []);
 
   async function save() {
     setBusy(true); setMessage("");
-    try { setConfig(await apiRequest<Config>("/admin/respaldos/configuracion", { method: "PUT", body: config })); setMessage("Configuración guardada."); }
-    catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible guardar."); }
+    try { setConfig(await apiRequest<Config>("/admin/respaldos/configuracion", { method: "PUT", body: config })); setMessage("Configuración guardada."); void notifySuccess("Configuración de respaldos guardada."); }
+    catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible guardar."); void notifyError(error, "No fue posible guardar."); }
     finally { setBusy(false); }
   }
   async function execute() {
     setBusy(true); setMessage("Generando respaldo...");
-    try { await apiRequest("/admin/respaldos/ejecutar", { method: "POST" }); setMessage("Respaldo completado."); await load(); }
-    catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible generar el respaldo."); }
+    try { await apiRequest("/admin/respaldos/ejecutar", { method: "POST" }); setMessage("Respaldo completado."); void notifySuccess("Respaldo completado."); await load(); }
+    catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible generar el respaldo."); void notifyError(error, "No fue posible generar el respaldo."); }
     finally { setBusy(false); }
   }
   async function download(id: number, filename: string) {
@@ -42,10 +43,10 @@ export function AutomaticBackupsSettings() {
     // (x-user-role / x-user-id) que el backend no acepta fuera de pruebas y la descarga fallaba.
     let blob: Blob;
     try { blob = await apiDownload(`/admin/respaldos/${id}/descargar`); }
-    catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible descargar el respaldo."); return; }
+    catch (error) { setMessage(error instanceof ApiError ? error.message : "No fue posible descargar el respaldo."); void notifyError(error, "No fue posible descargar el respaldo."); return; }
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
-    setMessage("Descarga del respaldo iniciada.");
+    setMessage("Descarga del respaldo iniciada."); void notifySuccess("Descarga del respaldo iniciada.");
   }
 
   return (

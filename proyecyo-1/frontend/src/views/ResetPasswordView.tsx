@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useState, type FormEvent } from "react";
 import { KeyRound } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -33,6 +34,7 @@ export function ResetPasswordView() {
       setSubmitting(true);
       const response = await resetPasswordRequest(token, password);
       setMessage(response.message);
+      void notifySuccess(response.message);
       setPassword("");
       setConfirmation("");
     } catch (reason) {

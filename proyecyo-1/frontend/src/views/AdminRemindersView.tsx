@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { confirmAction } from "@/utils/feedback";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BellRing,
@@ -140,6 +141,14 @@ export function AdminRemindersView() {
   }, [loadRemindersModule]);
 
   const handleGenerateReminders = useCallback(async () => {
+    const confirmed = await confirmAction({
+      title: "¿Enviar recordatorios de pago?",
+      text: "Se enviarán recordatorios a los responsables de las cuotas próximas a vencer.",
+      confirmText: "Sí, enviar",
+      cancelText: "No, cancelar",
+      tone: "primary",
+    });
+    if (!confirmed) return;
     try {
       setIsGenerating(true);
       setErrorMessage("");

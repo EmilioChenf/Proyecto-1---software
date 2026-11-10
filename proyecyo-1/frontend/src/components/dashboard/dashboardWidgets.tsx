@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useEffect, useMemo, useState, type DependencyList, type ReactNode } from "react";
 import { ArrowRight, Bell, CheckCheck, Clock3, UserRoundCheck, Wallet, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -275,6 +276,7 @@ export function useNotificationCenter() {
       const updated = await markNotificationAsReadRequest(notificationId);
       update((current) => current.map((item) => (item.id_notificacion === updated.id_notificacion ? updated : item)));
       notifySidebarCountersChanged();
+      void notifySuccess("Notificación marcada como leída.");
     } catch (error) {
       setActionError(errorMessage(error, "No fue posible marcar la notificacion como leida."));
     } finally {
@@ -289,6 +291,7 @@ export function useNotificationCenter() {
       await markAllNotificationsAsReadRequest();
       update((current) => current.map((item) => ({ ...item, leido: true })));
       notifySidebarCountersChanged();
+      void notifySuccess("Todas las notificaciones se marcaron como leídas.");
     } catch (error) {
       setActionError(errorMessage(error, "No fue posible marcar las notificaciones como leidas."));
     } finally {

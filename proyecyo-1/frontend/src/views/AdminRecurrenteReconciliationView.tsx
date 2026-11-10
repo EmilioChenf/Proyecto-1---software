@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useEffect, useRef, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export function AdminRecurrenteReconciliationView() {
     try {
       const result = external ? await verifyRecurrenteTransactions(selected, discover) : await listRecurrenteTransactions(selected);
       if (mounted.current) setData(result);
+      if (mounted.current && external) void notifySuccess("Verificación con Recurrente completada. Revisa los resultados de la conciliación.");
     } catch (e) { if (mounted.current) setError(reconciliationError(e)); }
     finally { pending.current = false; if (mounted.current) setBusy(null); }
   }

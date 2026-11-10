@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifyError, notifySuccess, notifyWarning } from "@/utils/feedback";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +13,17 @@ export function VisitScheduleSettings() {
   const [form, setForm] = useState(INITIAL);
   const [message, setMessage] = useFeedbackState("info", "");
   const [saving, setSaving] = useState(false);
-  useEffect(() => { getAdminVisitScheduleConfigRequest().then(setForm).catch((e) => setMessage(e.message)); }, []);
+  useEffect(() => { getAdminVisitScheduleConfigRequest().then(setForm).catch((e) => { setMessage(e.message); void notifyError(e, "No fue posible cargar el horario de visitas."); }); }, []);
   async function save() {
-    if (!form.dias_habilitados.length || form.hora_apertura >= form.hora_cierre) return setMessage("Selecciona días y un rango válido.");
+    if (!form.dias_habilitados.length || form.hora_apertura >= form.hora_cierre) { setMessage("Selecciona días y un rango válido."); void notifyWarning("Selecciona días y un rango válido."); return; }
     try {
       setSaving(true);
       setForm(await updateVisitScheduleConfigRequest(form));
       setMessage("Horarios de visita actualizados.");
+      void notifySuccess("Horarios de visita actualizados.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No fue posible guardar.");
+      void notifyError(error, "No fue posible guardar.");
     } finally { setSaving(false); }
   }
   return (

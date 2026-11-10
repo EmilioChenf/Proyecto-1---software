@@ -1,6 +1,6 @@
 import Swal from "sweetalert2";
-import { clearToasts, toastStore } from "./toastStore";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { clearToasts, setAlertPresenter, sweetAlertPresenter, toastStore } from "./toastStore";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/services/api";
 import { buildConfirmOptions, confirmAction, notifyError, notifySuccess, notifyWarning } from "./feedback";
@@ -11,6 +11,8 @@ const button = (selector: string) => document.querySelector(selector) as HTMLBut
 const nextTick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 beforeAll(() => {
+  // Aqui se prueban las ventanas reales de SweetAlert2 (las pruebas de vistas solo las registran).
+  setAlertPresenter(sweetAlertPresenter);
   // SweetAlert restores scroll position when a real browser closes a dialog.
   window.scrollTo = vi.fn();
   // jsdom no implementa innerText: SweetAlert2 lo usa para titleText (texto plano).
@@ -31,6 +33,8 @@ beforeAll(() => {
     });
   }
 });
+
+afterAll(() => setAlertPresenter(() => new Promise((resolve) => setTimeout(resolve, 0))));
 
 afterEach(async () => {
   Swal.close();
@@ -61,7 +65,8 @@ describe("HU-C02 confirmaciones", () => {
   // jsdom no calcula visibilidad y SweetAlert2 solo enfoca botones visibles: el foco se
   // verifica a traves de las opciones que recibe la libreria.
   it("en acciones destructivas el foco inicial va a Cancelar y Cancelar queda a la izquierda", () => {
-    expect(buildConfirmOptions({ title: "x", tone: "danger" })).toMatchObject({ focusCancel: true, reverseButtons: true, icon: "warning", confirmButtonColor: "#DC2626" });
+    // Estilo unico del sistema: confirmar en verde y cancelar en rojo.
+    expect(buildConfirmOptions({ title: "x", tone: "danger" })).toMatchObject({ focusCancel: true, reverseButtons: true, icon: "warning", confirmButtonColor: "#16A34A", cancelButtonColor: "#DC2626" });
     expect(buildConfirmOptions({ title: "x" })).toMatchObject({ focusCancel: false, icon: "question" });
   });
 
@@ -76,13 +81,38 @@ describe("HU-C02 confirmaciones", () => {
   });
 });
 
-describe("Resultados flotantes globales", () => {
-  it("publica éxito, advertencia y error sin abrir un diálogo", async () => {
-    await notifySuccess("Usuario creado correctamente.");
-    await notifyWarning("Revisa la fecha antes de continuar.");
-    await notifyError(new ApiError("La visita ya ingresó.", 409));
-    expect(toastStore.getSnapshot().map((item) => item.tone)).toEqual(["success", "warning", "error"]);
-    expect(popup()).toBeNull();
+describe("Resultado de cada acción como ventana de SweetAlert2", () => {
+  it("el éxito abre una ventana con icono, título, texto y botón OK", async () => {
+    void notifySuccess("La visita se creó correctamente.");
+    await nextTick();
+    expect(popup()).not.toBeNull();
+    expect(popup()?.classList.contains("swal2-toast")).toBe(false);
+    expect(document.querySelector(".swal2-icon.swal2-success")).not.toBeNull();
+    expect(Swal.getTitle()?.textContent).toBe("¡Listo!");
+    expect(Swal.getHtmlContainer()?.textContent).toBe("La visita se creó correctamente.");
+    expect(button(".swal2-confirm").textContent).toBe("OK");
+    button(".swal2-confirm").click();
+    await nextTick();
+    expect(toastStore.getSnapshot()).toHaveLength(0);
+  });
+
+  it("advertencia y error usan su icono y se muestran uno después del otro", async () => {
+    void notifyWarning("Revisa la fecha antes de continuar.");
+    void notifyError(new ApiError("La visita ya ingresó.", 409));
+    await nextTick();
+    expect(document.querySelector(".swal2-icon.swal2-warning")).not.toBeNull();
+    expect(Swal.getTitle()?.textContent).toBe("Atención");
+    button(".swal2-confirm").click();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector(".swal2-icon.swal2-error")).not.toBeNull();
+    expect(Swal.getHtmlContainer()?.textContent).toBe("La visita ya ingresó.");
+  });
+
+  it("los datos del usuario se muestran como texto, nunca como HTML", async () => {
+    void notifySuccess("<img src=x onerror=alert(1)> creado.");
+    await nextTick();
+    expect(popup()?.querySelector("img[src=\"x\"]")).toBeNull();
+    expect(Swal.getHtmlContainer()?.textContent).toBe("<img src=x onerror=alert(1)> creado.");
   });
 
   it("sanea detalles técnicos del servidor", async () => {
@@ -97,6 +127,7 @@ describe("Resultados flotantes globales", () => {
 
   it("deduplica resultados y no cierra una confirmación pendiente", async () => {
     const pending = confirmAction({ title: "¿Cancelar reserva?" });
+    await nextTick();
     await notifyError("La visita ya no existe.");
     await notifyError("La visita ya no existe.");
     expect(toastStore.getSnapshot()).toHaveLength(1);

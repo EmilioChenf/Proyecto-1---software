@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { closeActiveSessionRequest, getActiveSessionsRequest } from "@/services/sessionsService";
 import type { ActiveSession } from "@/types/sessions";
 import { formatUtcTimestamp } from "@/utils/guatemalaTime";
-import { notifySuccess } from "@/utils/feedback";
+import { confirmAction, notifySuccess } from "@/utils/feedback";
 
 // Las marcas de sesion (NOW()) son instantes UTC; se muestran en hora de Guatemala.
 function formatDate(value: string) {
@@ -45,6 +45,14 @@ export function ActiveSessionsView() {
   }, [reloadKey]);
 
   async function closeSession(session: ActiveSession) {
+    const confirmed = await confirmAction({
+      title: "¿Cerrar esta sesión?",
+      text: "El dispositivo deberá iniciar sesión de nuevo para entrar a la cuenta.",
+      confirmText: "Sí, cerrar sesión",
+      cancelText: "No, cancelar",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     try {
       setClosing(session.id_sesion);
       setError("");

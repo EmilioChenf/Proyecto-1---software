@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifySuccess } from "@/utils/feedback";
 import { useState, type FormEvent } from "react";
 import { Building2, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -27,6 +28,7 @@ export function ForgotPasswordView() {
       setSubmitting(true);
       const response = await requestPasswordReset(email.trim().toLowerCase());
       setMessage(response.message);
+      void notifySuccess(response.message);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No fue posible procesar la solicitud.");
     } finally {

@@ -8,6 +8,11 @@ import { getOwnerProvidersRequest, updateOwnerProviderValidationRequest } from "
 import type { AdminProviderRecord } from "@/types/providers";
 import { ResidenteProvidersView } from "./ResidenteProvidersView";
 
+// La acción pide confirmación con SweetAlert2; en estas pruebas el usuario confirma.
+vi.mock("@/utils/feedback", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/feedback")>()),
+  confirmAction: vi.fn(async () => true),
+}));
 vi.mock("@/components/layout/AppShell", () => ({ AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 vi.mock("@/services/providersService", () => ({ getOwnerProvidersRequest: vi.fn(), updateOwnerProviderValidationRequest: vi.fn() }));
 

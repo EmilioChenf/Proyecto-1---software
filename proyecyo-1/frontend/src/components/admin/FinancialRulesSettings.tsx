@@ -1,5 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
-import { notifySuccess } from "@/utils/feedback";
+import { notifyError, notifySuccess } from "@/utils/feedback";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export function FinancialRulesSettings() {
   const [applyError, setApplyError] = useFeedbackState("error", "");
 
   useEffect(() => {
-    apiRequest<Rule>("/admin/configuracion-financiera").then(setRule).catch((e) => setMessage(errorText(e, "No fue posible cargar la regla.")));
+    apiRequest<Rule>("/admin/configuracion-financiera").then(setRule).catch((e) => { setMessage(errorText(e, "No fue posible cargar la regla.")); void notifyError(e, "No fue posible cargar la regla."); });
   }, []);
 
   async function save() {
@@ -43,8 +43,10 @@ export function FinancialRulesSettings() {
       setBusy(true);
       setRule(await apiRequest<Rule>("/admin/configuracion-financiera", { method: "PUT", body: rule }));
       setMessage("Configuración financiera guardada.");
+      void notifySuccess("Configuración financiera guardada.");
     } catch (e) {
       setMessage(errorText(e, "Error"));
+      void notifyError(e, "No fue posible guardar la configuración financiera.");
     } finally {
       setBusy(false);
     }

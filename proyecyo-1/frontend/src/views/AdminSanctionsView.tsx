@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { confirmAction } from "@/utils/feedback";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
@@ -206,6 +207,14 @@ export function AdminSanctionsView() {
   }, [loadSanctionsModule]);
 
   const handleGenerateSanctions = useCallback(async () => {
+    const confirmed = await confirmAction({
+      title: "¿Generar sanciones automáticas?",
+      text: "Se aplicarán las reglas activas a las cuotas vencidas que cumplan las condiciones.",
+      confirmText: "Sí, generar",
+      cancelText: "No, cancelar",
+      tone: "primary",
+    });
+    if (!confirmed) return;
     try {
       setIsGenerating(true);
       setErrorMessage("");
@@ -229,11 +238,20 @@ export function AdminSanctionsView() {
 
   const handleStatusChange = useCallback(
     async (sanctionId: number, status: AdminSanctionStatus) => {
+      const confirmed = await confirmAction({
+        title: "¿Cambiar el estado de la sanción?",
+        text: `La sanción quedará como ${status.toLowerCase()}.`,
+        confirmText: "Sí, cambiar estado",
+        cancelText: "No, cancelar",
+        tone: "primary",
+      });
+      if (!confirmed) return;
       try {
         setUpdatingId(sanctionId);
         setErrorMessage("");
         setSuccessMessage("");
         await updateAdminSanctionStatusRequest(sanctionId, status);
+        setSuccessMessage(`Estado de la sanción actualizado a ${status.toLowerCase()}.`);
         await loadSanctionsModule();
       } catch (error) {
         setErrorMessage(

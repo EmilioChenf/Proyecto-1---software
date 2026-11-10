@@ -8,6 +8,11 @@ import {
 } from "@/services/sprintStoriesService";
 import type { OwnerAuthorizationRequest } from "@/types/sprintStories";
 
+// La acción pide confirmación con SweetAlert2; en estas pruebas el usuario confirma.
+vi.mock("@/utils/feedback", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/feedback")>()),
+  confirmAction: vi.fn(async () => true),
+}));
 vi.mock("@/services/sprintStoriesService", () => ({
   getOwnerAuthorizationRequestsRequest: vi.fn(),
   resolveOwnerAuthorizationRequest: vi.fn(),

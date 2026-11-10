@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 
 import { closeActiveSessionRequest, getActiveSessionsRequest } from "@/services/sessionsService";
+import { confirmAction } from "@/utils/feedback";
 import { ActiveSessionsView } from "./ActiveSessionsView";
 
 const logout = vi.fn();
+// La acción pide confirmación con SweetAlert2; en estas pruebas el usuario confirma.
+vi.mock("@/utils/feedback", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/feedback")>()),
+  confirmAction: vi.fn(async () => true),
+}));
 vi.mock("@/components/layout/AppShell", () => ({ AppShell: ({ children }: { children: ReactNode }) => <main>{children}</main> }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: () => ({ user: { id: 2, email: "user@test.com", role: "residente" }, logout }) }));
 vi.mock("@/services/sessionsService", () => ({ getActiveSessionsRequest: vi.fn(), closeActiveSessionRequest: vi.fn() }));
@@ -37,4 +43,14 @@ it("no duplica la navegacion del sidebar para el residente", async () => {
   render(<MemoryRouter><ActiveSessionsView /></MemoryRouter>);
   expect(await screen.findByText("Safari en iOS")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Volver al panel" })).not.toBeInTheDocument();
+});
+
+it("si el usuario responde \"No, cancelar\" en la confirmación, la sesión no se cierra", async () => {
+  vi.mocked(confirmAction).mockResolvedValueOnce(false);
+  render(<MemoryRouter><ActiveSessionsView /></MemoryRouter>);
+  expect(await screen.findByText("Safari en iOS")).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Cerrar sesion" })[1]);
+  await waitFor(() => expect(confirmAction).toHaveBeenCalledWith(expect.objectContaining({ title: "¿Cerrar esta sesión?", tone: "danger" })));
+  expect(closeActiveSessionRequest).not.toHaveBeenCalled();
+  expect(screen.getByText("Safari en iOS")).toBeInTheDocument();
 });

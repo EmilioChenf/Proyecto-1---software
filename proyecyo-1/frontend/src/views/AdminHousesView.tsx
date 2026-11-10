@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { confirmAction, notifyError } from "@/utils/feedback";
 import { useCallback, useEffect, useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 
@@ -30,7 +31,7 @@ export function AdminHousesView({ webglSupported }: { webglSupported?: boolean }
   const [detailError, setDetailError] = useFeedbackState("error", "");
   const [modal, setModal] = useState<{ open: boolean; editing: HouseDetail | null }>({ open: false, editing: null });
   const [busy, setBusy] = useState(false);
-  const [feedback, setFeedback] = useFeedbackState("info", "");
+  const [feedback, setFeedback] = useFeedbackState("success", "");
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -85,6 +86,16 @@ export function AdminHousesView({ webglSupported }: { webglSupported?: boolean }
   };
 
   const toggleActive = async (house: HouseDetail) => {
+    const confirmed = await confirmAction({
+      title: house.activo ? `¿Desactivar la vivienda ${house.codigo}?` : `¿Activar la vivienda ${house.codigo}?`,
+      text: house.activo
+        ? "La vivienda dejará de estar disponible en el residencial. Su historial se conserva."
+        : "La vivienda volverá a estar disponible en el residencial.",
+      confirmText: house.activo ? "Sí, desactivar" : "Sí, activar",
+      cancelText: "No, cancelar",
+      tone: house.activo ? "danger" : "primary",
+    });
+    if (!confirmed) return;
     setBusy(true);
     setFeedback("");
     try {
@@ -93,7 +104,7 @@ export function AdminHousesView({ webglSupported }: { webglSupported?: boolean }
       setFeedback(`Vivienda ${saved.codigo} ${saved.activo ? "activada" : "desactivada"}.`);
       await loadList();
     } catch (requestError) {
-      setFeedback(message(requestError, "No fue posible cambiar el estado de la vivienda."));
+      void notifyError(requestError, "No fue posible cambiar el estado de la vivienda.");
     } finally {
       setBusy(false);
     }

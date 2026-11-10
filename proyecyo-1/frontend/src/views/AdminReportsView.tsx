@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { notifyInfo, notifySuccess } from "@/utils/feedback";
 ﻿import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -37,9 +38,11 @@ export function AdminReportsView() {
       setFeedback('');
       if (selected?.usesDates && desde && hasta && desde > hasta) throw new Error("La fecha inicial no puede ser posterior a la fecha final.");
       await downloadReport({ reporte: report, formato: format, desde: selected?.usesDates ? desde : '', hasta: selected?.usesDates ? hasta : '', ...filters }, controller.signal);
-      setFeedback(controller.signal.aborted ? 'Exportación cancelada.' : `Descarga de ${selected?.title} iniciada en ${format.toUpperCase()}.`);
+      const result = controller.signal.aborted ? 'Exportación cancelada.' : `Descarga de ${selected?.title} iniciada en ${format.toUpperCase()}.`;
+      setFeedback(result);
+      void (controller.signal.aborted ? notifyInfo(result) : notifySuccess(result));
     } catch (error) {
-      if (controller.signal.aborted) setFeedback('Exportación cancelada.');
+      if (controller.signal.aborted) { setFeedback('Exportación cancelada.'); void notifyInfo('Exportación cancelada.'); }
       else setError(error instanceof Error ? error.message : "No fue posible exportar.");
     } finally {
       setBusy(false);

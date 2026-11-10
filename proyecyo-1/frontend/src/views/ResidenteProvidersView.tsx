@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { confirmAction } from "@/utils/feedback";
 import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, BriefcaseBusiness, Clock3, Search, ShieldCheck } from "lucide-react";
 
@@ -48,6 +49,13 @@ export function ResidenteProvidersView() {
 
   async function approve(provider: AdminProviderRecord) {
     const key = `${provider.id_casa}-${provider.id_servicio}`;
+    const confirmed = await confirmAction({
+      title: `¿Aprobar a ${provider.nombre}?`,
+      text: `El proveedor quedará validado para la unidad ${provider.casa_unidad}.`,
+      confirmText: "Sí, aprobar",
+      cancelText: "No, cancelar",
+    });
+    if (!confirmed) return;
     try {
       setValidatingKey(key);
       setError("");

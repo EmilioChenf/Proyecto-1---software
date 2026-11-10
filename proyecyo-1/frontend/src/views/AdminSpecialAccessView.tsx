@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { confirmAction } from "@/utils/feedback";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -181,6 +182,14 @@ export function AdminSpecialAccessView() {
   }
 
   async function handleApprove(accessId: number) {
+    const confirmed = await confirmAction({
+      title: "¿Aprobar este acceso especial?",
+      text: "Se generará el QR y se notificará al guardia.",
+      confirmText: "Sí, aprobar",
+      cancelText: "No, cancelar",
+      tone: "primary",
+    });
+    if (!confirmed) return;
     setProcessingId(accessId);
     setErrorMessage("");
     try {
@@ -198,6 +207,14 @@ export function AdminSpecialAccessView() {
   }
 
   async function handleReject(accessId: number) {
+    const confirmed = await confirmAction({
+      title: "¿Rechazar este acceso especial?",
+      text: "La solicitud quedará rechazada y registrada en el historial.",
+      confirmText: "Sí, rechazar",
+      cancelText: "No, cancelar",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     setProcessingId(accessId);
     setErrorMessage("");
     try {

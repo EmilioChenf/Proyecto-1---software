@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import { getErrorMessage } from "@/utils/errorMessages";
 import { pushToast, type ToastTone } from "@/utils/toastStore";
 
-/** Keeps persistent inline feedback and announces each action in the global tray. */
+/** Conserva el mensaje en la vista; éxito, error y advertencia además abren una ventana de SweetAlert2. */
 export function useFeedbackState(tone: ToastTone, initial: string | (() => string)): readonly [string, Dispatch<SetStateAction<string>>];
 export function useFeedbackState<T extends string | null>(tone: ToastTone, initial: T | (() => T)): readonly [T, Dispatch<SetStateAction<T>>];
 export function useFeedbackState<T extends string | null = string>(tone: ToastTone, initial: T | (() => T)) {
@@ -11,7 +11,9 @@ export function useFeedbackState<T extends string | null = string>(tone: ToastTo
   useEffect(() => {
     if (lastRevision.current === state.revision) return;
     lastRevision.current = state.revision;
-    if (!state.value) return;
+    // "info" mezcla progreso ("Validando...") con resultados: se queda en la vista y
+    // cada pantalla anuncia sus resultados con notifySuccess/notifyError.
+    if (!state.value || tone === "info") return;
     const message = tone === "error" ? getErrorMessage(new Error(state.value)) : state.value;
     pushToast(tone, message);
   }, [state, tone]);

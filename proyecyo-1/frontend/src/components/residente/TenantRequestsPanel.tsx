@@ -1,4 +1,5 @@
 import { useFeedbackState } from "@/hooks/useFeedbackState";
+import { confirmAction } from "@/utils/feedback";
 import { useCallback, useEffect, useState } from "react";
 import { Check, ShieldCheck, X } from "lucide-react";
 
@@ -52,6 +53,15 @@ export function TenantRequestsPanel({company=false}:{company?:boolean}={}) {
   }, [load]);
 
   async function resolve(request: OwnerAuthorizationRequest, decision: AuthorizationDecision, respuesta = "") {
+    const approving = decision === "APROBADO";
+    const confirmed = await confirmAction({
+      title: approving ? "¿Aprobar la solicitud?" : "¿Rechazar la solicitud?",
+      text: `Solicitud: ${request.accion}.`,
+      confirmText: approving ? "Sí, aprobar" : "Sí, rechazar",
+      cancelText: "No, cancelar",
+      tone: approving ? "primary" : "danger",
+    });
+    if (!confirmed) return;
     try {
       setBusyId(request.id_solicitud);
       setActionError("");
