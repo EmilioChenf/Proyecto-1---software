@@ -429,6 +429,26 @@ async function ensureProductFeaturesSchema() {
       )
     `);
   }
+  // Roles personalizados creados por el administrador, con permisos por módulo del panel.
+  const roleColumns = [
+    ["personalizado", "TINYINT(1) NOT NULL DEFAULT 0"],
+    ["descripcion", "VARCHAR(200) NULL"],
+    ["color", "VARCHAR(7) NULL"],
+  ];
+  for (const [column, definition] of roleColumns) {
+    if (!(await columnExists("TIPO_USUARIO", column))) await query(`ALTER TABLE TIPO_USUARIO ADD COLUMN ${column} ${definition}`);
+  }
+  if (!(await tableExists("ROL_PERMISO_MODULO"))) {
+    await query(`
+      CREATE TABLE ROL_PERMISO_MODULO (
+        id_tipo_usuario INT NOT NULL,
+        modulo VARCHAR(40) NOT NULL,
+        nivel ENUM('VER','EDITAR') NOT NULL DEFAULT 'VER',
+        PRIMARY KEY (id_tipo_usuario, modulo),
+        FOREIGN KEY (id_tipo_usuario) REFERENCES TIPO_USUARIO(id_tipo_usuario) ON DELETE CASCADE
+      )
+    `);
+  }
 }
 
 async function ensureActiveSessionsSchema() {

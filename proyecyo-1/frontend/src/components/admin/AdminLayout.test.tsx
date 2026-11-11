@@ -79,3 +79,23 @@ describe("HU32 AdminLayout responsive", () => {
     expect(screen.getByText("Contenido")).toBeInTheDocument();
   });
 });
+
+describe("Roles personalizados en el panel", () => {
+  it("un Contador solo ve sus módulos y no la gestión de roles", () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 9, email: "conta@nexus.test", role: "admin", rol_personalizado: { id: 7, nombre: "Contador" }, permisos: { pagos: "EDITAR", finanzas: "VER" } },
+      logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+    render(
+      <MemoryRouter initialEntries={["/admin/pagos"]}>
+        <AdminLayout title="Pagos" subtitle="Cobros"><p>Contenido</p></AdminLayout>
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole("navigation", { name: "Módulos del administrador" });
+    expect(within(nav).getByRole("link", { name: /^Pagos$/ })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: /Finanzas/ })).toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: /Usuarios/ })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /Roles y permisos/ })).toBeNull();
+    expect(screen.getByText("Contador")).toBeInTheDocument();
+  });
+});

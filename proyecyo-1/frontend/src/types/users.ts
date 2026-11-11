@@ -1,6 +1,9 @@
 export interface UserTypeOption {
   id: number;
   nombre: string;
+  personalizado?: boolean;
+  descripcion?: string | null;
+  color?: string | null;
 }
 
 export interface UserRecord {

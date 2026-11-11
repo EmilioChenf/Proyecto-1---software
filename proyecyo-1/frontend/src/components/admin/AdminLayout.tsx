@@ -19,7 +19,9 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Navigate, NavLink, useLocation } from "react-router-dom";
+
+import { canOpenAdminPath, firstAllowedAdminPath } from "@/config/roleModules";
 
 import { BrandIcon } from "@/components/layout/BrandIcon";
 import { brandSubtitle, useResidentialBrand } from "@/hooks/useResidentialBrand";
@@ -65,6 +67,8 @@ const adminMenuItems: AdminMenuItem[] = [
     icon: KeyRound,
     to: "/admin/accesos",
   },
+  { label: "Roles y permisos", icon: Users, to: "/admin/roles" },
+  { label: "Votaciones y documentos", icon: Megaphone, to: "/admin/comunidad" },
   {
     label: "Usuarios autorizados",
     icon: UserCheck,
@@ -153,6 +157,8 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/reportes": "General",
   "/admin/reportes-financieros": "General",
   "/admin/usuarios": "Comunidad",
+  "/admin/roles": "Sistema",
+  "/admin/comunidad": "Convivencia",
   "/admin/viviendas": "Comunidad",
   "/admin/usuarios-autorizados": "Comunidad",
   "/admin/proveedores": "Comunidad",
@@ -196,6 +202,8 @@ const menuIconByPath: Record<string, string> = {
   "/admin/sanciones": "M12 3l10 18H2zM12 10v4M12 17v.01",
   "/admin/sanciones/historial-completo": "M12 7v5l3 3M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5",
   "/admin/configuracion": "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4",
+  "/admin/roles": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 8v4M12 15v.01",
+  "/admin/comunidad": "M4 4h16v12H5l-1 4zM8 9h8M8 12h5",
   "/admin/solicitudes-demo": "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5",
 };
 
@@ -255,6 +263,11 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const activeItem = findActiveItem(pathname);
+  const permisos = user?.permisos;
+  const visibleGroups = permisos
+    ? menuGroups.map(({ group, items }) => ({ group, items: items.filter((item) => item.to !== "/admin/roles" && canOpenAdminPath(permisos, item.to)) })).filter(({ items }) => items.length > 0)
+    : menuGroups;
+  const blocked = Boolean(permisos) && (pathname === "/admin/roles" || !canOpenAdminPath(permisos, pathname));
 
   useEffect(() => {
     setMenuOpen(false);
@@ -287,6 +300,9 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
   // Al contraer solo se ocultan los textos en escritorio; el panel movil siempre es completo.
   const whenExpanded = collapsed ? "lg:hidden" : "";
   const brand = useResidentialBrand();
+
+  // Un rol personalizado que abre una pantalla fuera de sus módulos va a la primera que sí tiene.
+  if (blocked) return <Navigate to={firstAllowedAdminPath(permisos)} replace />;
 
   return (
     <div className="nd min-h-screen">
@@ -358,7 +374,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
         </div>
 
         <nav aria-label={"Módulos del administrador"} className="min-h-0 flex-1 overflow-y-auto px-[14px] pb-3">
-          {menuGroups.map(({ group, items }, groupIndex) => (
+          {visibleGroups.map(({ group, items }, groupIndex) => (
             <div key={group} className="flex flex-col gap-0.5">
               <p className={cn("nd-sec", whenExpanded)}>{group}</p>
               {collapsed && groupIndex > 0 ? <div className="mx-2 my-2.5 hidden h-px bg-[#EEF2F7] lg:block" /> : null}
@@ -387,7 +403,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
               <span className="absolute bottom-0 right-0 size-[11px] rounded-full border-2 border-[#F6F8FC] bg-emerald-500" aria-hidden="true" />
             </span>
             <div className={cn("min-w-0", whenExpanded)}>
-              <p className="truncate text-sm font-bold">Administrador</p>
+              <p className="truncate text-sm font-bold">{user?.rol_personalizado?.nombre ?? "Administrador"}</p>
               <p className="truncate text-xs text-slate-500">{user?.email || "admin@residencial.com"}</p>
             </div>
           </div>

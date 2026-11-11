@@ -5,13 +5,16 @@ async function listUserTypes() {
     `
       SELECT
         id_tipo_usuario AS id,
-        nombre
+        nombre,
+        personalizado,
+        descripcion,
+        color
       FROM TIPO_USUARIO
-      ORDER BY nombre ASC
+      ORDER BY personalizado ASC, nombre ASC
     `,
   );
 
-  return rows;
+  return rows.map((row) => ({ ...row, personalizado: Number(row.personalizado) === 1 }));
 }
 
 module.exports = {
