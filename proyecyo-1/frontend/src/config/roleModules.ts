@@ -2,7 +2,7 @@
 export type ModuleLevel = "VER" | "EDITAR";
 
 export const ROLE_MODULE_PATHS: Record<string, string[]> = {
-  dashboard: ["/admin"],
+  dashboard: ["/admin", "/admin/indicadores"],
   finanzas: ["/admin/finanzas", "/admin/reportes-financieros"],
   pagos: ["/admin/pagos"],
   reportes: ["/admin/reportes"],

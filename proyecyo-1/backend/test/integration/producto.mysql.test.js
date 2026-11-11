@@ -101,3 +101,16 @@ test('RL02 un rol con Usuarios no puede crear administradores',async()=>{
   const ok=await request.post('/usuarios').set(as).send({nombre:'Guardia nuevo',correo:`${randomUUID()}@x.test`,password:'clave1234',id_tipo_usuario:guardType});
   assert.equal(ok.status,201,JSON.stringify(ok.body));
 });
+
+test('IN01 indicadores: morosidad mes a mes, ocupación, visitas y fallas',async()=>{
+  const {getIndicators}=require('../../src/services/indicatorsService');
+  const result=await getIndicators({meses:6,dias:30},new Date());
+  assert.equal(result.morosidad.length,6);assert.equal(result.visitas.length,30);assert.equal(result.fallas.length,6);
+  assert(result.ocupacion.every(a=>a.porcentaje>=0&&a.porcentaje<=100));
+  const month=result.fallas[result.fallas.length-1];assert(month.abiertas>=1,'el ticket de TK01 cuenta en el mes actual');
+  assert.equal(typeof result.resumen.visitas_promedio_dia,'number');
+  const request=require('supertest')(require('../../src/app').createApp());
+  await require('../../src/services/customRolesService').createRole({nombre:'Junta Test',permisos:{dashboard:'VER'}});
+  const board=await user('Junta Test','Presidenta');
+  assert.equal((await request.get('/admin/indicadores').set({'x-user-id':String(board),'x-user-role':'Junta Test'})).status,200);
+});

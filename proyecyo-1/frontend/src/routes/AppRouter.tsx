@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { rolePaths } from "@/routes/rolePaths";
 import { AdminAmenitiesReservationsView } from "@/views/AdminAmenitiesReservationsView";
 import { AdminAccessesView } from "@/views/AdminAccessesView";
+import { AdminIndicatorsView } from "@/views/AdminIndicatorsView";
 import { AdminRolesView } from "@/views/AdminRolesView";
 import { AdminTicketsView } from "@/views/AdminTicketsView";
 import { ResidentTicketsView } from "@/views/ResidentTicketsView";
@@ -92,6 +93,7 @@ export function AppRouter() {
           <Route path="/admin/amenidades" element={<AdminAmenitiesReservationsView />} />
           <Route path="/admin/fallas" element={<AdminTicketsView />} />
           <Route path="/admin/roles" element={<AdminRolesView />} />
+          <Route path="/admin/indicadores" element={<AdminIndicatorsView />} />
           <Route path="/admin/reportes" element={<AdminReportsView />} />
           <Route path="/admin/finanzas" element={<AdminFinancialDashboardView />} />
           <Route path="/admin/reportes-financieros" element={<AdminMonthlyFinancialReportView />} />

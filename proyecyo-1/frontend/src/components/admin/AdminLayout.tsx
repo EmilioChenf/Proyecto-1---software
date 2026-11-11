@@ -67,6 +67,7 @@ const adminMenuItems: AdminMenuItem[] = [
     icon: KeyRound,
     to: "/admin/accesos",
   },
+  { label: "Indicadores", icon: LayoutDashboard, to: "/admin/indicadores" },
   { label: "Roles y permisos", icon: Users, to: "/admin/roles" },
   { label: "Votaciones y documentos", icon: Megaphone, to: "/admin/comunidad" },
   {
@@ -158,6 +159,7 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/reportes-financieros": "General",
   "/admin/usuarios": "Comunidad",
   "/admin/roles": "Sistema",
+  "/admin/indicadores": "General",
   "/admin/comunidad": "Convivencia",
   "/admin/viviendas": "Comunidad",
   "/admin/usuarios-autorizados": "Comunidad",
@@ -202,6 +204,7 @@ const menuIconByPath: Record<string, string> = {
   "/admin/sanciones": "M12 3l10 18H2zM12 10v4M12 17v.01",
   "/admin/sanciones/historial-completo": "M12 7v5l3 3M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5",
   "/admin/configuracion": "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4",
+  "/admin/indicadores": "M3 3v18h18M7 15l4-4 3 3 5-6",
   "/admin/roles": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 8v4M12 15v.01",
   "/admin/comunidad": "M4 4h16v12H5l-1 4zM8 9h8M8 12h5",
   "/admin/solicitudes-demo": "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5",
