@@ -17,6 +17,7 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ProviderEntryModeField } from "@/components/providers/ProviderEntryModeField";
+import { VisitScheduleGuide } from "@/components/visits/VisitScheduleGuide";
 import { QrCodeCard } from "@/components/visits/QrCodeCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +34,7 @@ import { getVisitScheduleConfigRequest } from "@/services/configurationService";
 import type { FrequentVisitor, VisitPayload, VisitRecord, VisitType } from "@/types/visits";
 import type { VisitScheduleConfig } from "@/types/configuration";
 import {
-  formatVisitScheduleSummary,
+  suggestVisitWindow,
   validateVisitTimesAgainstSchedule,
 } from "@/utils/visitSchedule";
 import { getVehiclePlateError, normalizeVehiclePlate } from "@/utils/vehiclePlate";
@@ -305,7 +306,21 @@ export function ResidenteVisitsView() {
       return;
     }
 
+    // Al llegar al horario, si el sugerido ya no es valido (p. ej. de noche), se propone
+    // el primer horario permitido en lugar de dejar que el usuario choque con el error.
+    if (step === 1 && visitSchedule && validateVisitTimesAgainstSchedule(form.hora_inicio, form.hora_fin, visitSchedule)) {
+      setForm((current) => ({ ...current, ...suggestVisitWindow(visitSchedule) }));
+    }
+
     setStep((current) => Math.min(current + 1, steps.length));
+  }
+
+  async function reloadVisits() {
+    try {
+      setVisits(await getVisitsRequest());
+    } catch {
+      // La solicitud ya se envio; la lista se actualizara en la siguiente carga.
+    }
   }
 
   function handlePrevious() {
@@ -420,11 +435,10 @@ export function ResidenteVisitsView() {
   const visitsDisabled = visitSchedule !== null && !visitSchedule.activo;
 
   async function handleQuickAuthorize(visitor: FrequentVisitor) {
-    const now = new Date();
-    const finish = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    const fecha = getDateInTimezone(now);
-    const horaInicio = getTimeInTimezone(now);
-    const horaFin = getTimeInTimezone(finish);
+    const suggestion = suggestVisitWindow(visitSchedule);
+    const fecha = suggestion.fecha;
+    const horaInicio = suggestion.hora_inicio;
+    const horaFin = suggestion.hora_fin;
 
     if (!visitor.dpi) {
       void notifyWarning(
@@ -844,14 +858,8 @@ export function ResidenteVisitsView() {
 
             {step === 2 ? (
               <>
-                {visitSchedule ? (
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                    Horario permitido:{" "}
-                    <span className="font-medium">{formatVisitScheduleSummary(visitSchedule)}</span>
-                  </div>
-                ) : null}
                 <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                  La fecha y hora se completaron automaticamente con la hora actual. Puedes modificarlos si lo necesitas.
+                  Te sugerimos el primer horario disponible. Puedes modificarlo si lo necesitas.
                 </div>
                 <div className="grid gap-5 md:grid-cols-2">
                   <label className="block space-y-2">
@@ -923,6 +931,12 @@ export function ResidenteVisitsView() {
                     />
                   </label>
                 </div>
+
+                <VisitScheduleGuide
+                  schedule={visitSchedule}
+                  draft={form}
+                  onEmergencySent={() => void reloadVisits()}
+                />
 
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-slate-800">

@@ -28,6 +28,10 @@ import { Input } from "@/components/ui/input";
 import { ProviderRegistrationForm } from "@/components/providers/ProviderRegistrationForm";
 import { ProviderEntryModeField } from "@/components/providers/ProviderEntryModeField";
 import { QrCodeCard } from "@/components/visits/QrCodeCard";
+import { VisitScheduleGuide } from "@/components/visits/VisitScheduleGuide";
+import { getVisitScheduleConfigRequest } from "@/services/configurationService";
+import type { VisitScheduleConfig } from "@/types/configuration";
+import { suggestVisitWindow, validateVisitTimesAgainstSchedule } from "@/utils/visitSchedule";
 import {
   cancelVisitRequest,
   createVisitRequest,
@@ -223,6 +227,7 @@ const sectionHeadings: Record<InquilinoSection, { title: string; subtitle: strin
 
 export function InquilinoView({ section }: { section: InquilinoSection }) {
   const [step, setStep] = useState(1);
+  const [visitSchedule, setVisitSchedule] = useState<VisitScheduleConfig | null>(null);
   const [form, setForm] = useState<VisitFormState>(createInitialForm);
   const [editingVisit, setEditingVisit] = useState<VisitRecord | null>(null);
   const [editForm, setEditForm] = useState<VisitFormState>(createInitialForm);
@@ -408,8 +413,13 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
         return false;
       }
 
-      if (form.hora_inicio >= form.hora_fin) {
-        setErrorMessage("La hora de fin debe ser mayor a la hora de inicio.");
+      const scheduleError = visitSchedule
+        ? validateVisitTimesAgainstSchedule(form.hora_inicio, form.hora_fin, visitSchedule)
+        : form.hora_inicio >= form.hora_fin
+          ? "La hora de fin debe ser mayor a la hora de inicio."
+          : null;
+      if (scheduleError) {
+        setErrorMessage(scheduleError);
         return false;
       }
 
@@ -471,12 +481,32 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
     return true;
   }
 
+  useEffect(() => {
+    let active = true;
+    getVisitScheduleConfigRequest()
+      .then((schedule) => { if (active) setVisitSchedule(schedule); })
+      .catch(() => { /* sin horario configurado el backend sigue validando */ });
+    return () => { active = false; };
+  }, []);
+
   function handleNext() {
     if (!validateStep()) {
       return;
     }
 
+    if (step === 1 && visitSchedule && validateVisitTimesAgainstSchedule(form.hora_inicio, form.hora_fin, visitSchedule)) {
+      setForm((current) => ({ ...current, ...suggestVisitWindow(visitSchedule) }));
+    }
+
     setStep((current) => Math.min(current + 1, steps.length));
+  }
+
+  async function reloadTenantVisits() {
+    try {
+      setVisits(await getVisitsRequest());
+    } catch {
+      // La solicitud ya se envio; la lista se actualizara en la siguiente carga.
+    }
   }
 
   function handlePrevious() {
@@ -1359,8 +1389,8 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
 
           {step === 2 ? (
             <>
-              <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                La fecha y hora se completaron automaticamente con la hora actual.
+              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Te sugerimos el primer horario disponible. Puedes modificarlo si lo necesitas.
               </div>
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="block space-y-2">
@@ -1418,6 +1448,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                   />
                 </label>
               </div>
+              <VisitScheduleGuide schedule={visitSchedule} draft={form} onEmergencySent={() => void reloadTenantVisits()} />
             </>
           ) : null}
 

@@ -1,3 +1,11 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* Las ventanas modales (Radix) desactivan los clics fuera de ellas poniendo
+   pointer-events:none en <body>. Las alertas de SweetAlert2 viven en <body>, asi que
+   se reactivan y se dibujan por encima de cualquier ventana abierta. */
+.swal2-container {
+  pointer-events: auto !important;
+  z-index: 2147483000 !important;
+}

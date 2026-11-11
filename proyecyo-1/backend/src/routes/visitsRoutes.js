@@ -13,6 +13,7 @@ const {
   postValidateQr,
   postRegisterQrEntry,
   postRegisterQrExit,
+  postEmergencyVisit,
 } = require("../controllers/visitsController");
 const { requireResidentOrTenant } = require("../middlewares/requireResident");
 const { requireGuard } = require("../middlewares/requireGuard");
@@ -24,6 +25,7 @@ router.get("/visitantes-frecuentes", requireResidentOrTenant, getFrequentVisitor
 router.patch("/visitantes-frecuentes/:id", requireResidentOrTenant, patchFrequentVisitor);
 router.delete("/visitantes-frecuentes/:id", requireResidentOrTenant, removeFrequentVisitor);
 router.post("/visitas", requireResidentOrTenant, postVisit);
+router.post("/visitas/emergencia", requireResidentOrTenant, postEmergencyVisit);
 router.patch("/visitas/:id", requireResidentOrTenant, patchVisit);
 router.delete("/visitas/:id", requireResidentOrTenant, removeVisit);
 router.patch("/visitas/:id/cancelar", requireResidentOrTenant, patchCancelVisit);

@@ -336,6 +336,21 @@ async function listFrequentVisitors(userId, role = "residente") {
   }));
 }
 
+// Una visita ocurre dentro de un mismo dia. Si la hora de fin es menor, el usuario
+// intento cruzar la medianoche (p. ej. 23:49 -> 03:49): se explica en lugar del
+// mensaje generico.
+function visitEndBeforeStartError(horaInicio, horaFin) {
+  const crossesMidnight = horaFin < horaInicio;
+  const error = new Error(
+    crossesMidnight
+      ? "La visita no puede pasar de la medianoche: debe empezar y terminar el mismo día dentro del horario de visitas. Si es urgente, usa «Solicitar acceso de emergencia»."
+      : "La hora de fin debe ser mayor a la hora de inicio.",
+  );
+  error.status = 400;
+  error.code = crossesMidnight ? "VISIT_CROSSES_MIDNIGHT" : "VISIT_END_BEFORE_START";
+  return error;
+}
+
 async function createVisit(userId, role = "residente", payload) {
   const house = await getHouseByUserId(userId, role);
   const nombre = normalizeString(payload.nombre);
@@ -355,9 +370,7 @@ async function createVisit(userId, role = "residente", payload) {
   }
 
   if (horaInicio >= horaFin) {
-    const error = new Error("La hora de fin debe ser mayor a la hora de inicio.");
-    error.status = 400;
-    throw error;
+    throw visitEndBeforeStartError(horaInicio, horaFin);
   }
 
   // HU-C06.6/C06.7: sin fechas ni horarios pasados, asi nunca se genera un QR vencido.
@@ -748,9 +761,7 @@ async function updateVisit(userId, role = "residente", accessId, payload = {}) {
   }
 
   if (horaInicio >= horaFin) {
-    const error = new Error("La hora de fin debe ser mayor a la hora de inicio.");
-    error.status = 400;
-    throw error;
+    throw visitEndBeforeStartError(horaInicio, horaFin);
   }
 
   // Un acceso vigente que conserva su inicio puede editarse aunque ya haya empezado;
@@ -1690,6 +1701,7 @@ module.exports = {
   registerQrEntry,
   registerQrExit,
   __private__: {
+    getHouseByUserId,
     ensureVisitType,
     ensureQrExitCanBeRegistered,
     getQrStatus,

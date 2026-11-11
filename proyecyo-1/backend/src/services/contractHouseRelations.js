@@ -16,9 +16,20 @@ async function syncHouseRelations(c,houseId,today=guatemalaToday()) {
     await c.execute('INSERT INTO RESIDENTE(id_usuario) VALUES(?) ON DUPLICATE KEY UPDATE id_usuario=VALUES(id_usuario)',[title.id_usuario]);
     const [[r]]=await c.execute('SELECT id_residente FROM RESIDENTE WHERE id_usuario=?',[title.id_usuario]); resident=r.id_residente;
   }
+  const [occupants]=await c.execute(`SELECT h.id_usuario,h.autorizado,h.calidad,tu.nombre rol FROM CASA_HABITANTE h
+    JOIN USUARIO u ON u.id_usuario=h.id_usuario JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario=u.id_tipo_usuario
+    WHERE h.id_casa=? AND h.id_version_pendiente IS NULL AND h.calidad IN ('ARRENDATARIO_DIRECTO','INQUILINO_PRIVADO')
+    AND h.vigente_desde<=? AND (h.vigente_hasta IS NULL OR h.vigente_hasta>?)`,[houseId,today,today]);
+  // Quien renta directamente a la administracion con cuenta de residente usa el panel de
+  // residente: la casa es de la residencial (sin titular persona) y el queda como residente.
+  const directResident=!title?.id_usuario?occupants.find(o=>o.calidad==='ARRENDATARIO_DIRECTO'&&o.rol==='residente'):null;
+  if (directResident) {
+    await c.execute('INSERT INTO RESIDENTE(id_usuario) VALUES(?) ON DUPLICATE KEY UPDATE id_usuario=VALUES(id_usuario)',[directResident.id_usuario]);
+    const [[r]]=await c.execute('SELECT id_residente FROM RESIDENTE WHERE id_usuario=?',[directResident.id_usuario]); resident=r.id_residente;
+  }
   await c.execute('UPDATE CASA SET id_residente=? WHERE id_casa=?',[resident,houseId]);
   await c.execute('DELETE FROM INQUILINO_CASA WHERE id_casa=?',[houseId]);
-  const [tenants]=await c.execute("SELECT id_usuario,autorizado FROM CASA_HABITANTE WHERE id_casa=? AND id_version_pendiente IS NULL AND calidad IN ('ARRENDATARIO_DIRECTO','INQUILINO_PRIVADO') AND vigente_desde<=? AND (vigente_hasta IS NULL OR vigente_hasta>?)",[houseId,today,today]);
+  const tenants=occupants.filter(o=>o!==directResident);
   for (const tenant of tenants) {
     await c.execute('SELECT id_usuario FROM USUARIO WHERE id_usuario=? FOR UPDATE',[tenant.id_usuario]);
     const [[other]]=await c.execute(`SELECT id_casa FROM CASA_HABITANTE WHERE id_usuario=? AND id_casa<>?

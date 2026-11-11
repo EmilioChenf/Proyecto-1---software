@@ -1072,6 +1072,9 @@ const HOUSE_COLUMNS = [
   ["mapa_columna", "TINYINT UNSIGNED NULL"],
   ["activo", "BOOLEAN NOT NULL DEFAULT TRUE"],
   ["creado_en", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+  // Oferta comercial: VENTA (precio), RENTA (precio_renta mensual) o AMBAS.
+  ["modalidad", "VARCHAR(12) NOT NULL DEFAULT 'VENTA'"],
+  ["precio_renta", "DECIMAL(12,2) NULL"],
 ];
 
 async function ensureHousesSchema() {

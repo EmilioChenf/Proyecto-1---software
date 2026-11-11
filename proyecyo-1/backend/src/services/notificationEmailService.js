@@ -33,6 +33,7 @@ const TYPE_LABELS = {
   COMUNICADO: { tag: "Comunicado", button: "Leer en NexusResidencial", paths: { residente: "/residente/comunicados", inquilino: "/inquilino/comunicados" } },
   RESERVA_CANCELADA: { tag: "Reservas", button: "Ver mis reservas", paths: { residente: "/residente/amenidades", inquilino: "/inquilino/reservas" } },
   RECORDATORIO_RESERVA: { tag: "Reservas", button: "Ver mis reservas", paths: { residente: "/residente/amenidades", inquilino: "/inquilino/reservas" } },
+  ACCESO_EMERGENCIA: { tag: "Emergencia", button: "Revisar solicitud", paths: { admin: "/admin/accesos-especiales", residente: "/residente/visitas", inquilino: "/inquilino/visitas" } },
   SOLICITUD_AUTORIZACION: { tag: "Solicitudes", button: "Ver solicitud", paths: { inquilino: "/inquilino/permisos" } },
 };
 

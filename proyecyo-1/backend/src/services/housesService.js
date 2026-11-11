@@ -49,6 +49,8 @@ function optionalInteger(value, field, min, max) {
   return number;
 }
 
+const HOUSE_OFFERS = ["VENTA", "RENTA", "AMBAS"];
+
 function validateHousePayload(payload = {}) {
   const numero = String(payload.numero ?? "").trim();
   const torre = String(payload.torre ?? "").trim() || null;
@@ -65,9 +67,13 @@ function validateHousePayload(payload = {}) {
   const columna = optionalInteger(payload.mapa_columna, "La columna del mapa", 1, MAX_MAP_INDEX);
   if ((fila === null) !== (columna === null)) throw fail(400, "Indica fila y columna del mapa, o deja ambas vacias.");
 
+  const modalidad = String(payload.modalidad ?? "VENTA").trim().toUpperCase() || "VENTA";
+  if (!HOUSE_OFFERS.includes(modalidad)) throw fail(400, "La modalidad debe ser venta, renta o ambas.");
+
   return {
-    numero, torre, modelo,
+    numero, torre, modelo, modalidad,
     precio: optionalDecimal(payload.precio, "El precio", 9999999999),
+    precio_renta: optionalDecimal(payload.precio_renta, "La renta mensual", 99999999),
     area_terreno: optionalDecimal(payload.area_terreno, "El area del terreno", 999999),
     area_construccion: optionalDecimal(payload.area_construccion, "El area de construccion", 999999),
     habitaciones: optionalInteger(payload.habitaciones, "Habitaciones", 0, 50),
@@ -85,7 +91,7 @@ const HOUSE_SELECT = `
     (SELECT ct.tipo FROM CONTRATO_CASA ct JOIN CONTRATO_CASA_VERSION cv ON cv.id_contrato=ct.id_contrato
       WHERE ct.id_casa=c.id_casa AND cv.activacion_estado='ACTIVA' AND ct.fecha_inicio<=${GUATEMALA_TODAY_SQL}
       ORDER BY ct.fecha_inicio DESC,ct.id_contrato DESC LIMIT 1) tipo_contractual,
-    c.habitaciones, c.banos, c.niveles, c.modelo, c.mapa_fila, c.mapa_columna, c.activo,
+    c.habitaciones, c.banos, c.niveles, c.modelo, c.mapa_fila, c.mapa_columna, c.activo, c.modalidad, c.precio_renta,
     DATE_FORMAT(c.creado_en, '%Y-%m-%d %H:%i:%s') AS creado_en,
     ${HOUSE_STATUS_SQL} AS estado,
     u.id_usuario AS residente_id_usuario, u.nombre AS residente_nombre,
@@ -103,6 +109,8 @@ function mapHouse(row) {
     estado: row.estado || houseStatus(row),
     activo: Boolean(Number(row.activo ?? 1)),
     precio: toNumber(row.precio),
+    modalidad: row.modalidad || "VENTA",
+    precio_renta: toNumber(row.precio_renta),
     area_terreno: toNumber(row.area_terreno),
     area_construccion: toNumber(row.area_construccion),
     habitaciones: toNumber(row.habitaciones),
@@ -240,7 +248,7 @@ async function assertUniqueHouse(connection, data, exceptId = 0) {
   }
 }
 
-const HOUSE_FIELDS = ["numero", "torre", "precio", "area_terreno", "area_construccion", "habitaciones", "banos", "niveles", "modelo", "mapa_fila", "mapa_columna"];
+const HOUSE_FIELDS = ["numero", "torre", "modalidad", "precio", "precio_renta", "area_terreno", "area_construccion", "habitaciones", "banos", "niveles", "modelo", "mapa_fila", "mapa_columna"];
 
 async function inTransaction(work) {
   const connection = await pool.getConnection();

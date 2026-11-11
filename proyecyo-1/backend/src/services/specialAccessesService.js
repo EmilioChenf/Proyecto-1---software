@@ -235,7 +235,55 @@ async function notifyGuards(connection, accessId, titulo, mensaje) {
   }
 }
 
-async function createSpecialAccess(adminUserId, payload = {}) {
+async function notifyAdmins(connection, accessId, titulo, mensaje) {
+  const [admins] = await connection.execute(
+    `
+      SELECT u.id_usuario
+      FROM USUARIO u
+      INNER JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario = u.id_tipo_usuario
+      WHERE tu.nombre = 'admin' AND u.activo = TRUE
+    `,
+  );
+
+  for (const admin of admins) {
+    await connection.execute(
+      `
+        INSERT INTO NOTIFICACION (id_usuario, id_acceso, tipo, titulo, mensaje, leido)
+        VALUES (?, ?, 'ACCESO_EMERGENCIA', ?, ?, FALSE)
+      `,
+      [admin.id_usuario, accessId, titulo, mensaje],
+    );
+  }
+}
+
+// Avisa al residente o inquilino que pidio el acceso de emergencia cuando se resuelve.
+async function notifyRequester(connection, accessId, titulo, mensaje) {
+  const [rows] = await connection.execute(
+    `
+      SELECT u.id_usuario
+      FROM ACCESO a
+      INNER JOIN USUARIO u ON u.id_usuario = a.id_usuario_autoriza AND u.activo = TRUE
+      INNER JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario = u.id_tipo_usuario
+      WHERE a.id_acceso = ? AND tu.nombre IN ('residente', 'inquilino')
+      LIMIT 1
+    `,
+    [accessId],
+  );
+
+  if (!rows[0]) return;
+  await connection.execute(
+    `
+      INSERT INTO NOTIFICACION (id_usuario, id_acceso, tipo, titulo, mensaje, leido)
+      VALUES (?, ?, 'ACCESO_EMERGENCIA', ?, ?, FALSE)
+    `,
+    [rows[0].id_usuario, accessId, titulo, String(mensaje).slice(0, 255)],
+  );
+}
+
+// options.emergency: solicitud de un residente/inquilino. Siempre queda pendiente de
+// aprobacion del administrador y se avisa a los administradores y guardias.
+async function createSpecialAccess(adminUserId, payload = {}, options = {}) {
+  const emergency = Boolean(options.emergency);
   const nombre = normalizeString(payload.nombre);
   const tipoVisita = ensureSpecialAccessType(payload.tipo_visita);
 
@@ -293,8 +341,9 @@ async function createSpecialAccess(adminUserId, payload = {}) {
 
   const schedule = await getVisitScheduleConfig();
   const outsideHours = isOutsideRestrictedHours(horaInicio, horaFin, schedule);
-  const estadoAcceso = outsideHours ? "PENDIENTE_APROBACION" : "AUTORIZADA";
-  const tokenQr = outsideHours ? null : generateQrToken();
+  const requiresApproval = outsideHours || emergency;
+  const estadoAcceso = requiresApproval ? "PENDIENTE_APROBACION" : "AUTORIZADA";
+  const tokenQr = requiresApproval ? null : generateQrToken();
 
   const connection = await pool.getConnection();
 
@@ -378,7 +427,7 @@ async function createSpecialAccess(adminUserId, payload = {}) {
     const horaInicioCorta = horaInicio.slice(0, 5);
     const horaFinCorta = horaFin.slice(0, 5);
 
-    if (!outsideHours) {
+    if (!requiresApproval) {
       await connection.execute(
         `
           INSERT INTO ACCESO_EXCEPCION (
@@ -405,7 +454,16 @@ async function createSpecialAccess(adminUserId, payload = {}) {
         connection,
         accessId,
         "Acceso especial pendiente",
-        `${nombre} solicita acceso especial fuera de horario para ${casaLabel} (${fecha} ${horaInicioCorta}-${horaFinCorta}). Pendiente de aprobacion administrativa; sin QR hasta aprobar.`,
+        `${nombre} solicita acceso ${emergency ? "de emergencia" : "especial fuera de horario"} para ${casaLabel} (${fecha} ${horaInicioCorta}-${horaFinCorta}). Pendiente de aprobacion administrativa; sin QR hasta aprobar.`,
+      );
+    }
+
+    if (emergency) {
+      await notifyAdmins(
+        connection,
+        accessId,
+        "Solicitud de acceso de emergencia",
+        `${options.requesterName || "Un residente"} (casa ${casaLabel}) solicita el ingreso de ${nombre} el ${fecha} de ${horaInicioCorta} a ${horaFinCorta}. Motivo: ${motivo}`.slice(0, 255),
       );
     }
 
@@ -446,7 +504,7 @@ async function createSpecialAccess(adminUserId, payload = {}) {
     return {
       ...mapSpecialAccess(rows[0]),
       horario_permitido: schedule,
-      requiere_aprobacion: outsideHours,
+      requiere_aprobacion: requiresApproval,
     };
   } catch (error) {
     await connection.rollback();
@@ -553,6 +611,13 @@ async function approveSpecialAccess(adminUserId, accessId) {
       normalizedAccessId,
       "Acceso especial aprobado",
       `${access.visitante} fue aprobado fuera de horario para ${access.casa}.`,
+    );
+
+    await notifyRequester(
+      connection,
+      normalizedAccessId,
+      "Acceso de emergencia aprobado",
+      `La administración aprobó el ingreso de ${access.visitante} el ${access.fecha} de ${String(access.hora_inicio).slice(0, 5)} a ${String(access.hora_fin).slice(0, 5)}. El código QR ya está disponible en Mis visitas.`,
     );
 
     await connection.commit();
@@ -667,6 +732,13 @@ async function rejectSpecialAccess(adminUserId, accessId, payload = {}) {
       ],
     );
 
+    await notifyRequester(
+      connection,
+      normalizedAccessId,
+      "Acceso de emergencia rechazado",
+      `La administración rechazó la solicitud de ingreso de ${String(access.hora_inicio).slice(0, 5)} a ${String(access.hora_fin).slice(0, 5)}. Motivo: ${motivoRechazo}`,
+    );
+
     await connection.commit();
 
     return { id_acceso: normalizedAccessId, estado_acceso: "RECHAZADA" };
@@ -678,7 +750,30 @@ async function rejectSpecialAccess(adminUserId, accessId, payload = {}) {
   }
 }
 
+async function requestEmergencyAccess(userId, role, payload = {}) {
+  const { getHouseByUserId } = require("./visitsService").__private__;
+  const house = await getHouseByUserId(userId, role);
+  const motivo = normalizeString(payload.motivo_excepcion);
+  if (!motivo) {
+    const error = new Error("Explica el motivo de la emergencia.");
+    error.status = 400;
+    throw error;
+  }
+  if (motivo.length > 200) {
+    const error = new Error("El motivo no puede superar 200 caracteres.");
+    error.status = 400;
+    throw error;
+  }
+  const [requester] = await query("SELECT nombre FROM USUARIO WHERE id_usuario = ? LIMIT 1", [userId]);
+  return createSpecialAccess(
+    userId,
+    { ...payload, id_casa: house.id_casa, motivo_excepcion: `Emergencia: ${motivo}` },
+    { emergency: true, requesterName: requester?.nombre },
+  );
+}
+
 module.exports = {
+  requestEmergencyAccess,
   getVisitScheduleConfig,
   isOutsideRestrictedHours,
   listHouses,

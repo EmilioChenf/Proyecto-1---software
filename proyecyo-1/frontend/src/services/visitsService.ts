@@ -91,3 +91,22 @@ export async function registerQrExitRequest(payload: GuardQrValidationPayload) {
   notifyAccessCountersChanged();
   return visit;
 }
+
+export type EmergencyAccessPayload = {
+  nombre: string;
+  dpi?: string;
+  placa?: string;
+  tipo_visita?: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  motivo_excepcion: string;
+};
+
+/** Solicitud fuera de horario: queda pendiente hasta que la administración la apruebe. */
+export function requestEmergencyAccessRequest(payload: EmergencyAccessPayload) {
+  return apiRequest<{ id_acceso: number; estado_acceso: string; requiere_aprobacion?: boolean }>("/visitas/emergencia", {
+    method: "POST",
+    body: payload,
+  });
+}

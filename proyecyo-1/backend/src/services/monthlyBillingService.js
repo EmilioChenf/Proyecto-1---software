@@ -12,7 +12,7 @@ async function billHouse(houseId, period, actor = null, metadata = {}, asOf = pe
     await require('./contractHouseRelations').syncHouseRelations(c,houseId,asOf);
     const [frozen] = await exec('SELECT id_casa FROM FACTURACION_CASA_PERIODO WHERE id_casa=? AND periodo=?', [houseId,period]);
     if (frozen) return {id_casa:houseId,estado:'YA_FACTURADO',generadas:0};
-    const [version] = await exec(`SELECT v.*,ct.tipo,ct.meses_financiamiento,rf.id_usuario,
+    const [version] = await exec(`SELECT v.*,ct.tipo,ct.meses_financiamiento,ct.dia_pago,ct.monto_financiado,rf.id_usuario,
       u.nombre,u.correo FROM CONTRATO_CASA_VERSION v
       JOIN CONTRATO_CASA ct ON ct.id_contrato=v.id_contrato
       JOIN CASA_RESPONSABLE_FINANCIERO rf ON rf.id_responsabilidad=v.id_responsabilidad
@@ -25,13 +25,20 @@ async function billHouse(houseId, period, actor = null, metadata = {}, asOf = pe
     // Snapshot of the entire month, including zero concepts, is inserted in the same transaction.
     const snapshot = {tipo:version.tipo,cuota_vivienda:version.cuota_vivienda,mantenimiento:tariff.monto,id_responsable:version.id_usuario,nombre:version.nombre,correo:version.correo};
     await exec('INSERT INTO FACTURACION_CASA_PERIODO(id_casa,periodo,id_version,id_tarifa,configuracion_snapshot) VALUES(?,?,?,?,?)', [houseId,period,version.id_version,tariff.id_tarifa,JSON.stringify(snapshot)]);
-    const [[generated]] = await c.execute("SELECT COUNT(*) cantidad,COALESCE(MAX(numero_cuota),0) numero FROM CUOTA WHERE id_contrato=? AND concepto='VIVIENDA'", [version.id_contrato]);
+    const [[generated]] = await c.execute("SELECT COUNT(*) cantidad,COALESCE(MAX(numero_cuota),0) numero,COALESCE(SUM(monto),0) total FROM CUOTA WHERE id_contrato=? AND concepto='VIVIENDA'", [version.id_contrato]);
     const concepts = [];
-    if (version.tipo==='COMPRA_FINANCIADA' && Number(generated.cantidad)<Number(version.meses_financiamiento)) concepts.push(['VIVIENDA',version.cuota_vivienda,Number(generated.numero)+1]);
+    if (version.tipo==='COMPRA_FINANCIADA' && Number(generated.cantidad)<Number(version.meses_financiamiento)) {
+      // Con saldo financiado registrado, la ultima cuota cubre exactamente lo que falta.
+      const isLast = Number(generated.cantidad)+1===Number(version.meses_financiamiento);
+      const remaining = version.monto_financiado!=null ? (toCents(version.monto_financiado)-toCents(generated.total))/100 : null;
+      const amount = isLast && remaining!==null && remaining>0 ? remaining.toFixed(2) : version.cuota_vivienda;
+      concepts.push(['VIVIENDA',amount,Number(generated.numero)+1]);
+    }
     if (version.tipo==='RENTA_DIRECTA') concepts.push(['ALQUILER_RESIDENCIAL',version.cuota_vivienda,null]);
     concepts.push(['MANTENIMIENTO',tariff.monto,null]);
     const rules = await exec("SELECT valor FROM CONFIGURACION WHERE clave='finanzas_dia_limite' LIMIT 1");
-    const dueDay = Math.min(28,Math.max(1,Number(rules[0]?.valor)||10));
+    // Vence el dia del mes en que inicio el contrato; los contratos anteriores usan la regla global.
+    const dueDay = Math.min(28,Math.max(1,Number(version.dia_pago)||Number(rules[0]?.valor)||10));
     const due = `${period.slice(0,7)}-${String(dueDay).padStart(2,'0')}`;
     let count = 0;
     for (const [concept,amount,number] of concepts) {
