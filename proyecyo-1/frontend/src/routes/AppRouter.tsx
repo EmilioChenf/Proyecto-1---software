@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { rolePaths } from "@/routes/rolePaths";
 import { AdminAmenitiesReservationsView } from "@/views/AdminAmenitiesReservationsView";
 import { AdminAccessesView } from "@/views/AdminAccessesView";
+import { AdminTicketsView } from "@/views/AdminTicketsView";
+import { ResidentTicketsView } from "@/views/ResidentTicketsView";
 import { AdminAuthorizedUsersView } from "@/views/AdminAuthorizedUsersView";
 import { AdminCommunicationsView } from "@/views/AdminCommunicationsView";
 import { AdminPaymentsView } from "@/views/AdminPaymentsView";
@@ -87,6 +89,7 @@ export function AppRouter() {
           <Route path="/admin/sanciones" element={<AdminSanctionsView />} />
           <Route path="/admin/sanciones/historial-completo" element={<AdminSanctionHistoryView />} />
           <Route path="/admin/amenidades" element={<AdminAmenitiesReservationsView />} />
+          <Route path="/admin/fallas" element={<AdminTicketsView />} />
           <Route path="/admin/reportes" element={<AdminReportsView />} />
           <Route path="/admin/finanzas" element={<AdminFinancialDashboardView />} />
           <Route path="/admin/reportes-financieros" element={<AdminMonthlyFinancialReportView />} />
@@ -122,6 +125,7 @@ export function AppRouter() {
           <Route path="/residente/notificaciones" element={<ResidentNotificationsView />} />
           <Route path="/residente/comunicados" element={<ResidentNotificationsView initialFilter="COMUNICADOS" />} />
           <Route path="/residente/proveedores" element={<ResidenteProvidersView />} />
+          <Route path="/residente/fallas" element={<ResidentTicketsView />} />
           <Route path="/residente/sesiones" element={<ActiveSessionsView />} />
         </Route>
 
@@ -131,6 +135,7 @@ export function AppRouter() {
           <Route path="/inquilino/proveedores" element={<InquilinoView section="proveedores" />} />
           <Route path="/inquilino/permisos" element={<InquilinoView section="permisos" />} />
           <Route path="/inquilino/reservas" element={<TenantAmenitiesHistoryView />} />
+          <Route path="/inquilino/fallas" element={<ResidentTicketsView role="inquilino" />} />
           <Route path="/inquilino/notificaciones" element={<ResidentNotificationsView role="inquilino" />} />
           <Route path="/inquilino/comunicados" element={<ResidentNotificationsView role="inquilino" initialFilter="COMUNICADOS" />} />
           <Route path="/inquilino/sesiones" element={<ActiveSessionsView />} />

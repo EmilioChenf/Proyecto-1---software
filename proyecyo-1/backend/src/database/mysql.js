@@ -294,6 +294,9 @@ async function ensureAmenityReservationsSchema() {
         ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE AFTER intervalo_minutos
       `,
     },
+    // Catalogo editable por el administrador (foto y reglas visibles al reservar).
+    { column: "foto_url", ddl: "ALTER TABLE AMENIDAD ADD COLUMN foto_url VARCHAR(255) NULL" },
+    { column: "reglas", ddl: "ALTER TABLE AMENIDAD ADD COLUMN reglas VARCHAR(500) NULL" },
   ];
 
   for (const definition of amenityColumns) {
@@ -392,6 +395,38 @@ async function ensureNotificationsSchema() {
     await query(`
       ALTER TABLE NOTIFICACION
       ADD INDEX idx_notificacion_correo (correo_estado, correo_proximo_intento, id_notificacion)
+    `);
+  }
+}
+
+// Funciones de producto: reportes de fallas (TICKET), roles personalizados, comunidad
+// y notificaciones push. Aditivo y re-ejecutable.
+async function ensureProductFeaturesSchema() {
+  const ticketColumns = [
+    ["titulo", "VARCHAR(120) NULL"],
+    ["ubicacion", "VARCHAR(120) NULL"],
+    ["id_casa", "INT NULL"],
+    ["foto", "MEDIUMTEXT NULL"],
+    ["creado_en", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ["actualizado_en", "DATETIME NULL"],
+    ["resuelto_en", "DATETIME NULL"],
+  ];
+  for (const [column, definition] of ticketColumns) {
+    if (!(await columnExists("TICKET", column))) await query(`ALTER TABLE TICKET ADD COLUMN ${column} ${definition}`);
+  }
+  if (!(await tableExists("TICKET_COMENTARIO"))) {
+    await query(`
+      CREATE TABLE TICKET_COMENTARIO (
+        id_comentario INT PRIMARY KEY AUTO_INCREMENT,
+        id_ticket INT NOT NULL,
+        id_usuario INT NOT NULL,
+        comentario VARCHAR(1000) NOT NULL,
+        estado_nuevo VARCHAR(20) NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_ticket_comentario (id_ticket, creado_en),
+        FOREIGN KEY (id_ticket) REFERENCES TICKET(id_ticket) ON DELETE CASCADE,
+        FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario)
+      )
     `);
   }
 }
@@ -1178,6 +1213,7 @@ module.exports = {
   ensureAccessGuardAuditSchema,
   ensureAmenityReservationsSchema,
   ensureNotificationsSchema,
+  ensureProductFeaturesSchema,
   ensureActiveSessionsSchema,
   ensurePasswordResetSchema,
   ensureAuditSchema,

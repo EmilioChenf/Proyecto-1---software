@@ -109,6 +109,11 @@ const adminMenuItems: AdminMenuItem[] = [
     to: "/admin/sanciones/historial-completo",
   },
   {
+    label: "Fallas y mantenimiento",
+    icon: Building2,
+    to: "/admin/fallas",
+  },
+  {
     label: "Amenidades",
     icon: Home,
     to: "/admin/amenidades",
@@ -152,6 +157,7 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/usuarios-autorizados": "Comunidad",
   "/admin/proveedores": "Comunidad",
   "/admin/amenidades": "Comunidad",
+  "/admin/fallas": "Comunidad",
   "/admin/accesos": "Seguridad",
   "/admin/accesos-especiales": "Seguridad",
   "/admin/auditoria": "Seguridad",
@@ -178,6 +184,7 @@ const menuIconByPath: Record<string, string> = {
   "/admin/usuarios-autorizados": "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 9-5.2M15 18l2 2 4-4",
   "/admin/proveedores": "M2 7h11v9H2zM13 10h4l4 4v2h-8zM6 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
   "/admin/amenidades": "M12 3l4 7h-3l4 6H7l4-6H8zM12 16v5",
+  "/admin/fallas": "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z",
   "/admin/accesos": "M8 21a5 5 0 1 1 4.6-7L21 5.6M17 9.5l2.5 2.5M14.5 12l2 2",
   "/admin/accesos-especiales": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4",
   "/admin/auditoria": "M9 3h6l1 2h3v16H5V5h3zM9 3v3h6V3M9 12h6M9 16h4",

@@ -521,6 +521,12 @@ export function ResidenteAmenitiesView() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedAmenity && (selectedAmenity.foto_url || selectedAmenity.reglas) ? (
+              <div className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                {selectedAmenity.foto_url ? <img src={selectedAmenity.foto_url} alt={`Foto de ${selectedAmenity.nombre}`} className="size-20 shrink-0 rounded-xl object-cover" /> : null}
+                {selectedAmenity.reglas ? <div className="min-w-0 text-sm"><p className="font-semibold text-slate-800">Reglas de uso</p><p className="mt-0.5 whitespace-pre-line text-slate-600">{selectedAmenity.reglas}</p></div> : null}
+              </div>
+            ) : null}
             {selectedDateIsPast ? (
               <Alert variant="destructive">
                 <AlertTitle>Fecha pasada</AlertTitle>

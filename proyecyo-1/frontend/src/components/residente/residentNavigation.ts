@@ -10,6 +10,7 @@ import {
   ReceiptText,
   UserRoundCheck,
   Wallet,
+  Wrench,
 } from "lucide-react";
 
 import {
@@ -35,6 +36,7 @@ export const residentNavSections: ResidentNavSection[] = [
       { label: "Mis visitas", icon: UserRoundCheck, to: "/residente/visitas" },
       { label: "Accesos y reservas", icon: KeyRound, to: "/residente/unificado", badge: "pendingTenantRequests" },
       { label: "Amenidades", icon: CalendarDays, to: "/residente/amenidades" },
+      { label: "Reportar falla", icon: Wrench, to: "/residente/fallas" },
       {
         label: "Proveedores",
         icon: BriefcaseBusiness,

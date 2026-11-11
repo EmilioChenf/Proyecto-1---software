@@ -14,6 +14,7 @@ const usersRoutes = require("./routes/usersRoutes");
 const housesRoutes = require("./routes/housesRoutes");
 const userTypesRoutes = require("./routes/userTypesRoutes");
 const visitsRoutes = require("./routes/visitsRoutes");
+const ticketsRoutes = require("./routes/ticketsRoutes");
 const amenitiesReservationsRoutes = require("./routes/amenitiesReservationsRoutes");
 const adminAccessesRoutes = require("./routes/adminAccessesRoutes");
 const notificationsRoutes = require("./routes/notificationsRoutes");
@@ -92,6 +93,7 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
   app.use(require('./routes/propertyContractsRoutes'));
   app.use(userTypesRoutes);
   app.use(visitsRoutes);
+  app.use(ticketsRoutes);
   app.use(amenitiesReservationsRoutes);
   app.use(adminAccessesRoutes);
   app.use(notificationsRoutes);

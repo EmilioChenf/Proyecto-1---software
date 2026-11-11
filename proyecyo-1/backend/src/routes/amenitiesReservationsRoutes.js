@@ -19,6 +19,9 @@ const {
   postAdminAmenityReservation,
   patchAdminCancelAmenityReservation,
   putAdminAmenitySchedule,
+  postAdminAmenity,
+  patchAdminAmenity,
+  deleteAdminAmenity,
 } = require("../controllers/amenitiesReservationsController");
 const { requireResident, requireTenant } = require("../middlewares/requireResident");
 const { requireAdmin } = require("../middlewares/requireAdmin");
@@ -43,6 +46,9 @@ router.get("/admin/amenidades", requireAdmin, getAmenities);
 router.get("/admin/amenidades/usuarios", requireAdmin, getReservableAmenitiesUsers);
 router.get("/admin/amenidades/estadisticas", requireAdmin, getAdminAmenitiesStats);
 router.put("/admin/amenidades/:id/horario", requireAdmin, putAdminAmenitySchedule);
+router.post("/admin/amenidades", requireAdmin, postAdminAmenity);
+router.patch("/admin/amenidades/:id", requireAdmin, patchAdminAmenity);
+router.delete("/admin/amenidades/:id", requireAdmin, deleteAdminAmenity);
 router.get("/admin/reservas/amenidades", requireAdmin, getAdminAmenitiesReservations);
 router.get(
   "/admin/reservas/amenidades/disponibilidad",

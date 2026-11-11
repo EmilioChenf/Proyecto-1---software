@@ -215,7 +215,28 @@ async function putAdminAmenitySchedule(req, res, next) {
   }
 }
 
+const amenitiesCatalog = require("../services/amenitiesCatalogService");
+const { getRequestMetadata, recordAudit } = require("../services/auditService");
+
+function amenityHandler(action, work) {
+  return async (req, res, next) => {
+    try {
+      const result = await work(req);
+      await recordAudit({ userId: req.authUser.id, action, entity: "AMENIDAD", entityId: result.id_amenidad ?? req.params.id, newData: result, metadata: getRequestMetadata(req) });
+      res.status(action === "AMENITY_CREATED" ? 201 : 200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+}
+const postAdminAmenity = amenityHandler("AMENITY_CREATED", (req) => amenitiesCatalog.createAmenity(req.body || {}));
+const patchAdminAmenity = amenityHandler("AMENITY_UPDATED", (req) => amenitiesCatalog.updateAmenity(Number(req.params.id), req.body || {}));
+const deleteAdminAmenity = amenityHandler("AMENITY_DELETED", (req) => amenitiesCatalog.deleteAmenity(Number(req.params.id)));
+
 module.exports = {
+  postAdminAmenity,
+  patchAdminAmenity,
+  deleteAdminAmenity,
   getOwnAmenitiesReservations,
   getAmenities,
   getReservableAmenitiesUsers,

@@ -184,3 +184,15 @@ export function getAdminAmenityStatsRequest(filters: ReservationFilters) {
     `/admin/amenidades/estadisticas?${buildReservationQuery(filters)}`,
   );
 }
+
+export function createAmenityRequest(payload: import("@/types/amenities").AmenityCatalogPayload) {
+  return apiRequest<import("@/types/amenities").Amenity>("/admin/amenidades", { method: "POST", body: payload });
+}
+
+export function updateAmenityRequest(id: number, payload: Partial<import("@/types/amenities").AmenityCatalogPayload>) {
+  return apiRequest<import("@/types/amenities").Amenity>(`/admin/amenidades/${id}`, { method: "PATCH", body: payload });
+}
+
+export function deleteAmenityRequest(id: number) {
+  return apiRequest<{ id_amenidad: number; eliminada: boolean }>(`/admin/amenidades/${id}`, { method: "DELETE" });
+}

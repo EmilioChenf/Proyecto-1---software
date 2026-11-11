@@ -201,6 +201,8 @@ function mapAmenity(row) {
     hora_cierre: row.hora_cierre,
     intervalo_minutos: Number(row.intervalo_minutos || 60),
     activo: Boolean(row.activo),
+    foto_url: row.foto_url || "",
+    reglas: row.reglas || "",
   };
 }
 
@@ -792,7 +794,9 @@ async function listAmenities() {
         TIME_FORMAT(hora_apertura, '%H:%i') AS hora_apertura,
         TIME_FORMAT(hora_cierre, '%H:%i') AS hora_cierre,
         intervalo_minutos,
-        activo
+        activo,
+        foto_url,
+        reglas
       FROM AMENIDAD
       ORDER BY id_amenidad ASC
     `);

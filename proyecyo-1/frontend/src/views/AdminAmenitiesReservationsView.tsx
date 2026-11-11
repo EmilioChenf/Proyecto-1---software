@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AdminLayout } from "@/components/admin/AdminLayout";
+import { AmenityCatalogDialog } from "@/components/amenities/AmenityCatalogDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -268,6 +269,7 @@ export function AdminAmenitiesReservationsView() {
   const today = guatemalaToday();
   const [monthReference, setMonthReference] = useState(() => parseDate(guatemalaToday()));
   const [amenities, setAmenities] = useState<Amenity[]>([]);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const [users, setUsers] = useState<ReservableUserOption[]>([]);
   const [reservations, setReservations] = useState<AmenityReservation[]>([]);
   const [selectedAmenityFilter, setSelectedAmenityFilter] = useState<number | "all">("all");
@@ -1056,6 +1058,17 @@ export function AdminAmenitiesReservationsView() {
                 <Settings2 className="size-4" />
                 Configurar Horarios
               </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCatalogOpen(true)}
+                className="h-10 w-full rounded-xl border-slate-200 text-[0.82rem]"
+              >
+                <PlusCircle className="size-4" />
+                Gestionar amenidades
+              </Button>
+              <AmenityCatalogDialog open={catalogOpen} onClose={() => setCatalogOpen(false)} amenities={amenities} onChanged={() => refreshDashboard()} />
 
               <div className="border-t border-slate-100 pt-4">
                 <p className="text-[0.82rem] text-slate-500">Reservas esta semana</p>

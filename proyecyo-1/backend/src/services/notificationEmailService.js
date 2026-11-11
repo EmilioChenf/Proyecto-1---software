@@ -34,6 +34,7 @@ const TYPE_LABELS = {
   RESERVA_CANCELADA: { tag: "Reservas", button: "Ver mis reservas", paths: { residente: "/residente/amenidades", inquilino: "/inquilino/reservas" } },
   RECORDATORIO_RESERVA: { tag: "Reservas", button: "Ver mis reservas", paths: { residente: "/residente/amenidades", inquilino: "/inquilino/reservas" } },
   ACCESO_EMERGENCIA: { tag: "Emergencia", button: "Revisar solicitud", paths: { admin: "/admin/accesos-especiales", residente: "/residente/visitas", inquilino: "/inquilino/visitas" } },
+  TICKET: { tag: "Mantenimiento", button: "Ver el reporte", paths: { admin: "/admin/fallas", residente: "/residente/fallas", inquilino: "/inquilino/fallas" } },
   SOLICITUD_AUTORIZACION: { tag: "Solicitudes", button: "Ver solicitud", paths: { inquilino: "/inquilino/permisos" } },
 };
 
