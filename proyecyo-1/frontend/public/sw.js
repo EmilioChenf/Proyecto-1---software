@@ -1,9 +1,13 @@
 // Service worker de NexusResidencial: permite instalar la app y recibir notificaciones push.
 // No guarda datos de la API en caché (son privados y cambian); solo la página base para abrir sin red.
-const SHELL = "nexus-shell-v1";
+const SHELL = "nexus-shell-v2";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(["/", "/manifest.webmanifest", "/icons/icon-192.png"])).then(() => self.skipWaiting()));
+  // Si alguna página no se puede guardar, la app se instala igual (los avisos no dependen de la caché).
+  event.waitUntil(caches.open(SHELL)
+    .then((cache) => Promise.allSettled(["/", "/manifest.webmanifest", "/icons/icon-192.png"].map((url) => cache.add(url))))
+    .catch(() => undefined)
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
