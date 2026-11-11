@@ -17,9 +17,9 @@ afterEach(() => vi.resetAllMocks());
 it("HU10 exporta el reporte, formato y período elegidos", async () => {
   vi.mocked(downloadReport).mockResolvedValue();
   render(<AdminReportsView />);
-  await screen.findByRole('option', { name: 'Reservas' });
-  fireEvent.change(screen.getByLabelText("Reporte"), { target: { value: "reservas" } });
-  fireEvent.change(screen.getByLabelText("Formato"), { target: { value: "xlsx" } });
+  await screen.findByRole('radio', { name: 'Reservas' });
+  fireEvent.click(screen.getByRole('radio', { name: 'Reservas' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Excel' }));
   fireEvent.change(screen.getByLabelText("Desde"), { target: { value: "2026-09-01" } });
   fireEvent.change(screen.getByLabelText("Hasta"), { target: { value: "2026-09-07" } });
   fireEvent.click(screen.getByRole("button", { name: "Exportar" }));
@@ -30,7 +30,7 @@ it("HU10 exporta el reporte, formato y período elegidos", async () => {
 it("HU10 muestra errores de exportación y permite reintentar", async () => {
   vi.mocked(downloadReport).mockRejectedValue(new Error("Reduzca el período"));
   render(<AdminReportsView />);
-  await screen.findByRole('option', { name: 'Accesos' });
+  await screen.findByRole('radio', { name: 'Accesos' });
   fireEvent.click(screen.getByRole("button", { name: "Exportar" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Reduzca el período");
   expect(screen.getByRole("button", { name: "Exportar" })).toBeEnabled();
@@ -39,13 +39,13 @@ it("HU10 muestra errores de exportación y permite reintentar", async () => {
 it('HU29 descarga con filtros de módulo y los limpia al cambiar de reporte', async () => {
   vi.mocked(downloadReport).mockResolvedValue();
   render(<AdminReportsView />);
-  await screen.findByRole('option', { name: 'Reservas' });
-  fireEvent.change(screen.getByLabelText('Reporte'), { target: { value: 'reservas' } });
+  await screen.findByRole('radio', { name: 'Reservas' });
+  fireEvent.click(screen.getByRole('radio', { name: 'Reservas' }));
   fireEvent.change(screen.getByLabelText('Estado de reserva'), { target: { value: 'CONFIRMADA' } });
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
   await waitFor(() => expect(downloadReport).toHaveBeenCalledWith(expect.objectContaining({ estado: 'CONFIRMADA' }), expect.any(AbortSignal)));
-  await waitFor(() => expect(screen.getByLabelText('Reporte')).toBeEnabled());
-  fireEvent.change(screen.getByLabelText('Reporte'), { target: { value: 'pagos' } });
+  await waitFor(() => expect(screen.getByRole('radio', { name: 'Pagos aplicados' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('radio', { name: 'Pagos aplicados' }));
   fireEvent.change(screen.getByLabelText('Responsable histórico'), { target: { value: 'Ana' } });
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
   await waitFor(() => expect(downloadReport).toHaveBeenLastCalledWith({ reporte: 'pagos', formato: 'pdf', desde: '', hasta: '', responsable: 'Ana' }, expect.any(AbortSignal)));
@@ -54,9 +54,9 @@ it('HU29 descarga con filtros de módulo y los limpia al cambiar de reporte', as
 it('HU29 morosidad explica deuda actual, deshabilita fechas y no envía un período residual', async () => {
   vi.mocked(downloadReport).mockResolvedValue();
   render(<AdminReportsView />);
-  await screen.findByRole('option', { name: 'Morosos' });
+  await screen.findByRole('radio', { name: 'Morosos' });
   fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2030-01-01' } });
-  fireEvent.change(screen.getByLabelText('Reporte'), { target: { value: 'morosos' } });
+  fireEvent.click(screen.getByRole('radio', { name: 'Morosos' }));
   expect(screen.getByLabelText('Desde')).toBeDisabled();
   expect(screen.getByLabelText('Hasta')).toBeDisabled();
   expect(screen.getByText(/toda la deuda vencida vigente/)).toBeInTheDocument();
@@ -69,7 +69,7 @@ it('HU29 permite cancelar una descarga y comunica el resultado sin mostrar un er
     signal?.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')));
   }));
   render(<AdminReportsView />);
-  await screen.findByRole('option', { name: 'Accesos' });
+  await screen.findByRole('radio', { name: 'Accesos' });
   fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
   expect(screen.getByRole('status')).toHaveTextContent('Preparando');
   fireEvent.click(screen.getByRole('button', { name: 'Cancelar exportación' }));
@@ -83,7 +83,7 @@ it('HU29 recupera un catálogo fallido sin recargar la página', async () => {
   await screen.findByRole('alert');
   expect(screen.getByRole('button', { name: 'Exportar' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Reintentar catálogo' }));
-  await screen.findByRole('option', { name: 'Accesos' });
+  await screen.findByRole('radio', { name: 'Accesos' });
   expect(screen.getByRole('button', { name: 'Exportar' })).toBeEnabled();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
