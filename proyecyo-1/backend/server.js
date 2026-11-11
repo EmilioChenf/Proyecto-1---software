@@ -32,6 +32,7 @@ const {
 const { startScheduler } = require("./src/services/automaticBackupsService");
 const { startReminderScheduler } = require("./src/services/adminRemindersService");
 const { startNotificationEmailScheduler } = require("./src/services/notificationEmailService");
+const { bootstrapFromEnvironment } = require("./src/database/bootstrapResidencial");
 
 const DB_READY_RETRIES = 30;
 const DB_READY_DELAY_MS = 2000;
@@ -64,6 +65,8 @@ async function waitForDatabase() {
 
 async function startServer() {
   await waitForDatabase();
+  // Copia nueva de un residencial: crea esquema y administrador si la base esta vacia.
+  await bootstrapFromEnvironment(env);
   await ensureVisitQrSchema();
   await ensureQrValidationAttemptsSchema();
   await ensureAccessGuardAuditSchema();

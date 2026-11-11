@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/hooks/useAuth";
+import { hasCustomName, useResidentialBrand } from "@/hooks/useResidentialBrand";
 import { rolePaths } from "@/routes/rolePaths";
 import "./loginView.css";
 
@@ -78,6 +79,7 @@ const ErrIcon = () => (
 
 export function LoginView() {
   const navigate = useNavigate();
+  const brand = useResidentialBrand();
   const { login } = useAuth();
   const [role, setRole] = useState<RoleId>("administrador");
   const [showPw, setShowPw] = useState(false);
@@ -168,7 +170,7 @@ export function LoginView() {
               </span>
               <div>
                 <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", color: `color-mix(in srgb, ${ACCENT} 85%, #000)` }}>NexusResidencial</div>
-                <div style={{ fontSize: 13, color: "#526079" }}>Gestión inteligente residencial</div>
+                <div style={{ fontSize: 13, color: "#526079" }}>{hasCustomName(brand) ? brand.nombre : "Gestión inteligente residencial"}</div>
               </div>
             </div>
             <div className="nr-mono" style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "#526079", padding: "8px 12px", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 999 }}>

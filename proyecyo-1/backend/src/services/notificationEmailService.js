@@ -1,6 +1,6 @@
 const { env } = require("../config/env");
 const { query } = require("../database/mysql");
-const { sendEmail, renderEmailLayout, isEmailConfigured } = require("./emailService");
+const { sendEmail, renderEmailLayout, isEmailConfigured, currentBrand } = require("./emailService");
 const { logger } = require("../utils/safeLogger");
 
 // Despachador de correos de notificaciones.
@@ -54,7 +54,7 @@ function describe(notification) {
   return { tag, path, button };
 }
 
-function buildNotificationEmail(notification) {
+function buildNotificationEmail(notification, brand = null) {
   const { tag, path, button } = describe(notification);
   const url = `${frontendBase()}${path}`;
   const greeting = `Hola${notification.nombre ? ` ${notification.nombre}` : ""},`;
@@ -62,11 +62,11 @@ function buildNotificationEmail(notification) {
   return {
     subject,
     text: `${greeting}\n\n${notification.titulo}\n${notification.mensaje}\n\nAbrir NexusResidencial: ${url}`,
-    html: renderEmailLayout({ heading: notification.titulo, greeting, paragraphs: [notification.mensaje], buttonText: button, buttonUrl: url }),
+    html: renderEmailLayout({ heading: notification.titulo, greeting, paragraphs: [notification.mensaje], buttonText: button, buttonUrl: url, brand }),
   };
 }
 
-function createNotificationEmailDispatcher({ db = query, send = sendEmail, configured = isEmailConfigured, log = logger } = {}) {
+function createNotificationEmailDispatcher({ db = query, send = sendEmail, configured = isEmailConfigured, log = logger, brandOf = currentBrand } = {}) {
   let running = false;
 
   async function claim(id) {
@@ -110,7 +110,7 @@ function createNotificationEmailDispatcher({ db = query, send = sendEmail, confi
         }
         if (!(await claim(row.id_notificacion))) continue;
         try {
-          const email = buildNotificationEmail(row);
+          const email = buildNotificationEmail(row, await brandOf());
           const result = await send({ to: row.correo, ...email });
           if (result && result.delivered === false) throw new Error(result.reason || "NO_ENTREGADO");
           await db(`UPDATE NOTIFICACION SET correo_estado = 'ENVIADO', correo_enviado_en = NOW(), correo_intentos = correo_intentos + 1,

@@ -15,6 +15,7 @@ import { VisitScheduleSettings } from "@/components/admin/VisitScheduleSettings"
 import { FinancialRulesSettings } from "@/components/admin/FinancialRulesSettings";
 import { AutomaticBackupsSettings } from "@/components/admin/AutomaticBackupsSettings";
 import { GeneralSettings } from "@/components/admin/GeneralSettings";
+import { BrandSettings } from "@/components/admin/BrandSettings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/services/api";
@@ -207,6 +208,7 @@ export function AdminSettingsView() {
       }
     >
       <GeneralSettings />
+      <BrandSettings />
       <VisitScheduleSettings />
       <FinancialRulesSettings />
       <AutomaticBackupsSettings />
