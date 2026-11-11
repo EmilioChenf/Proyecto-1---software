@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { InstallAppBanner } from "@/components/pwa/InstallAppBanner";
 import { LogOut, Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -285,6 +286,7 @@ export function RoleSidebarLayout<Badge extends string>({
             {actions ? <div className="flex flex-wrap items-center gap-2.5">{actions}</div> : null}
           </header>
 
+          <InstallAppBanner />
           <div className="nd-content">{children}</div>
         </div>
       </main>

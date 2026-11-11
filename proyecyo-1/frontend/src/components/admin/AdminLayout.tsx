@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { InstallAppBanner } from "@/components/pwa/InstallAppBanner";
 import {
   BellRing,
   FileText,
@@ -449,6 +450,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
             {actions ? <div className="flex flex-wrap items-center gap-2.5">{actions}</div> : null}
           </header>
 
+          <InstallAppBanner />
           <div className="nd-content">{children}</div>
         </div>
       </main>
