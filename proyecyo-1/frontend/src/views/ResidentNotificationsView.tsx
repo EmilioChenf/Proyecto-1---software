@@ -37,6 +37,7 @@ const typeLabels: Record<string, string> = {
   ACCESO_ESPECIAL: "Acceso especial",
   ACCESO_EMERGENCIA: "Acceso de emergencia",
   TICKET: "Reporte de falla",
+  COMUNIDAD: "Comunidad",
   SOLICITUD_AUTORIZACION: "Autorización",
   RECORDATORIO_RESERVA: "Reserva",
   RESERVA_CANCELADA: "Reserva cancelada",

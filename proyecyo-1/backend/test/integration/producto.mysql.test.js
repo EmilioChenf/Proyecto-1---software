@@ -114,3 +114,44 @@ test('IN01 indicadores: morosidad mes a mes, ocupación, visitas y fallas',async
   const board=await user('Junta Test','Presidenta');
   assert.equal((await request.get('/admin/indicadores').set({'x-user-id':String(board),'x-user-role':'Junta Test'})).status,200);
 });
+
+test('CM01 votación: un voto por vivienda, resultados y cierre',async()=>{
+  const community=require('../../src/services/communityService');
+  const admin=await user('admin','Admin comunidad');
+  const resident=await user('residente','Propietaria votante');
+  const [res]=await query('SELECT id_residente FROM RESIDENTE WHERE id_usuario=?',[resident]);
+  let residentId=res?.id_residente;
+  if(!residentId){residentId=(await query('INSERT INTO RESIDENTE(id_usuario) VALUES(?)',[resident])).insertId;}
+  await query("INSERT INTO CASA(numero,torre,id_residente) VALUES(?,?,?)",[`V${Date.now()%100000}`,'T9',residentId]);
+  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,16);
+  assert.throws(()=>community.validatePoll({titulo:'¿Pintamos?',opciones:['Sí'],fecha_cierre:tomorrow}),/entre 2 y 8/);
+  const poll=await community.createPoll(admin,{titulo:'¿Pintamos la garita de azul?',opciones:['Sí','No','Me da igual'],fecha_cierre:tomorrow,resultados_visibles:false});
+  assert.equal(poll.opciones.length,3);
+  const notices=await query("SELECT COUNT(*) n FROM NOTIFICACION WHERE id_usuario=? AND tipo='COMUNIDAD'",[resident]);
+  assert.equal(Number(notices[0].n),1);
+  const [mine]=(await community.listPolls({userId:resident,role:'residente'})).filter(p=>p.id_votacion===poll.id_votacion);
+  assert.equal(mine.puede_votar,true,JSON.stringify(mine));
+  const voted=await community.vote(poll.id_votacion,resident,'residente',poll.opciones[0].id_opcion);
+  assert.equal(voted.mi_voto,poll.opciones[0].id_opcion);assert.equal(voted.mostrar_resultados,false,'resultados ocultos hasta el cierre');
+  await assert.rejects(community.vote(poll.id_votacion,resident,'residente',poll.opciones[1].id_opcion),{status:409});
+  await assert.rejects(community.vote(poll.id_votacion,resident,'inquilino',poll.opciones[1].id_opcion),{status:403});
+  await assert.rejects(community.deletePoll(poll.id_votacion),{status:409});
+  const closed=await community.closePoll(poll.id_votacion);
+  assert.equal(closed.abierta,false);assert.equal(closed.opciones[0].votos,1);assert.equal(closed.total_votos,1);
+});
+test('CM02 documentos y directorio',async()=>{
+  const community=require('../../src/services/communityService');
+  const admin=await user('admin','Admin docs');
+  const pdf='data:application/pdf;base64,'+Buffer.from('%PDF-1.4 reglamento').toString('base64');
+  await assert.rejects(community.createDocument(admin,{titulo:'Malo',nombre_archivo:'x.html',archivo:'data:text/html;base64,PGI+'}),/PDF/);
+  const doc=await community.createDocument(admin,{titulo:'Reglamento interno 2026',categoria:'REGLAMENTO',nombre_archivo:'reglamento.pdf',archivo:pdf,notificar:false});
+  assert.equal(doc.tipo,'PDF');
+  const file=await community.getDocumentFile(doc.id_documento);
+  assert.equal(file.buffer.toString(),'%PDF-1.4 reglamento');
+  const contacts=await community.listContacts();
+  assert(contacts.some(c=>c.telefono==='110'),'trae números de emergencia');
+  const plumber=await community.saveContact(null,{nombre:'Plomero Don Luis',categoria:'SERVICIOS',telefono:'5555-1234'});
+  assert.equal(plumber.categoria,'SERVICIOS');
+  await assert.rejects(community.saveContact(null,{nombre:'Sin datos'}),/teléfono o un correo/);
+  assert.deepEqual(await community.deleteDocument(doc.id_documento),{id_documento:doc.id_documento,eliminado:true});
+});

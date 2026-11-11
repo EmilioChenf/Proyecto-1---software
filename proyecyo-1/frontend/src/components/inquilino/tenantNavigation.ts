@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   UserRoundCheck,
   Wallet,
-  Wrench,
+  Vote, Wrench,
 } from "lucide-react";
 
 import {
@@ -32,6 +32,7 @@ export const tenantNavSections: RoleNavSection<TenantBadgeKey>[] = [
       { label: "Mis visitas", icon: UserRoundCheck, to: "/inquilino/visitas" },
       { label: "Mis reservas", icon: CalendarDays, to: "/inquilino/reservas" },
       { label: "Reportar falla", icon: Wrench, to: "/inquilino/fallas" },
+      { label: "Comunidad", icon: Vote, to: "/inquilino/comunidad" },
       { label: "Proveedores", icon: BriefcaseBusiness, to: "/inquilino/proveedores" },
       { label: "Permisos y solicitudes", icon: ShieldCheck, to: "/inquilino/permisos" },
     ],

@@ -49,6 +49,7 @@ describe("TenantLayout", () => {
       [/^Mis visitas$/, "/inquilino/visitas"],
       [/^Mis reservas$/, "/inquilino/reservas"],
       [/^Reportar falla$/, "/inquilino/fallas"],
+      [/^Comunidad$/, "/inquilino/comunidad"],
       [/^Proveedores$/, "/inquilino/proveedores"],
       [/^Permisos y solicitudes$/, "/inquilino/permisos"],
       [/^Estado de cuenta$/, "/inquilino/estado-cuenta"],

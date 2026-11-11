@@ -449,6 +449,84 @@ async function ensureProductFeaturesSchema() {
       )
     `);
   }
+  // Comunidad: votaciones (un voto por vivienda), documentos descargables y directorio.
+  if (!(await tableExists("VOTACION"))) {
+    await query(`
+      CREATE TABLE VOTACION (
+        id_votacion INT PRIMARY KEY AUTO_INCREMENT,
+        titulo VARCHAR(150) NOT NULL,
+        descripcion VARCHAR(1000) NULL,
+        fecha_cierre DATETIME NOT NULL,
+        resultados_visibles TINYINT(1) NOT NULL DEFAULT 1,
+        cerrada_en DATETIME NULL,
+        creada_por INT NOT NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (creada_por) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  if (!(await tableExists("VOTACION_OPCION"))) {
+    await query(`
+      CREATE TABLE VOTACION_OPCION (
+        id_opcion INT PRIMARY KEY AUTO_INCREMENT,
+        id_votacion INT NOT NULL,
+        texto VARCHAR(120) NOT NULL,
+        orden INT NOT NULL DEFAULT 0,
+        FOREIGN KEY (id_votacion) REFERENCES VOTACION(id_votacion) ON DELETE CASCADE
+      )
+    `);
+  }
+  if (!(await tableExists("VOTO"))) {
+    await query(`
+      CREATE TABLE VOTO (
+        id_votacion INT NOT NULL,
+        id_casa INT NOT NULL,
+        id_opcion INT NOT NULL,
+        id_usuario INT NOT NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id_votacion, id_casa),
+        FOREIGN KEY (id_votacion) REFERENCES VOTACION(id_votacion) ON DELETE CASCADE,
+        FOREIGN KEY (id_opcion) REFERENCES VOTACION_OPCION(id_opcion) ON DELETE CASCADE,
+        FOREIGN KEY (id_casa) REFERENCES CASA(id_casa),
+        FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  if (!(await tableExists("DOCUMENTO_COMUNIDAD"))) {
+    await query(`
+      CREATE TABLE DOCUMENTO_COMUNIDAD (
+        id_documento INT PRIMARY KEY AUTO_INCREMENT,
+        titulo VARCHAR(150) NOT NULL,
+        categoria VARCHAR(20) NOT NULL DEFAULT 'OTRO',
+        nombre_archivo VARCHAR(180) NOT NULL,
+        tipo_mime VARCHAR(120) NOT NULL,
+        tamano INT NOT NULL,
+        contenido LONGTEXT NOT NULL,
+        subido_por INT NOT NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (subido_por) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  if (!(await tableExists("DIRECTORIO_CONTACTO"))) {
+    await query(`
+      CREATE TABLE DIRECTORIO_CONTACTO (
+        id_contacto INT PRIMARY KEY AUTO_INCREMENT,
+        nombre VARCHAR(120) NOT NULL,
+        categoria VARCHAR(20) NOT NULL DEFAULT 'SERVICIOS',
+        telefono VARCHAR(30) NULL,
+        correo VARCHAR(160) NULL,
+        nota VARCHAR(200) NULL,
+        orden INT NOT NULL DEFAULT 0
+      )
+    `);
+    // Números de emergencia de Guatemala para que el directorio no arranque vacío.
+    await query(`INSERT INTO DIRECTORIO_CONTACTO (nombre, categoria, telefono, nota, orden) VALUES
+      ('Policía Nacional Civil', 'EMERGENCIA', '110', 'Emergencias y seguridad', 1),
+      ('Bomberos Voluntarios', 'EMERGENCIA', '122', 'Incendios y rescate', 2),
+      ('Bomberos Municipales', 'EMERGENCIA', '123', 'Incendios y rescate', 3),
+      ('Cruz Roja', 'EMERGENCIA', '125', 'Ambulancias', 4)`);
+  }
 }
 
 async function ensureActiveSessionsSchema() {

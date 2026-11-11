@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { rolePaths } from "@/routes/rolePaths";
 import { AdminAmenitiesReservationsView } from "@/views/AdminAmenitiesReservationsView";
 import { AdminAccessesView } from "@/views/AdminAccessesView";
+import { AdminCommunityView } from "@/views/AdminCommunityView";
+import { CommunityView } from "@/views/CommunityView";
 import { AdminIndicatorsView } from "@/views/AdminIndicatorsView";
 import { AdminRolesView } from "@/views/AdminRolesView";
 import { AdminTicketsView } from "@/views/AdminTicketsView";
@@ -92,6 +94,7 @@ export function AppRouter() {
           <Route path="/admin/sanciones/historial-completo" element={<AdminSanctionHistoryView />} />
           <Route path="/admin/amenidades" element={<AdminAmenitiesReservationsView />} />
           <Route path="/admin/fallas" element={<AdminTicketsView />} />
+          <Route path="/admin/comunidad" element={<AdminCommunityView />} />
           <Route path="/admin/roles" element={<AdminRolesView />} />
           <Route path="/admin/indicadores" element={<AdminIndicatorsView />} />
           <Route path="/admin/reportes" element={<AdminReportsView />} />
@@ -130,6 +133,7 @@ export function AppRouter() {
           <Route path="/residente/comunicados" element={<ResidentNotificationsView initialFilter="COMUNICADOS" />} />
           <Route path="/residente/proveedores" element={<ResidenteProvidersView />} />
           <Route path="/residente/fallas" element={<ResidentTicketsView />} />
+          <Route path="/residente/comunidad" element={<CommunityView />} />
           <Route path="/residente/sesiones" element={<ActiveSessionsView />} />
         </Route>
 
@@ -140,6 +144,7 @@ export function AppRouter() {
           <Route path="/inquilino/permisos" element={<InquilinoView section="permisos" />} />
           <Route path="/inquilino/reservas" element={<TenantAmenitiesHistoryView />} />
           <Route path="/inquilino/fallas" element={<ResidentTicketsView role="inquilino" />} />
+          <Route path="/inquilino/comunidad" element={<CommunityView role="inquilino" />} />
           <Route path="/inquilino/notificaciones" element={<ResidentNotificationsView role="inquilino" />} />
           <Route path="/inquilino/comunicados" element={<ResidentNotificationsView role="inquilino" initialFilter="COMUNICADOS" />} />
           <Route path="/inquilino/sesiones" element={<ActiveSessionsView />} />
