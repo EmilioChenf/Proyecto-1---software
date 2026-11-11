@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { BellRing, Download, Share, Smartphone } from "lucide-react";
+import { BellRing, Download, Smartphone } from "lucide-react";
+
+import { IosInstallGuide } from "@/components/pwa/IosInstallGuide";
 
 import { Button } from "@/components/ui/button";
 import { canPromptInstall, disablePush, enablePush, getPushState, isIos, isStandalone, onPwaChange, promptInstall } from "@/pwa/pwa";
@@ -12,6 +14,7 @@ export function AppDeviceCard() {
   const [installable, setInstallable] = useState(canPromptInstall());
   const [push, setPush] = useState<PushState>("cargando");
   const [busy, setBusy] = useState(false);
+  const [guide, setGuide] = useState(false);
   const installed = isStandalone();
 
   useEffect(() => onPwaChange(() => setInstallable(canPromptInstall())), []);
@@ -35,7 +38,7 @@ export function AppDeviceCard() {
           <div className="mt-3 flex flex-wrap gap-2">
             {installed ? <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800">App instalada en este dispositivo</span>
               : installable ? <Button type="button" onClick={() => void promptInstall()}><Download className="size-4" />Instalar app</Button>
-              : isIos() ? <p className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200">En iPhone: toca <Share className="size-3.5" /> Compartir y luego “Agregar a inicio”.</p>
+              : isIos() ? <Button type="button" onClick={() => setGuide(true)}><Download className="size-4" />Cómo instalarla en iPhone</Button>
               : <p className="rounded-xl bg-white px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200">Abre el menú del navegador y elige “Instalar app” o “Agregar a la pantalla de inicio”.</p>}
             {push === "activo" || push === "inactivo" ? (
               <Button type="button" variant={push === "activo" ? "outline" : "default"} disabled={busy} onClick={() => void togglePush()}><BellRing className="size-4" />{busy ? "Un momento…" : push === "activo" ? "Desactivar avisos aquí" : "Activar avisos en este dispositivo"}</Button>
@@ -44,6 +47,7 @@ export function AppDeviceCard() {
           </div>
         </div>
       </div>
+      <IosInstallGuide open={guide} onClose={() => setGuide(false)} />
     </section>
   );
 }
