@@ -101,6 +101,7 @@ async function startServer() {
   startScheduler();
   startReminderScheduler();
   startNotificationEmailScheduler();
+  require("./src/services/pushService").startPushScheduler();
 
   const app = createApp();
 

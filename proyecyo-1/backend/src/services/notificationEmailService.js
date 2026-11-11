@@ -162,4 +162,4 @@ function startNotificationEmailScheduler() {
   return timer;
 }
 
-module.exports = { createNotificationEmailDispatcher, buildNotificationEmail, startNotificationEmailScheduler, MAX_ATTEMPTS };
+module.exports = { createNotificationEmailDispatcher, buildNotificationEmail, startNotificationEmailScheduler, MAX_ATTEMPTS, TYPE_LABELS };

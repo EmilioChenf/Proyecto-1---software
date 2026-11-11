@@ -191,3 +191,19 @@ de tu suscripción para cubrirlo con margen.
 - [ ] Eliminada `BOOTSTRAP_ADMIN_PASSWORD`
 - [ ] Marca, mantenimiento global y horarios configurados
 - [ ] Correo de prueba recibido (¿Olvidó su contraseña?)
+
+## App instalable y notificaciones push (opcional)
+
+La app ya se puede instalar desde el celular (Android: "Instalar app"; iPhone: Compartir → "Agregar a inicio").
+Para que además lleguen **avisos push** aunque la app esté cerrada:
+
+1. En tu computadora genera un par de llaves (una sola vez por residencial):
+   `npx web-push generate-vapid-keys`
+2. En Railway → servicio del **backend** → Variables, agrega:
+   - `VAPID_PUBLIC_KEY` = la llave pública
+   - `VAPID_PRIVATE_KEY` = la llave privada (nunca la compartas ni la subas al repositorio)
+   - `VAPID_SUBJECT` = `mailto:` + el correo de soporte
+3. Redeploy. Cada persona entra a **Sesiones → Tu residencial en el celular → Activar avisos**.
+
+Cada aviso que hoy llega a la campana y al correo se envía también como push a los dispositivos activados.
+En iPhone los avisos requieren iOS 16.4+ y tener la app instalada en la pantalla de inicio.

@@ -209,3 +209,20 @@ test('FE01 datos fiscales y factura simulada por pago',async()=>{
   assert.equal(status.recurrente.modo,'SANDBOX');assert(status.produccion.length>=4);
   assert.equal(JSON.stringify(status).includes(process.env.RECURRENTE_SECRET_KEY||'@@nada@@'),false,'nunca expone la llave');
 });
+
+test('PU01 push: suscripción por dispositivo, envío y limpieza de dispositivos dados de baja',async()=>{
+  const push=require('../../src/services/pushService');
+  const resident=await user('residente','Residente push');
+  const sub={endpoint:`https://push.example.test/${randomUUID()}`,keys:{p256dh:'B'.repeat(87),auth:'a'.repeat(22)}};
+  const gone={endpoint:`https://push.example.test/${randomUUID()}`,keys:{p256dh:'C'.repeat(87),auth:'b'.repeat(22)}};
+  await assert.rejects(push.subscribe(resident,{endpoint:'http://inseguro'}),{status:400});
+  await push.subscribe(resident,sub,'Chrome Android');await push.subscribe(resident,gone,'iPhone');
+  await query("UPDATE NOTIFICACION SET push_estado='OMITIDO' WHERE push_estado='PENDIENTE'");
+  await query("INSERT INTO NOTIFICACION (id_usuario,tipo,titulo,mensaje,leido) VALUES (?,'TICKET','Tu reporte está resuelto','Reporte #1',FALSE)",[resident]);
+  const sent=[];
+  const sender={sendNotification:async(target,payload)=>{if(target.endpoint===gone.endpoint)throw Object.assign(new Error('Gone'),{statusCode:410});sent.push(JSON.parse(payload));}};
+  const stats=await push.processPushBatch({sender});
+  assert.equal(stats.sent,1);assert.equal(sent[0].title,'Tu reporte está resuelto');assert.equal(sent[0].url,'/residente/fallas');
+  assert.equal(Number((await query('SELECT COUNT(*) n FROM PUSH_SUSCRIPCION WHERE id_usuario=?',[resident]))[0].n),1,'se borra el dispositivo dado de baja');
+  assert.equal((await push.processPushBatch({sender})).sent,0,'no se reenvía');
+});

@@ -4,6 +4,7 @@ import { Clock3, Laptop, MapPin, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { ChangePasswordCard } from "@/components/auth/ChangePasswordCard";
+import { AppDeviceCard } from "@/components/pwa/AppDeviceCard";
 import { AppShell } from "@/components/layout/AppShell";
 import { rolesWithSidebar } from "@/components/layout/roleNavigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -76,6 +77,7 @@ export function ActiveSessionsView() {
       {/* Los roles con sidebar persistente no necesitan este enlace; admin lo conserva. */}
       {!user || !rolesWithSidebar.has(user.role) ? <Link className="text-sm font-semibold text-blue-700 hover:text-blue-900" to={home}>Volver al panel</Link> : null}
       {error ? <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
+      <AppDeviceCard />
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><ShieldCheck className="size-5 text-blue-700" /> Dispositivos conectados</CardTitle>

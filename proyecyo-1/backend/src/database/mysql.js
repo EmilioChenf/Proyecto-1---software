@@ -508,6 +508,28 @@ async function ensureProductFeaturesSchema() {
       )
     `);
   }
+  // Notificaciones push (app instalable): suscripciones por dispositivo y estado por notificación.
+  if (!(await tableExists("PUSH_SUSCRIPCION"))) {
+    await query(`
+      CREATE TABLE PUSH_SUSCRIPCION (
+        id_suscripcion INT PRIMARY KEY AUTO_INCREMENT,
+        id_usuario INT NOT NULL,
+        endpoint VARCHAR(500) NOT NULL,
+        p256dh VARCHAR(200) NOT NULL,
+        auth VARCHAR(100) NOT NULL,
+        dispositivo VARCHAR(120) NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_push_endpoint (endpoint(255)),
+        KEY idx_push_usuario (id_usuario),
+        FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario) ON DELETE CASCADE
+      )
+    `);
+  }
+  if (!(await columnExists("NOTIFICACION", "push_estado"))) {
+    await query("ALTER TABLE NOTIFICACION ADD COLUMN push_estado VARCHAR(12) NOT NULL DEFAULT 'PENDIENTE'");
+    // Las notificaciones anteriores a esta función nunca se envían como push.
+    await query("UPDATE NOTIFICACION SET push_estado = 'OMITIDO'");
+  }
   if (!(await tableExists("DIRECTORIO_CONTACTO"))) {
     await query(`
       CREATE TABLE DIRECTORIO_CONTACTO (
