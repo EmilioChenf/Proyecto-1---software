@@ -34,6 +34,7 @@
     "test:huc01:mysql": "node scripts/run-isolated-tests.js huc01",
     "test:sprint10:mysql": "node scripts/run-isolated-tests.js sprint10",
     "test:viviendas:mysql": "node scripts/run-isolated-tests.js viviendas",
+    "test:contractterms:mysql": "node scripts/run-isolated-tests.js contractterms",
     "test:correlation:mysql": "node scripts/run-isolated-tests.js correlation",
     "test:hu19:mysql": "node scripts/run-isolated-tests.js hu19",
     "notifications:run": "node scripts/run-financial-notifications.js",

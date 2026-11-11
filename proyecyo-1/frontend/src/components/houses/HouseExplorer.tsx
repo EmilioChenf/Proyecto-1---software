@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import type { HouseDetail, HouseRecord, HouseSummary } from "@/types/houses";
+import { houseOfferLabels, type HouseDetail, type HouseRecord, type HouseSummary } from "@/types/houses";
 import { buildHouseMapLayout } from "@/utils/houseMapLayout";
 import { supportsWebGL } from "./HouseMap";
 import type { MapView, SceneAmbient } from "./HouseMap3D";
@@ -68,6 +68,7 @@ export function HouseExplorer({
 }: HouseExplorerProps) {
   const [filters, setFilters] = useState<Record<StatusFilter, boolean>>({ DISPONIBLE: true, OCUPADA: true, INACTIVA: true });
   const [modelFilter, setModelFilter] = useState("todos");
+  const [offerFilter, setOfferFilter] = useState<"todas" | "VENTA" | "RENTA">("todas");
   const [view, setView] = useState<MapView>("3d");
   const [ambient, setAmbient] = useState<SceneAmbient>("dia");
   const [closeUp, setCloseUp] = useState<{ id: number; n: number } | null>(null);
@@ -84,7 +85,9 @@ export function HouseExplorer({
   const prices = houses.map((h) => h.precio).filter((p): p is number => p != null);
   const counts: Record<StatusFilter, number> = { DISPONIBLE: summary.disponibles, OCUPADA: summary.ocupadas, INACTIVA: summary.inactivas };
 
-  const isVisible = useCallback((h: HouseRecord) => filters[statusOf(h)] && (modelFilter === "todos" || h.modelo === modelFilter), [filters, modelFilter]);
+  // "En renta" incluye las que se ofrecen en venta o renta; igual "En venta".
+  const offerMatches = useCallback((h: HouseRecord) => offerFilter === "todas" || (h.modalidad ?? "VENTA") === offerFilter || h.modalidad === "AMBAS", [offerFilter]);
+  const isVisible = useCallback((h: HouseRecord) => filters[statusOf(h)] && (modelFilter === "todos" || h.modelo === modelFilter) && offerMatches(h), [filters, modelFilter, offerMatches]);
   const isDimmed = useCallback((h: HouseRecord) => !isVisible(h), [isVisible]);
   const describe = useCallback((h: HouseRecord) => `Vivienda ${h.codigo}, ${h.modelo ?? "sin modelo"}, ${STATUS[statusOf(h)].texto.toLowerCase()}`, []);
 
@@ -117,6 +120,11 @@ export function HouseExplorer({
             ))}
           </div>
           <div className="selects">
+            <select aria-label="Filtrar por oferta" value={offerFilter} onChange={(e) => setOfferFilter(e.target.value as "todas" | "VENTA" | "RENTA")}>
+              <option value="todas">Venta y renta</option>
+              <option value="VENTA">En venta</option>
+              <option value="RENTA">En renta</option>
+            </select>
             <select aria-label="Filtrar por modelo" value={modelFilter} onChange={(e) => setModelFilter(e.target.value)}>
               <option value="todos">Todos los modelos</option>
               {models.map(([name]) => <option key={name} value={name}>Casa {name}</option>)}
@@ -166,9 +174,10 @@ export function HouseExplorer({
                   <span className="badge"><i style={{ background: `var(${STATUS[status].css})` }} />{STATUS[status].texto}</span>
                   <span>Vivienda {shown.codigo}</span>
                 </div>
-                <p className="price">{money(shown.precio)}</p>
-                <p className="price-note">{contractLabels[shown.tipo_contractual||'PENDIENTE_CONFIGURACION']}</p>
-                <p className="price-note">{shown.precio == null ? "Precio aún no registrado" : "Precio de lista con terreno incluido"}</p>
+                {(shown.modalidad ?? "VENTA") !== "RENTA" ? <p className="price">{money(shown.precio)}</p> : null}
+                {shown.modalidad === "RENTA" || shown.modalidad === "AMBAS" ? <p className={shown.modalidad === "RENTA" ? "price" : "price-note"}>{shown.precio_renta == null ? "Renta sin registrar" : `${money(shown.precio_renta)} al mes`}</p> : null}
+                <p className="price-note">{houseOfferLabels[shown.modalidad ?? "VENTA"]} · {contractLabels[shown.tipo_contractual||'PENDIENTE_CONFIGURACION']}</p>
+                <p className="price-note">{(shown.modalidad ?? "VENTA") === "RENTA" ? "Renta mensual con la administración, sin incluir mantenimiento" : shown.precio == null ? "Precio aún no registrado" : "Precio de lista con terreno incluido"}</p>
                 <ul className="specs">
                   <li><Icon name="terreno" /><div><b>{shown.area_terreno != null ? `${shown.area_terreno} m²` : "—"}</b><span>Terreno</span></div></li>
                   <li><Icon name="casa" /><div><b>{shown.area_construccion != null ? `${shown.area_construccion} m²` : "—"}</b><span>Construcción</span></div></li>

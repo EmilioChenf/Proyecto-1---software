@@ -219,7 +219,7 @@ function validateVisitTimesAgainstSchedule(horaInicio, horaFin, schedule, fecha)
 
   if (startMinutes < openingMinutes || endMinutes > closingMinutes) {
     const error = new Error(
-      `El horario debe estar entre ${schedule.hora_apertura} y ${schedule.hora_cierre}.`,
+      `Las visitas se autorizan de ${schedule.hora_apertura} a ${schedule.hora_cierre}. El horario debe estar entre ${schedule.hora_apertura} y ${schedule.hora_cierre}; fuera de ese horario usa «Solicitar acceso de emergencia».`,
     );
     error.status = 400;
     throw error;
@@ -227,7 +227,7 @@ function validateVisitTimesAgainstSchedule(horaInicio, horaFin, schedule, fecha)
 
   if (endMinutes - startMinutes > maxDurationMinutes) {
     const error = new Error(
-      `La visita no puede durar mas de ${schedule.duracion_maxima_horas} hora(s).`,
+      `La visita no puede durar mas de ${schedule.duracion_maxima_horas} hora(s). Si necesitas más tiempo, registra otra visita a continuación.`,
     );
     error.status = 400;
     throw error;

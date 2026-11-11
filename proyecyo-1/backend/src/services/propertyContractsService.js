@@ -27,19 +27,39 @@ function money(value) {
   if (cents > 9999999999) throw error(422, 'El importe excede el límite permitido.', 'IMPORTE_INVALIDO');
   return (cents / 100).toFixed(2);
 }
+const PAYMENT_DAY_MAX = 28;
+// Plan de una compra financiada: saldo = precio - enganche, repartido en N cuotas.
+// Las primeras N-1 cuotas son iguales y la ultima absorbe los centavos del redondeo.
+function financingPlan(precio, enganche, term) {
+  const priceCents = toCents(precio), downCents = toCents(enganche);
+  if (priceCents <= 0) throw error(422, 'Indica el precio total de la vivienda.', 'PRECIO_REQUERIDO');
+  if (downCents < 0 || downCents >= priceCents) throw error(422, 'El enganche debe ser menor que el precio de la vivienda.', 'ENGANCHE_INVALIDO');
+  const financedCents = priceCents - downCents;
+  const baseCents = Math.floor(financedCents / term);
+  if (baseCents <= 0) throw error(422, 'El plazo es demasiado largo para el saldo a financiar.', 'PLAZO_INVALIDO');
+  const lastCents = financedCents - baseCents * (term - 1);
+  return { precio_total: (priceCents / 100).toFixed(2), enganche: (downCents / 100).toFixed(2), monto_financiado: (financedCents / 100).toFixed(2),
+    cuota: (baseCents / 100).toFixed(2), ultima_cuota: (lastCents / 100).toFixed(2) };
+}
 function validateConfiguration(body, today = guatemalaToday()) {
   if (!TYPES.includes(body.tipo)) throw error(422, 'Selecciona un tipo contractual oficial.', 'TIPO_CONTRATO_INVALIDO');
   const start = date(body.fecha_efectiva);
   if (start < today) throw error(422, 'La fecha efectiva no puede ser retroactiva.', 'FECHA_RETROACTIVA');
+  // Primer periodo por defecto: el mes siguiente si la fecha no es dia 1. configureHouse
+  // lo adelanta al mes en curso cuando ese mes aun no se ha facturado.
   const first = effectivePeriod(start);
-  // Any change during the current month applies from the next billing month.
-  const installment = body.tipo === 'PROPIEDAD_PRIVADA' ? '0.00' : money(body.cuota_vivienda);
-  if (body.tipo !== 'PROPIEDAD_PRIVADA' && toCents(installment) <= 0) throw error(422, 'La cuota de vivienda o renta debe ser mayor que cero.', 'CUOTA_REQUERIDA');
   const term = body.tipo === 'COMPRA_FINANCIADA' ? Number(body.meses_financiamiento) : null;
   if (term !== null && (!Number.isInteger(term) || term < 1 || term > 1200)) throw error(422, 'El financiamiento requiere entre 1 y 1200 meses.', 'PLAZO_INVALIDO');
+  const hasPrice = body.tipo === 'COMPRA_FINANCIADA' && body.precio_total !== undefined && body.precio_total !== null && String(body.precio_total).trim() !== '';
+  const plan = hasPrice ? financingPlan(money(body.precio_total), money(body.enganche || 0), term) : null;
+  const installment = body.tipo === 'PROPIEDAD_PRIVADA' ? '0.00' : plan ? plan.cuota : money(body.cuota_vivienda);
+  if (body.tipo !== 'PROPIEDAD_PRIVADA' && toCents(installment) <= 0) throw error(422, 'La cuota de vivienda o renta debe ser mayor que cero.', 'CUOTA_REQUERIDA');
   if (!Number.isInteger(Number(body.version)) || Number(body.version) < 0) throw error(422, 'Actualiza la versión de la vivienda.', 'VERSION_REQUERIDA');
   if (body.confirmado !== true) throw error(422, 'Confirma el resumen antes de guardar.', 'CONFIRMACION_REQUERIDA');
-  return { tipo: body.tipo, start, first, installment, term };
+  const maintenancePayer = body.mantenimiento_paga === undefined || body.mantenimiento_paga === null ? 'PROPIETARIO' : String(body.mantenimiento_paga).toUpperCase();
+  if (!['PROPIETARIO', 'INQUILINO'].includes(maintenancePayer)) throw error(422, 'Indica si el mantenimiento lo paga el propietario o el inquilino.', 'MANTENIMIENTO_RESPONSABLE_INVALIDO');
+  const tenantPaysMaintenance = body.tipo === 'PROPIEDAD_PRIVADA' && Boolean(body.inquilino_privado) && maintenancePayer === 'INQUILINO';
+  return { tipo: body.tipo, start, first, installment, term, plan, paymentDay: Math.min(PAYMENT_DAY_MAX, Number(start.slice(8, 10))), tenantPaysMaintenance };
 }
 async function transaction(task) {
   const connection = await pool.getConnection();
@@ -79,7 +99,7 @@ async function saveMaintenance(body, actor, metadata) {
 async function getHouseContracts(houseId) {
   const houses = await query('SELECT id_casa,version_contractual,relaciones_confirmadas_en FROM CASA WHERE id_casa=?', [houseId]);
   if (!houses.length) throw error(404, 'Vivienda no encontrada.', 'VIVIENDA_NO_ENCONTRADA');
-  const versions = await query(`SELECT v.*,ct.tipo,ct.meses_financiamiento,ct.estado,
+  const versions = await query(`SELECT v.*,ct.tipo,ct.meses_financiamiento,ct.estado,ct.precio_total,ct.enganche,ct.monto_financiado,ct.dia_pago,rf.calidad responsable_calidad,
     DATE_FORMAT(ct.fecha_inicio,'%Y-%m-%d') fecha_inicio,DATE_FORMAT(ct.primer_periodo,'%Y-%m-%d') primer_periodo,
     DATE_FORMAT(TIMESTAMPADD(MONTH,ct.meses_financiamiento-1,ct.primer_periodo),'%Y-%m-%d') ultimo_periodo_previsto,
     rf.id_usuario id_responsable,u.nombre responsable_nombre,
@@ -92,11 +112,13 @@ async function getHouseContracts(houseId) {
   const inhabitants = await query("SELECT h.*,u.nombre,DATE_FORMAT(vigente_desde,'%Y-%m-%d') vigente_desde,DATE_FORMAT(vigente_hasta,'%Y-%m-%d') vigente_hasta FROM CASA_HABITANTE h JOIN USUARIO u ON u.id_usuario=h.id_usuario WHERE id_casa=? ORDER BY vigente_desde DESC", [houseId]);
   return { ...houses[0], estado_configuracion: versions.length ? 'CONFIGURADA' : 'PENDIENTE_CONFIGURACION', versiones: versions, titularidades: titles, habitantes: inhabitants };
 }
-async function resolvePerson(c, value, role) {
+async function resolvePerson(c, value, roles) {
+  const allowed = Array.isArray(roles) ? roles : [roles];
+  const role = allowed[0];
   if (!value) throw error(422, 'Selecciona o crea a la persona responsable.', 'PERSONA_REQUERIDA');
   if (value.id_usuario) {
     const [[user]] = await c.execute(`SELECT u.id_usuario,u.nombre,u.correo,tu.nombre rol FROM USUARIO u JOIN TIPO_USUARIO tu ON tu.id_tipo_usuario=u.id_tipo_usuario WHERE u.id_usuario=? AND u.activo=1 FOR UPDATE`, [value.id_usuario]);
-    if (!user || user.rol !== role) throw error(422, `Selecciona una persona activa con acceso de ${role}.`, 'PERSONA_INVALIDA');
+    if (!user || !allowed.includes(user.rol)) throw error(422, `Selecciona una persona activa con acceso de ${allowed.join(' o ')}.`, 'PERSONA_INVALIDA');
     return user;
   }
   const name = String(value.nombre || '').trim(), email = String(value.correo || '').trim().toLowerCase();
@@ -117,7 +139,45 @@ async function outstandingForTransfer(c, houseId, ownerId) {
   if (Number(totals.saldo) > 0) throw error(409, `La vivienda tiene Q${Number(totals.saldo).toFixed(2)} pendientes del titular o sin atribución confirmada.`, 'VENTA_CON_DEUDA');
   if (Number(totals.revision) > 0) throw error(409, 'La vivienda requiere revisión de pagos o reembolsos antes del traspaso.', 'VENTA_REQUIERE_REVISION');
 }
+// Deshace una configuracion que aun no genero cuotas (p. ej. programada para el mes
+// siguiente) para reemplazarla. Restaura la version, titularidad y habitantes anteriores.
+async function undoUnbilledConfiguration(c, houseId, version, actor, metadata) {
+  const exec = executeWith(c);
+  const createdAt = version.creado_en;
+  const start = version.contrato_inicio;
+  await exec('DELETE FROM CASA_HABITANTE WHERE id_casa=? AND (id_version_pendiente=? OR (id_version_pendiente IS NULL AND creado_en>=?))', [houseId, version.id_version, createdAt]);
+  await exec('DELETE FROM CASA_TITULARIDAD WHERE id_casa=? AND (id_version_pendiente=? OR (id_version_pendiente IS NULL AND creado_en>=?))', [houseId, version.id_version, createdAt]);
+  await exec('UPDATE CASA_RESPONSABLE_FINANCIERO SET id_version_pendiente=NULL WHERE id_version_pendiente=?', [version.id_version]);
+  await exec('DELETE FROM CONTRATO_CASA_VERSION WHERE id_version=?', [version.id_version]);
+  await exec('DELETE FROM CASA_RESPONSABLE_FINANCIERO WHERE id_responsabilidad=?', [version.id_responsabilidad]);
+  const [[remaining]] = await c.execute('SELECT COUNT(*) n FROM CONTRATO_CASA_VERSION WHERE id_contrato=?', [version.id_contrato]);
+  const [[quotas]] = await c.execute('SELECT COUNT(*) n FROM CUOTA WHERE id_contrato=?', [version.id_contrato]);
+  if (Number(remaining.n)===0 && Number(quotas.n)===0) await exec('DELETE FROM CONTRATO_CASA WHERE id_contrato=?', [version.id_contrato]);
+  // Reabre lo que la configuracion deshecha habia cerrado.
+  const [latest] = await exec('SELECT id_version,id_contrato,id_responsabilidad FROM CONTRATO_CASA_VERSION WHERE id_casa=? ORDER BY vigente_desde DESC LIMIT 1', [houseId]);
+  if (latest) {
+    await exec('UPDATE CONTRATO_CASA_VERSION SET vigente_hasta=NULL WHERE id_version=?', [latest.id_version]);
+    await exec('UPDATE CASA_RESPONSABLE_FINANCIERO SET vigente_hasta=NULL WHERE id_responsabilidad=?', [latest.id_responsabilidad]);
+    await exec("UPDATE CONTRATO_CASA SET estado='VIGENTE' WHERE id_contrato=? AND estado='CERRADO'", [latest.id_contrato]);
+  }
+  if (start) {
+    const [title] = await exec('SELECT id_titularidad FROM CASA_TITULARIDAD WHERE id_casa=? AND id_version_pendiente IS NULL ORDER BY vigente_desde DESC LIMIT 1', [houseId]);
+    if (title) await exec('UPDATE CASA_TITULARIDAD SET vigente_hasta=NULL WHERE id_titularidad=? AND vigente_hasta=?', [title.id_titularidad, start]);
+    await exec('UPDATE CASA_HABITANTE SET vigente_hasta=NULL WHERE id_casa=? AND id_version_pendiente IS NULL AND vigente_hasta=? AND creado_en<?', [houseId, start, createdAt]);
+  }
+  await recordAudit({ userId:actor, action:'PROPERTY_CONFIGURATION_REPLACED', entity:'CASA', entityId:houseId,
+    previousData:{ id_version:version.id_version, id_contrato:version.id_contrato, vigente_desde:version.desde, tipo:version.tipo }, newData:null, metadata }, exec);
+}
 async function configureHouse(houseId, body, actor, metadata) {
+  const result = await configureHouseTransaction(houseId, body, actor, metadata);
+  // El primer cobro aparece de inmediato cuando el contrato empieza este mes.
+  if (result?.facturar_ahora) {
+    try { await require('./monthlyBillingService').__private__.billHouse(Number(houseId), result.primer_periodo, actor, metadata); }
+    catch (failure) { require('../utils/safeLogger').logger.error('No se generó el primer cobro del contrato.', { id_casa:Number(houseId), code:failure.code||'FACTURACION_ERROR' }); }
+  }
+  return result;
+}
+async function configureHouseTransaction(houseId, body, actor, metadata) {
   const config = validateConfiguration(body);
   const operationId = String(body.id_operacion || '');
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(operationId)) throw error(422, 'Identificador de operación inválido.', 'OPERACION_REQUERIDA');
@@ -133,19 +193,44 @@ async function configureHouse(houseId, body, actor, metadata) {
     }
     if (!house.activo) throw error(409, 'Activa la vivienda antes de configurar el contrato.', 'VIVIENDA_INACTIVA');
     if (Number(house.version_contractual)!==Number(body.version)) throw error(409, 'La vivienda cambió; actualiza el resumen.', 'VERSION_CONFLICTO');
-    const maintenance = await getMaintenance(config.first, exec);
-    if (!maintenance) throw error(422, 'Configura primero la tarifa global de mantenimiento para este período.', 'MANTENIMIENTO_PENDIENTE');
-    const [previous] = await exec(`SELECT v.*,ct.tipo,ct.meses_financiamiento,rf.id_usuario id_responsable
+    const loadPrevious = async () => (await exec(`SELECT v.*,ct.tipo,ct.meses_financiamiento,rf.id_usuario id_responsable,
+      DATE_FORMAT(v.vigente_desde,'%Y-%m-%d') desde,DATE_FORMAT(ct.fecha_inicio,'%Y-%m-%d') contrato_inicio
       FROM CONTRATO_CASA_VERSION v JOIN CONTRATO_CASA ct ON ct.id_contrato=v.id_contrato
       JOIN CASA_RESPONSABLE_FINANCIERO rf ON rf.id_responsabilidad=v.id_responsabilidad
-      WHERE v.id_casa=? ORDER BY v.vigente_desde DESC LIMIT 1`, [houseId]);
+      WHERE v.id_casa=? ORDER BY v.vigente_desde DESC LIMIT 1`, [houseId]))[0];
+    let previous = await loadPrevious();
+    // Cobro desde el dia de la compra o renta: si el mes en curso aun no se facturo, el
+    // primer periodo es este mismo mes (vence el dia de la fecha efectiva).
+    // Solo para contratos que empiezan hoy: los programados a futuro conservan el mes siguiente.
+    const monthStart = `${config.start.slice(0, 7)}-01`;
+    if (config.first !== monthStart && config.start === guatemalaToday()) {
+      const [billedMonth] = await exec('SELECT id_casa FROM FACTURACION_CASA_PERIODO WHERE id_casa=? AND periodo=?', [houseId, monthStart]);
+      if (!billedMonth && await getMaintenance(monthStart, exec)) config.first = monthStart;
+    }
+    // Una configuracion programada que todavia no genero cuotas se puede reemplazar.
+    if (previous && previous.desde>=config.first) {
+      const [billed] = await exec('SELECT (SELECT COUNT(*) FROM FACTURACION_CASA_PERIODO WHERE id_version=?)+(SELECT COUNT(*) FROM CUOTA WHERE id_version=?) n', [previous.id_version, previous.id_version]);
+      if (Number(billed.n)>0) throw error(409, `La configuración que inicia ${previous.desde} ya generó cuotas; el nuevo contrato puede empezar a partir del mes siguiente.`, 'VIGENCIA_CONFLICTO');
+      await undoUnbilledConfiguration(c, houseId, previous, actor, metadata);
+      previous = await loadPrevious();
+      if (previous && previous.desde>=config.first) throw error(409, 'Ya existe una configuración para ese mes o un mes posterior.', 'VIGENCIA_CONFLICTO');
+    }
     if (previous && previous.activacion_estado!=='ACTIVA') throw error(409, 'Hay una transferencia pendiente; resuélvela antes de programar otro cambio.', 'TRANSFERENCIA_PENDIENTE');
-    if (previous && String(previous.vigente_desde instanceof Date ? previous.vigente_desde.toISOString().slice(0,10) : previous.vigente_desde)>=config.first) throw error(409, 'Ya existe una configuración para ese mes o un mes posterior.', 'VIGENCIA_CONFLICTO');
-    const role = config.tipo==='RENTA_DIRECTA' ? 'inquilino' : 'residente';
-    const person = await resolvePerson(c, body.responsable, role);
+    const maintenance = await getMaintenance(config.first, exec);
+    if (!maintenance) throw error(422, 'Configura primero la tarifa global de mantenimiento para este período.', 'MANTENIMIENTO_PENDIENTE');
+    // Quien trata con la administracion es residente (compra, propiedad o renta directa).
+    // Las rentas directas registradas antes con usuarios inquilinos siguen siendo validas.
+    const roles = config.tipo==='RENTA_DIRECTA' ? ['residente','inquilino'] : 'residente';
+    const owner = await resolvePerson(c, body.responsable, roles);
+    if (body.inquilino_privado && config.tipo!=='PROPIEDAD_PRIVADA') throw error(422, 'El inquilino privado requiere propiedad privada.', 'INQUILINO_PRIVADO_INVALIDO');
+    const privateTenant = body.inquilino_privado ? await resolvePerson(c, body.inquilino_privado, 'inquilino') : null;
+    // El inquilino de un propietario puede ser quien paga el mantenimiento.
+    const person = config.tenantPaysMaintenance ? privateTenant : owner;
     const [priorTitle] = await exec('SELECT * FROM CASA_TITULARIDAD WHERE id_casa=? ORDER BY vigente_desde DESC LIMIT 1', [houseId]);
-    const oldOwner = priorTitle?.id_usuario || (await exec('SELECT id_usuario FROM RESIDENTE WHERE id_residente=?', [house.id_residente]))[0]?.id_usuario;
-    const newOwner = config.tipo==='RENTA_DIRECTA' ? null : person.id_usuario;
+    // Con un titular registrado (persona o la residencial) se usa ese; el puntero heredado
+    // de CASA.id_residente solo aplica a viviendas sin titularidad confirmada.
+    const oldOwner = priorTitle ? priorTitle.id_usuario : (await exec('SELECT id_usuario FROM RESIDENTE WHERE id_residente=?', [house.id_residente]))[0]?.id_usuario;
+    const newOwner = config.tipo==='RENTA_DIRECTA' ? null : owner.id_usuario;
     if (oldOwner && Number(oldOwner)!==Number(newOwner)) await outstandingForTransfer(c, houseId, oldOwner);
     const scheduledTransfer = Boolean(oldOwner && Number(oldOwner)!==Number(newOwner) && config.start>guatemalaToday());
     let contractId = previous?.id_contrato;
@@ -157,12 +242,13 @@ async function configureHouse(houseId, body, actor, metadata) {
     }
     if (!continuing) {
       if (previous && !scheduledTransfer) await exec("UPDATE CONTRATO_CASA SET estado='CERRADO' WHERE id_contrato=?", [previous.id_contrato]);
-      const created = await exec('INSERT INTO CONTRATO_CASA(id_casa,tipo,fecha_inicio,primer_periodo,meses_financiamiento,creado_por) VALUES(?,?,?,?,?,?)', [houseId,config.tipo,config.start,config.first,config.term,actor]);
+      const created = await exec('INSERT INTO CONTRATO_CASA(id_casa,tipo,fecha_inicio,primer_periodo,meses_financiamiento,precio_total,enganche,monto_financiado,dia_pago,creado_por) VALUES(?,?,?,?,?,?,?,?,?,?)', [houseId,config.tipo,config.start,config.first,config.term,config.plan?.precio_total??null,config.plan?.enganche??null,config.plan?.monto_financiado??null,config.paymentDay,actor]);
       contractId = created.insertId;
     }
     if (previous && !scheduledTransfer) await exec('UPDATE CONTRATO_CASA_VERSION SET vigente_hasta=? WHERE id_version=? AND vigente_hasta IS NULL', [config.first,previous.id_version]);
     if (!scheduledTransfer) await exec('UPDATE CASA_RESPONSABLE_FINANCIERO SET vigente_hasta=? WHERE id_casa=? AND vigente_hasta IS NULL', [config.first,houseId]);
-    const quality = { COMPRA_FINANCIADA:'COMPRADOR', RENTA_DIRECTA:'ARRENDATARIO_DIRECTO', PROPIEDAD_PRIVADA:'PROPIETARIO' }[config.tipo];
+    const ownerQuality = { COMPRA_FINANCIADA:'COMPRADOR', RENTA_DIRECTA:'ARRENDATARIO_DIRECTO', PROPIEDAD_PRIVADA:'PROPIETARIO' }[config.tipo];
+    const quality = config.tenantPaysMaintenance ? 'INQUILINO_PRIVADO' : ownerQuality;
     const responsibility = await exec('INSERT INTO CASA_RESPONSABLE_FINANCIERO(id_casa,id_usuario,calidad,vigente_desde,creado_por) VALUES(?,?,?,?,?)', [houseId,person.id_usuario,quality,config.first,actor]);
     const version = await exec('INSERT INTO CONTRATO_CASA_VERSION(id_contrato,id_casa,id_responsabilidad,cuota_vivienda,vigente_desde,creado_por) VALUES(?,?,?,?,?,?)', [contractId,houseId,responsibility.insertId,config.installment,config.first,actor]);
     // Title and occupants are explicit; neither is inferred from the financial role.
@@ -171,11 +257,8 @@ async function configureHouse(houseId, body, actor, metadata) {
       await exec('INSERT INTO CASA_TITULARIDAD(id_casa,id_usuario,titular_empresa,vigente_desde,creado_por) VALUES(?,?,?,?,?)', [houseId,newOwner,newOwner===null,config.start,actor]);
     }
     const inhabitants = [];
-    if (body.responsable_habita===true) inhabitants.push({person,quality});
-    if (body.inquilino_privado) {
-      if (config.tipo!=='PROPIEDAD_PRIVADA') throw error(422, 'El inquilino privado requiere propiedad privada.', 'INQUILINO_PRIVADO_INVALIDO');
-      inhabitants.push({person:await resolvePerson(c,body.inquilino_privado,'inquilino'),quality:'INQUILINO_PRIVADO'});
-    }
+    if (body.responsable_habita===true) inhabitants.push({person:owner,quality:ownerQuality});
+    if (privateTenant) inhabitants.push({person:privateTenant,quality:'INQUILINO_PRIVADO'});
     if (body.habitantes_accion && !['CONSERVAR','ACTUALIZAR'].includes(body.habitantes_accion)) throw error(422, 'Indica si deseas conservar o actualizar habitantes.', 'HABITANTES_ACCION_INVALIDA');
     const inhabitantsAction = !previous || body.habitantes_accion==='ACTUALIZAR' ? 'ACTUALIZAR' : 'CONSERVAR';
     for (const inhabitant of inhabitants) {
@@ -193,11 +276,12 @@ async function configureHouse(houseId, body, actor, metadata) {
     }
     await exec('UPDATE CASA SET version_contractual=version_contractual+1,relaciones_confirmadas_en=COALESCE(relaciones_confirmadas_en,UTC_TIMESTAMP()) WHERE id_casa=?', [houseId]);
     await require('./contractHouseRelations').syncHouseRelations(c,houseId);
-    const result = { id_casa:Number(houseId),id_contrato:Number(contractId),id_version:Number(version.insertId),version:Number(house.version_contractual)+1,tipo:config.tipo,fecha_efectiva:config.start,primer_periodo:config.first,responsable:person,mantenimiento:maintenance.monto,total_mensual:(toCents(config.installment)+toCents(maintenance.monto))/100 };
+    const result = { id_casa:Number(houseId),id_contrato:Number(contractId),id_version:Number(version.insertId),version:Number(house.version_contractual)+1,tipo:config.tipo,fecha_efectiva:config.start,primer_periodo:config.first,dia_pago:config.paymentDay,responsable:person,propietario:config.tipo==='RENTA_DIRECTA'?null:owner,mantenimiento:maintenance.monto,total_mensual:(toCents(config.installment)+toCents(maintenance.monto))/100,
+      financiamiento:config.plan?{...config.plan,meses:config.term}:null,facturar_ahora:!scheduledTransfer&&config.first<=guatemalaToday() };
     await recordAudit({ userId:actor,action:scheduledTransfer?'PROPERTY_TRANSFER_SCHEDULED':oldOwner && Number(oldOwner)!==Number(newOwner)?'PROPERTY_TRANSFERRED':'PROPERTY_CONTRACT_CONFIGURED',entity:'CASA',entityId:houseId,previousData:{contrato:previous,titular:priorTitle,id_propietario:oldOwner},newData:{...result,id_propietario:newOwner,habitantes:plannedInhabitants,habitantes_accion:inhabitantsAction,id_operacion:operationId},metadata }, exec);
     await exec('INSERT INTO OPERACION_CONTRACTUAL(id_operacion,id_usuario,id_casa,request_hash,resultado) VALUES(?,?,?,?,?)', [operationId,actor,houseId,hash,JSON.stringify(result)]);
     return result;
   });
 }
 module.exports = { TYPES, getMaintenance, listMaintenance, saveMaintenance, getHouseContracts, configureHouse,
-  __private__: { date,nextPeriod,effectivePeriod,money,validateConfiguration,transaction,executeWith,outstandingForTransfer } };
+  __private__: { date,nextPeriod,effectivePeriod,money,validateConfiguration,financingPlan,undoUnbilledConfiguration,transaction,executeWith,outstandingForTransfer } };

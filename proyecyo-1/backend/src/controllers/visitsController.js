@@ -11,6 +11,7 @@ const {
   registerQrEntry,
   registerQrExit,
 } = require("../services/visitsService");
+const { requestEmergencyAccess } = require("../services/specialAccessesService");
 const { getRequestMetadata } = require("../services/auditService");
 
 async function getVisits(req, res, next) {
@@ -121,7 +122,17 @@ async function postRegisterQrExit(req, res, next) {
   }
 }
 
+async function postEmergencyVisit(req, res, next) {
+  try {
+    const access = await requestEmergencyAccess(req.authUser.id, req.authUser.role, req.body || {});
+    res.status(201).json(access);
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
+  postEmergencyVisit,
   getVisits,
   getFrequentVisitors,
   postVisit,
