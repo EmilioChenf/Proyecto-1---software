@@ -308,7 +308,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
   if (blocked) return <Navigate to={firstAllowedAdminPath(permisos)} replace />;
 
   return (
-    <div className="nd min-h-screen">
+    <div className="nd min-h-screen" style={/^#[0-9a-f]{6}$/i.test(brand.color) ? ({ "--nd-accent": brand.color } as React.CSSProperties) : undefined}>
       <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E6EBF3] bg-white px-4 py-3 lg:hidden">
         <div className="flex min-w-0 items-center gap-3">
           <BrandIcon />

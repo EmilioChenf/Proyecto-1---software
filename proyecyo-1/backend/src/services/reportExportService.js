@@ -153,7 +153,7 @@ function display(key, value) {
   if (key === "monto") return Number(value).toFixed(2);
   return String(value);
 }
-function metadata(type, data, user, filters, now) {
+function metadata(type, data, user, filters, now, brandName = "NexusResidencial") {
   validate(type, "pdf");
   const details = type === "morosos"
     ? ["Saldo real actual de todas las cuotas vencidas. Las fechas del formulario solo filtran movimientos; no limitan este listado de deuda."]
@@ -161,12 +161,12 @@ function metadata(type, data, user, filters, now) {
   const labels = { search: "Búsqueda", house: "Unidad", plate: "Placa", type: "Tipo", status: "Estado" };
   for (const [key, definition] of Object.entries(MODULE_FILTERS[type] || {})) labels[key] = definition.label;
   for (const [key, label] of Object.entries(labels)) if (filters[key] && filters[key] !== "TODOS") details.push(`${label}: ${filters[key]}`);
-  return [`NexusResidencial - Reporte de ${REPORTS[type].title}`, `Generado: ${localTimestamp(now)} (${TIMEZONE}) | Usuario: ${user}`, ...details, `Total de registros: ${data.length}`];
+  return [`${brandName} - Reporte de ${REPORTS[type].title}`, `Generado: ${localTimestamp(now)} (${TIMEZONE}) | Usuario: ${user}`, ...details, `Total de registros: ${data.length}`];
 }
-async function excel(type, data, user, filters = {}, now = new Date()) {
+async function excel(type, data, user, filters = {}, now = new Date(), brand = null) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Reporte");
-  const info = metadata(type, data, user, filters, now);
+  const info = metadata(type, data, user, filters, now, brand?.nombre);
   const columns = Object.entries(REPORTS[type].columns);
   info.forEach(line => { const row = sheet.addRow([safe(line)]); sheet.mergeCells(row.number, 1, row.number, columns.length); });
   sheet.getRow(1).font = { bold: true, size: 16, color: { argb: "FF1E3A5F" } };
@@ -191,8 +191,10 @@ async function excel(type, data, user, filters = {}, now = new Date()) {
   sheet.pageSetup.printTitlesRow = `${header.number}:${header.number}`;
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
-function pdf(type, data, user, filters = {}, now = new Date()) {
-  const info = metadata(type, data, user, filters, now);
+function pdf(type, data, user, filters = {}, now = new Date(), brand = null) {
+  const info = metadata(type, data, user, filters, now, brand?.nombre);
+  const color = brand?.personalizada ? brand.color : "#1e3a5f";
+  const { drawLogo } = require("./pdfBrand");
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 36, bufferPages: true });
     const chunks = [];
@@ -202,11 +204,12 @@ function pdf(type, data, user, filters = {}, now = new Date()) {
     const columns = Object.entries(REPORTS[type].columns), width = doc.page.width - 72, cellWidth = width / columns.length;
     let y;
     function header() {
-      doc.fillColor("#1e3a5f").font("Helvetica-Bold").fontSize(17).text(info[0], 36, 30);
+      const offset = drawLogo(doc, brand, 36, 26, 30);
+      doc.fillColor(color).font("Helvetica-Bold").fontSize(17).text(info[0], 36 + offset, 30);
       doc.fillColor("#334155").font("Helvetica").fontSize(9);
       info.slice(1).forEach(line => doc.text(line, { width }));
       y = doc.y + 12;
-      doc.rect(36, y, width, 30).fill("#1e3a5f");
+      doc.rect(36, y, width, 30).fill(color);
       doc.font("Helvetica-Bold").fontSize(9).fillColor("white");
       columns.forEach(([, label], i) => doc.text(label, 42 + i * cellWidth, y + 7, { width: cellWidth - 12, lineBreak: false }));
       y += 30;
@@ -249,7 +252,7 @@ function pdf(type, data, user, filters = {}, now = new Date()) {
     const pages = doc.bufferedPageRange();
     for (let page = 0; page < pages.count; page++) {
       doc.switchToPage(page);
-      doc.fontSize(8).fillColor("#64748b").text(`NexusResidencial | Página ${page + 1} de ${pages.count}`, 36, doc.page.height - 30, { lineBreak: false });
+      doc.fontSize(8).fillColor("#64748b").text(`${brand?.personalizada ? `${brand.nombre} · ` : ""}NexusResidencial | Página ${page + 1} de ${pages.count}`, 36, doc.page.height - 30, { lineBreak: false });
     }
     doc.end();
   });

@@ -63,3 +63,10 @@ test("PDF conserva referencias externas extensas sin truncar datos autoritativos
   const text = receiptPdfText(await createPaymentReceiptPdf(await getPaymentReceipt(3, "residente", 395)));
   expect(text).toContain(reference); expect(text).toContain("Pago 395");
 });
+test("PDF lleva el nombre y color del residencial cuando tiene marca propia", async () => {
+  query.mockResolvedValue([row]);
+  const brand = { nombre: "Residencial Las Brisas", color: "#0E7490", logo: null, personalizada: true };
+  const text = receiptPdfText(await createPaymentReceiptPdf(await getPaymentReceipt(3, "residente", 395), brand));
+  expect(text).toContain("RESIDENCIAL LAS BRISAS");
+  expect(text).toContain("Documento generado por Residencial Las Brisas con NexusResidencial.");
+});
