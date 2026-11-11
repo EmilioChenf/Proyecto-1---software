@@ -155,3 +155,30 @@ test('CM02 documentos y directorio',async()=>{
   await assert.rejects(community.saveContact(null,{nombre:'Sin datos'}),/teléfono o un correo/);
   assert.deepEqual(await community.deleteDocument(doc.id_documento),{id_documento:doc.id_documento,eliminado:true});
 });
+
+test('IM01 importa viviendas, residentes, inquilinos y saldos desde la plantilla',async()=>{
+  const ExcelJS=require('exceljs');const importer=require('../../src/services/importService');
+  const workbook=new ExcelJS.Workbook();await workbook.xlsx.load(await importer.buildTemplate());
+  const tag=String(Date.now()%100000);
+  const fill=(name,rows)=>{const ws=workbook.getWorksheet(name);ws.spliceRows(2,ws.rowCount);rows.forEach(r=>ws.addRow(r));};
+  fill('Viviendas',[['IM','1'+tag,'Ceiba','VENTA',500000,'',3,2],['IM','2'+tag,'Ceiba','RENTA','',5000,2,1],['IM','1'+tag,'Dup','VENTA','','','','']]);
+  fill('Residentes',[['Ana Importada',`ana${tag}@import.test`,'5555-1111','IM','1'+tag],['Sin casa',`sincasa${tag}@import.test`,'','IM','999']]);
+  fill('Inquilinos',[['Carlos Inquilino',`carlos${tag}@import.test`,'','IM','1'+tag],['Pedro Sin Residente',`pedro${tag}@import.test`,'','IM','2'+tag]]);
+  fill('Saldos iniciales',[['IM','1'+tag,1250.5,'2026-11-30','Mantenimiento atrasado'],['IM','1'+tag,-5,'','Malo']]);
+  const base64=Buffer.from(await workbook.xlsx.writeBuffer()).toString('base64');
+  const preview=await importer.previewImport(base64);
+  assert.deepEqual(preview.viviendas.map(v=>v.estado),['NUEVA','NUEVA','ERROR']);
+  assert.deepEqual(preview.residentes.map(v=>v.estado),['NUEVO','ERROR']);
+  assert.deepEqual(preview.inquilinos.map(v=>v.estado),['NUEVO','ERROR']);
+  assert.match(preview.inquilinos[1].errores[0],/no tiene residente/);
+  assert.deepEqual(preview.saldos.map(v=>v.estado),['NUEVO','ERROR']);
+  assert.equal(preview.resumen.listas,5);
+  assert.equal(Number((await query("SELECT COUNT(*) n FROM CASA WHERE torre='IM'"))[0].n),0,'la vista previa no guarda');
+  const report=await importer.applyImport(base64,{invitar:false});
+  assert.deepEqual([report.viviendas,report.residentes,report.inquilinos,report.saldos],[2,1,1,1],JSON.stringify(report));
+  assert.equal(report.fallidas.length,0,JSON.stringify(report.fallidas));
+  const [quota]=await query("SELECT cu.monto, cu.concepto_snapshot FROM CUOTA cu JOIN CASA c ON c.id_casa=cu.id_casa WHERE c.torre='IM' AND c.numero=?",['1'+tag]);
+  assert.equal(Number(quota.monto),1250.5);assert.equal(quota.concepto_snapshot,'Mantenimiento atrasado');
+  const again=await importer.previewImport(base64);
+  assert.equal(again.viviendas[0].estado,'YA_EXISTE');assert.equal(again.residentes[0].estado,'YA_EXISTE');
+});
