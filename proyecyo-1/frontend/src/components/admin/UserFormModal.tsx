@@ -236,7 +236,7 @@ export function UserFormModal({
               >
                 <option value="">Seleccione un rol</option>
                 {userTypes.map((option) => (
-                  <option key={option.id} value={option.id}>{option.nombre}</option>
+                  <option key={option.id} value={option.id}>{option.personalizado ? `${option.nombre} (rol personalizado)` : option.nombre}</option>
                 ))}
               </select>
               <FieldError id="user-role-error" message={errors.id_tipo_usuario} />

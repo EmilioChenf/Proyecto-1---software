@@ -8,6 +8,7 @@ const {
   ensureAccessGuardAuditSchema,
   ensureAmenityReservationsSchema,
   ensureNotificationsSchema,
+  ensureProductFeaturesSchema,
   ensureActiveSessionsSchema,
   ensurePasswordResetSchema,
   ensureAuditSchema,
@@ -72,6 +73,7 @@ async function startServer() {
   await ensureAccessGuardAuditSchema();
   await ensureAmenityReservationsSchema();
   await ensureNotificationsSchema();
+  await ensureProductFeaturesSchema();
   await ensureActiveSessionsSchema();
   await ensurePasswordResetSchema();
   await ensureAuditSchema();
@@ -99,6 +101,7 @@ async function startServer() {
   startScheduler();
   startReminderScheduler();
   startNotificationEmailScheduler();
+  require("./src/services/pushService").startPushScheduler();
 
   const app = createApp();
 

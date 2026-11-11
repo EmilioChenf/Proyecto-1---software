@@ -301,6 +301,7 @@ async function getGeneralConfiguration() {
 }
 
 async function updateGeneralConfiguration(payload) {
+  require("./pdfBrand").clearPdfBrandCache();
   const validated = validateGeneralConfiguration(payload);
   const values = [
     [GENERAL_CONFIG_KEYS.NOMBRE, validated.nombre],
@@ -367,6 +368,7 @@ async function getPublicBrand() {
 
 async function updateBrand(payload) {
   const brand = validateBrand(payload);
+  require("./pdfBrand").clearPdfBrandCache();
   for (const [key, value] of [[BRAND_KEYS.LOGO, brand.logo_url], [BRAND_KEYS.COLOR, brand.color]]) {
     await query("INSERT INTO CONFIGURACION (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor)", [key, value]);
   }

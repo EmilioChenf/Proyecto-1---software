@@ -34,6 +34,8 @@ const TYPE_LABELS = {
   RESERVA_CANCELADA: { tag: "Reservas", button: "Ver mis reservas", paths: { residente: "/residente/amenidades", inquilino: "/inquilino/reservas" } },
   RECORDATORIO_RESERVA: { tag: "Reservas", button: "Ver mis reservas", paths: { residente: "/residente/amenidades", inquilino: "/inquilino/reservas" } },
   ACCESO_EMERGENCIA: { tag: "Emergencia", button: "Revisar solicitud", paths: { admin: "/admin/accesos-especiales", residente: "/residente/visitas", inquilino: "/inquilino/visitas" } },
+  COMUNIDAD: { tag: "Comunidad", button: "Ir a Comunidad", paths: { residente: "/residente/comunidad", inquilino: "/inquilino/comunidad" } },
+  TICKET: { tag: "Mantenimiento", button: "Ver el reporte", paths: { admin: "/admin/fallas", residente: "/residente/fallas", inquilino: "/inquilino/fallas" } },
   SOLICITUD_AUTORIZACION: { tag: "Solicitudes", button: "Ver solicitud", paths: { inquilino: "/inquilino/permisos" } },
 };
 
@@ -160,4 +162,4 @@ function startNotificationEmailScheduler() {
   return timer;
 }
 
-module.exports = { createNotificationEmailDispatcher, buildNotificationEmail, startNotificationEmailScheduler, MAX_ATTEMPTS };
+module.exports = { createNotificationEmailDispatcher, buildNotificationEmail, startNotificationEmailScheduler, MAX_ATTEMPTS, TYPE_LABELS };

@@ -2,6 +2,7 @@ const { loginUser, getCurrentSession } = require("../services/authService");
 const { revokeSession } = require("../services/activeSessionsService");
 const { getAuthenticatedSession } = require("../middlewares/requireRoles");
 const { getRequestMetadata, recordAudit } = require("../services/auditService");
+const { decorateSessionUser } = require("../services/customRolesService");
 
 async function login(req, res, next) {
   try {
@@ -9,7 +10,7 @@ async function login(req, res, next) {
       userAgent: req.header("user-agent"),
       ipAddress: req.ip || req.socket?.remoteAddress,
     });
-    res.status(200).json(response);
+    res.status(200).json(await decorateSessionUser(response));
   } catch (error) {
     next(error);
   }
@@ -19,7 +20,7 @@ async function session(req, res, next) {
   try {
     const authenticated = await getAuthenticatedSession(req);
     const current = await getCurrentSession(authenticated?.userId, authenticated?.token);
-    res.status(200).json(current);
+    res.status(200).json(await decorateSessionUser(current));
   } catch (error) {
     next(error);
   }

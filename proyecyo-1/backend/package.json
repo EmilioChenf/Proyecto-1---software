@@ -36,6 +36,7 @@
     "test:sprint10:mysql": "node scripts/run-isolated-tests.js sprint10",
     "test:viviendas:mysql": "node scripts/run-isolated-tests.js viviendas",
     "test:contractterms:mysql": "node scripts/run-isolated-tests.js contractterms",
+    "test:producto:mysql": "node scripts/run-isolated-tests.js producto",
     "test:correlation:mysql": "node scripts/run-isolated-tests.js correlation",
     "test:hu19:mysql": "node scripts/run-isolated-tests.js hu19",
     "notifications:run": "node scripts/run-financial-notifications.js",
@@ -58,7 +59,8 @@
     "mysql2": "^3.14.1",
     "nodemailer": "^7.0.13",
     "pdfkit": "^0.19.1",
-    "svix": "1.99.1"
+    "svix": "1.99.1",
+    "web-push": "3.6.7"
   },
   "devDependencies": {
     "jest": "^30.4.2",

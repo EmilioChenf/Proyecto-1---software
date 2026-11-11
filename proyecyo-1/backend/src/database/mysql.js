@@ -294,6 +294,9 @@ async function ensureAmenityReservationsSchema() {
         ADD COLUMN activo BOOLEAN NOT NULL DEFAULT TRUE AFTER intervalo_minutos
       `,
     },
+    // Catalogo editable por el administrador (foto y reglas visibles al reservar).
+    { column: "foto_url", ddl: "ALTER TABLE AMENIDAD ADD COLUMN foto_url VARCHAR(255) NULL" },
+    { column: "reglas", ddl: "ALTER TABLE AMENIDAD ADD COLUMN reglas VARCHAR(500) NULL" },
   ];
 
   for (const definition of amenityColumns) {
@@ -393,6 +396,158 @@ async function ensureNotificationsSchema() {
       ALTER TABLE NOTIFICACION
       ADD INDEX idx_notificacion_correo (correo_estado, correo_proximo_intento, id_notificacion)
     `);
+  }
+}
+
+// Funciones de producto: reportes de fallas (TICKET), roles personalizados, comunidad
+// y notificaciones push. Aditivo y re-ejecutable.
+async function ensureProductFeaturesSchema() {
+  const ticketColumns = [
+    ["titulo", "VARCHAR(120) NULL"],
+    ["ubicacion", "VARCHAR(120) NULL"],
+    ["id_casa", "INT NULL"],
+    ["foto", "MEDIUMTEXT NULL"],
+    ["creado_en", "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"],
+    ["actualizado_en", "DATETIME NULL"],
+    ["resuelto_en", "DATETIME NULL"],
+  ];
+  for (const [column, definition] of ticketColumns) {
+    if (!(await columnExists("TICKET", column))) await query(`ALTER TABLE TICKET ADD COLUMN ${column} ${definition}`);
+  }
+  if (!(await tableExists("TICKET_COMENTARIO"))) {
+    await query(`
+      CREATE TABLE TICKET_COMENTARIO (
+        id_comentario INT PRIMARY KEY AUTO_INCREMENT,
+        id_ticket INT NOT NULL,
+        id_usuario INT NOT NULL,
+        comentario VARCHAR(1000) NOT NULL,
+        estado_nuevo VARCHAR(20) NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY idx_ticket_comentario (id_ticket, creado_en),
+        FOREIGN KEY (id_ticket) REFERENCES TICKET(id_ticket) ON DELETE CASCADE,
+        FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  // Roles personalizados creados por el administrador, con permisos por módulo del panel.
+  const roleColumns = [
+    ["personalizado", "TINYINT(1) NOT NULL DEFAULT 0"],
+    ["descripcion", "VARCHAR(200) NULL"],
+    ["color", "VARCHAR(7) NULL"],
+  ];
+  for (const [column, definition] of roleColumns) {
+    if (!(await columnExists("TIPO_USUARIO", column))) await query(`ALTER TABLE TIPO_USUARIO ADD COLUMN ${column} ${definition}`);
+  }
+  if (!(await tableExists("ROL_PERMISO_MODULO"))) {
+    await query(`
+      CREATE TABLE ROL_PERMISO_MODULO (
+        id_tipo_usuario INT NOT NULL,
+        modulo VARCHAR(40) NOT NULL,
+        nivel ENUM('VER','EDITAR') NOT NULL DEFAULT 'VER',
+        PRIMARY KEY (id_tipo_usuario, modulo),
+        FOREIGN KEY (id_tipo_usuario) REFERENCES TIPO_USUARIO(id_tipo_usuario) ON DELETE CASCADE
+      )
+    `);
+  }
+  // Comunidad: votaciones (un voto por vivienda), documentos descargables y directorio.
+  if (!(await tableExists("VOTACION"))) {
+    await query(`
+      CREATE TABLE VOTACION (
+        id_votacion INT PRIMARY KEY AUTO_INCREMENT,
+        titulo VARCHAR(150) NOT NULL,
+        descripcion VARCHAR(1000) NULL,
+        fecha_cierre DATETIME NOT NULL,
+        resultados_visibles TINYINT(1) NOT NULL DEFAULT 1,
+        cerrada_en DATETIME NULL,
+        creada_por INT NOT NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (creada_por) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  if (!(await tableExists("VOTACION_OPCION"))) {
+    await query(`
+      CREATE TABLE VOTACION_OPCION (
+        id_opcion INT PRIMARY KEY AUTO_INCREMENT,
+        id_votacion INT NOT NULL,
+        texto VARCHAR(120) NOT NULL,
+        orden INT NOT NULL DEFAULT 0,
+        FOREIGN KEY (id_votacion) REFERENCES VOTACION(id_votacion) ON DELETE CASCADE
+      )
+    `);
+  }
+  if (!(await tableExists("VOTO"))) {
+    await query(`
+      CREATE TABLE VOTO (
+        id_votacion INT NOT NULL,
+        id_casa INT NOT NULL,
+        id_opcion INT NOT NULL,
+        id_usuario INT NOT NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id_votacion, id_casa),
+        FOREIGN KEY (id_votacion) REFERENCES VOTACION(id_votacion) ON DELETE CASCADE,
+        FOREIGN KEY (id_opcion) REFERENCES VOTACION_OPCION(id_opcion) ON DELETE CASCADE,
+        FOREIGN KEY (id_casa) REFERENCES CASA(id_casa),
+        FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  if (!(await tableExists("DOCUMENTO_COMUNIDAD"))) {
+    await query(`
+      CREATE TABLE DOCUMENTO_COMUNIDAD (
+        id_documento INT PRIMARY KEY AUTO_INCREMENT,
+        titulo VARCHAR(150) NOT NULL,
+        categoria VARCHAR(20) NOT NULL DEFAULT 'OTRO',
+        nombre_archivo VARCHAR(180) NOT NULL,
+        tipo_mime VARCHAR(120) NOT NULL,
+        tamano INT NOT NULL,
+        contenido LONGTEXT NOT NULL,
+        subido_por INT NOT NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (subido_por) REFERENCES USUARIO(id_usuario)
+      )
+    `);
+  }
+  // Notificaciones push (app instalable): suscripciones por dispositivo y estado por notificación.
+  if (!(await tableExists("PUSH_SUSCRIPCION"))) {
+    await query(`
+      CREATE TABLE PUSH_SUSCRIPCION (
+        id_suscripcion INT PRIMARY KEY AUTO_INCREMENT,
+        id_usuario INT NOT NULL,
+        endpoint VARCHAR(500) NOT NULL,
+        p256dh VARCHAR(200) NOT NULL,
+        auth VARCHAR(100) NOT NULL,
+        dispositivo VARCHAR(120) NULL,
+        creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_push_endpoint (endpoint(255)),
+        KEY idx_push_usuario (id_usuario),
+        FOREIGN KEY (id_usuario) REFERENCES USUARIO(id_usuario) ON DELETE CASCADE
+      )
+    `);
+  }
+  if (!(await columnExists("NOTIFICACION", "push_estado"))) {
+    await query("ALTER TABLE NOTIFICACION ADD COLUMN push_estado VARCHAR(12) NOT NULL DEFAULT 'PENDIENTE'");
+    // Las notificaciones anteriores a esta función nunca se envían como push.
+    await query("UPDATE NOTIFICACION SET push_estado = 'OMITIDO'");
+  }
+  if (!(await tableExists("DIRECTORIO_CONTACTO"))) {
+    await query(`
+      CREATE TABLE DIRECTORIO_CONTACTO (
+        id_contacto INT PRIMARY KEY AUTO_INCREMENT,
+        nombre VARCHAR(120) NOT NULL,
+        categoria VARCHAR(20) NOT NULL DEFAULT 'SERVICIOS',
+        telefono VARCHAR(30) NULL,
+        correo VARCHAR(160) NULL,
+        nota VARCHAR(200) NULL,
+        orden INT NOT NULL DEFAULT 0
+      )
+    `);
+    // Números de emergencia de Guatemala para que el directorio no arranque vacío.
+    await query(`INSERT INTO DIRECTORIO_CONTACTO (nombre, categoria, telefono, nota, orden) VALUES
+      ('Policía Nacional Civil', 'EMERGENCIA', '110', 'Emergencias y seguridad', 1),
+      ('Bomberos Voluntarios', 'EMERGENCIA', '122', 'Incendios y rescate', 2),
+      ('Bomberos Municipales', 'EMERGENCIA', '123', 'Incendios y rescate', 3),
+      ('Cruz Roja', 'EMERGENCIA', '125', 'Ambulancias', 4)`);
   }
 }
 
@@ -1178,6 +1333,7 @@ module.exports = {
   ensureAccessGuardAuditSchema,
   ensureAmenityReservationsSchema,
   ensureNotificationsSchema,
+  ensureProductFeaturesSchema,
   ensureActiveSessionsSchema,
   ensurePasswordResetSchema,
   ensureAuditSchema,

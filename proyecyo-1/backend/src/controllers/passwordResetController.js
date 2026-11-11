@@ -31,7 +31,7 @@ async function changePassword(req, res, next) {
       throw error;
     }
     const result = await changeOwnPassword(req.authUser.id, req.authSessionId, req.body || {}, getRequestMetadata(req));
-    res.set("Cache-Control", "no-store").status(200).json(result);
+    res.set("Cache-Control", "no-store").status(200).json(await require("../services/customRolesService").decorateSessionUser(result));
   } catch (error) {
     // Solo una contrasena actual incorrecta cuenta como intento para el rate limit.
     if (error.status === 400 && error.code !== "CURRENT_PASSWORD_INVALID") res.locals.rateLimitNotCounted = true;

@@ -14,8 +14,9 @@ router.get("/admin/reportes/exportar", requireAdmin, async (req, res, next) => {
     if (filters.vista === "hoy") {
       filters.desde = filters.hasta = reports.localTimestamp(now).slice(0, 10);
     }
+    const brand = await require("../services/pdfBrand").loadPdfBrand();
     const data = await reports.rows(type, filters, now);
-    const file = await reports[format === "pdf" ? "pdf" : "excel"](type, data, req.authUser.id, filters, now);
+    const file = await reports[format === "pdf" ? "pdf" : "excel"](type, data, req.authUser.id, filters, now, brand);
     const name = `nexus-${type}-${reports.localTimestamp(now).slice(0, 10)}.${format}`;
     res.set("Content-Type", format === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.set("Content-Disposition", `attachment; filename="${name}"`);

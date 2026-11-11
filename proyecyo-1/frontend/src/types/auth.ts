@@ -5,6 +5,9 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   token?: string;
+  /** Solo para roles personalizados: el panel muestra únicamente sus módulos. */
+  rol_personalizado?: { id: number; nombre: string };
+  permisos?: Record<string, "VER" | "EDITAR">;
 }
 
 export interface LoginPayload {

@@ -9,6 +9,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { rolePaths } from "@/routes/rolePaths";
 import { AdminAmenitiesReservationsView } from "@/views/AdminAmenitiesReservationsView";
 import { AdminAccessesView } from "@/views/AdminAccessesView";
+import { AdminPaymentsIntegrationView } from "@/views/AdminPaymentsIntegrationView";
+import { AdminSetupView } from "@/views/AdminSetupView";
+import { AdminImportView } from "@/views/AdminImportView";
+import { AdminCommunityView } from "@/views/AdminCommunityView";
+import { CommunityView } from "@/views/CommunityView";
+import { AdminIndicatorsView } from "@/views/AdminIndicatorsView";
+import { AdminRolesView } from "@/views/AdminRolesView";
+import { AdminTicketsView } from "@/views/AdminTicketsView";
+import { ResidentTicketsView } from "@/views/ResidentTicketsView";
 import { AdminAuthorizedUsersView } from "@/views/AdminAuthorizedUsersView";
 import { AdminCommunicationsView } from "@/views/AdminCommunicationsView";
 import { AdminPaymentsView } from "@/views/AdminPaymentsView";
@@ -82,11 +91,18 @@ export function AppRouter() {
           <Route path="/admin/comunicados" element={<AdminCommunicationsView />} />
           <Route path="/admin/pagos" element={<AdminPaymentsView />} />
           <Route path="/admin/pagos/reembolsos" element={<AdminRecurrenteRefundView />} />
+          <Route path="/admin/pagos/en-linea" element={<AdminPaymentsIntegrationView />} />
           <Route path="/admin/pagos/conciliacion" element={<AdminRecurrenteReconciliationView />} />
           <Route path="/admin/recordatorios" element={<AdminRemindersView />} />
           <Route path="/admin/sanciones" element={<AdminSanctionsView />} />
           <Route path="/admin/sanciones/historial-completo" element={<AdminSanctionHistoryView />} />
           <Route path="/admin/amenidades" element={<AdminAmenitiesReservationsView />} />
+          <Route path="/admin/fallas" element={<AdminTicketsView />} />
+          <Route path="/admin/comunidad" element={<AdminCommunityView />} />
+          <Route path="/admin/importar" element={<AdminImportView />} />
+          <Route path="/admin/primeros-pasos" element={<AdminSetupView />} />
+          <Route path="/admin/roles" element={<AdminRolesView />} />
+          <Route path="/admin/indicadores" element={<AdminIndicatorsView />} />
           <Route path="/admin/reportes" element={<AdminReportsView />} />
           <Route path="/admin/finanzas" element={<AdminFinancialDashboardView />} />
           <Route path="/admin/reportes-financieros" element={<AdminMonthlyFinancialReportView />} />
@@ -122,6 +138,8 @@ export function AppRouter() {
           <Route path="/residente/notificaciones" element={<ResidentNotificationsView />} />
           <Route path="/residente/comunicados" element={<ResidentNotificationsView initialFilter="COMUNICADOS" />} />
           <Route path="/residente/proveedores" element={<ResidenteProvidersView />} />
+          <Route path="/residente/fallas" element={<ResidentTicketsView />} />
+          <Route path="/residente/comunidad" element={<CommunityView />} />
           <Route path="/residente/sesiones" element={<ActiveSessionsView />} />
         </Route>
 
@@ -131,6 +149,8 @@ export function AppRouter() {
           <Route path="/inquilino/proveedores" element={<InquilinoView section="proveedores" />} />
           <Route path="/inquilino/permisos" element={<InquilinoView section="permisos" />} />
           <Route path="/inquilino/reservas" element={<TenantAmenitiesHistoryView />} />
+          <Route path="/inquilino/fallas" element={<ResidentTicketsView role="inquilino" />} />
+          <Route path="/inquilino/comunidad" element={<CommunityView role="inquilino" />} />
           <Route path="/inquilino/notificaciones" element={<ResidentNotificationsView role="inquilino" />} />
           <Route path="/inquilino/comunicados" element={<ResidentNotificationsView role="inquilino" initialFilter="COMUNICADOS" />} />
           <Route path="/inquilino/sesiones" element={<ActiveSessionsView />} />

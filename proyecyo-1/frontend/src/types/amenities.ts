@@ -6,6 +6,8 @@ export interface Amenity {
   hora_cierre: string;
   intervalo_minutos: number;
   activo: boolean;
+  foto_url?: string;
+  reglas?: string;
 }
 
 export interface AmenityReservation {
@@ -112,3 +114,5 @@ export interface AmenityStatsResponse {
   por_amenidad: AmenityStatsItem[];
   ranking: AmenityStatsItem[];
 }
+
+export type AmenityCatalogPayload = { nombre: string; descripcion: string; reglas: string; foto_url: string; hora_apertura: string; hora_cierre: string; intervalo_minutos: number; activo: boolean };

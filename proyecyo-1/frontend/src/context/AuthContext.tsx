@@ -62,8 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const fresh = await getSessionRequest();
 
-      if (fresh.id !== stored.id || fresh.role !== stored.role || fresh.email !== stored.email) {
-        persistSession(fresh);
+      const permissionsChanged = JSON.stringify(fresh.permisos ?? null) !== JSON.stringify(stored.permisos ?? null)
+        || fresh.rol_personalizado?.nombre !== stored.rol_personalizado?.nombre;
+      if (fresh.id !== stored.id || fresh.role !== stored.role || fresh.email !== stored.email || permissionsChanged) {
+        persistSession({ ...fresh, token: fresh.token ?? stored.token });
       }
     } catch (error) {
       // Si el backend indica que la sesion ya no es valida (usuario inactivo o eliminado),
@@ -132,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const changePassword = useCallback(
     async (payload: ChangePasswordPayload) => {
       const response = await changePasswordRequest(payload);
-      persistSession({ id: response.id, email: response.email, role: response.role, token: response.token });
+      persistSession({ id: response.id, email: response.email, role: response.role, token: response.token, rol_personalizado: response.rol_personalizado, permisos: response.permisos });
       return response;
     },
     [persistSession],

@@ -19,7 +19,9 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Navigate, NavLink, useLocation } from "react-router-dom";
+
+import { canOpenAdminPath, firstAllowedAdminPath } from "@/config/roleModules";
 
 import { BrandIcon } from "@/components/layout/BrandIcon";
 import { brandSubtitle, useResidentialBrand } from "@/hooks/useResidentialBrand";
@@ -65,6 +67,11 @@ const adminMenuItems: AdminMenuItem[] = [
     icon: KeyRound,
     to: "/admin/accesos",
   },
+  { label: "Indicadores", icon: LayoutDashboard, to: "/admin/indicadores" },
+  { label: "Roles y permisos", icon: Users, to: "/admin/roles" },
+  { label: "Importar desde Excel", icon: FileText, to: "/admin/importar" },
+  { label: "Primeros pasos", icon: Settings, to: "/admin/primeros-pasos" },
+  { label: "Votaciones y documentos", icon: Megaphone, to: "/admin/comunidad" },
   {
     label: "Usuarios autorizados",
     icon: UserCheck,
@@ -93,6 +100,7 @@ const adminMenuItems: AdminMenuItem[] = [
   },
   { label: "Reembolsos de pagos", icon: Wallet, to: "/admin/pagos/reembolsos" },
   { label: "Conciliación de pagos", icon: Wallet, to: "/admin/pagos/conciliacion" },
+  { label: "Pagos en línea y factura", icon: Wallet, to: "/admin/pagos/en-linea" },
   {
     label: "Recordatorios",
     icon: BellRing,
@@ -107,6 +115,11 @@ const adminMenuItems: AdminMenuItem[] = [
     label: "Historial sanciones",
     icon: FileText,
     to: "/admin/sanciones/historial-completo",
+  },
+  {
+    label: "Fallas y mantenimiento",
+    icon: Building2,
+    to: "/admin/fallas",
   },
   {
     label: "Amenidades",
@@ -148,16 +161,23 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/reportes": "General",
   "/admin/reportes-financieros": "General",
   "/admin/usuarios": "Comunidad",
+  "/admin/roles": "Sistema",
+  "/admin/importar": "Sistema",
+  "/admin/primeros-pasos": "Sistema",
+  "/admin/indicadores": "General",
+  "/admin/comunidad": "Convivencia",
   "/admin/viviendas": "Comunidad",
   "/admin/usuarios-autorizados": "Comunidad",
   "/admin/proveedores": "Comunidad",
   "/admin/amenidades": "Comunidad",
+  "/admin/fallas": "Comunidad",
   "/admin/accesos": "Seguridad",
   "/admin/accesos-especiales": "Seguridad",
   "/admin/auditoria": "Seguridad",
   "/admin/pagos": "Finanzas",
   "/admin/pagos/reembolsos": "Finanzas",
   "/admin/pagos/conciliacion": "Finanzas",
+  "/admin/pagos/en-linea": "Finanzas",
   "/admin/comunicados": "Convivencia",
   "/admin/recordatorios": "Convivencia",
   "/admin/sanciones": "Convivencia",
@@ -178,17 +198,24 @@ const menuIconByPath: Record<string, string> = {
   "/admin/usuarios-autorizados": "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 9-5.2M15 18l2 2 4-4",
   "/admin/proveedores": "M2 7h11v9H2zM13 10h4l4 4v2h-8zM6 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
   "/admin/amenidades": "M12 3l4 7h-3l4 6H7l4-6H8zM12 16v5",
+  "/admin/fallas": "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z",
   "/admin/accesos": "M8 21a5 5 0 1 1 4.6-7L21 5.6M17 9.5l2.5 2.5M14.5 12l2 2",
   "/admin/accesos-especiales": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4",
   "/admin/auditoria": "M9 3h6l1 2h3v16H5V5h3zM9 3v3h6V3M9 12h6M9 16h4",
   "/admin/pagos": "M3 6h18v12H3zM3 10h18M7 15h4",
   "/admin/pagos/reembolsos": "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  "/admin/pagos/en-linea": "M3 6h18v12H3zM3 10h18M15 15h3",
   "/admin/pagos/conciliacion": "M5 5h14v16H5zM8 3v4M16 3v4M5 10h14M9 15l2 2 4-4",
   "/admin/comunicados": "M3 11l15-6v14L3 13zM7 12.5V17a2 2 0 0 0 4 0v-2.8",
   "/admin/recordatorios": "M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0",
   "/admin/sanciones": "M12 3l10 18H2zM12 10v4M12 17v.01",
   "/admin/sanciones/historial-completo": "M12 7v5l3 3M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5",
   "/admin/configuracion": "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4",
+  "/admin/indicadores": "M3 3v18h18M7 15l4-4 3 3 5-6",
+  "/admin/primeros-pasos": "M5 19l4-1 10-10-3-3L6 15zM14 6l3 3M4 4l2 2M10 3v2M3 10h2",
+  "/admin/importar": "M14 3H6v18h12V7zM14 3v4h4M9 13l2 2 4-4",
+  "/admin/roles": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM12 8v4M12 15v.01",
+  "/admin/comunidad": "M4 4h16v12H5l-1 4zM8 9h8M8 12h5",
   "/admin/solicitudes-demo": "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5",
 };
 
@@ -248,6 +275,11 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const activeItem = findActiveItem(pathname);
+  const permisos = user?.permisos;
+  const visibleGroups = permisos
+    ? menuGroups.map(({ group, items }) => ({ group, items: items.filter((item) => item.to !== "/admin/roles" && canOpenAdminPath(permisos, item.to)) })).filter(({ items }) => items.length > 0)
+    : menuGroups;
+  const blocked = Boolean(permisos) && (pathname === "/admin/roles" || !canOpenAdminPath(permisos, pathname));
 
   useEffect(() => {
     setMenuOpen(false);
@@ -281,8 +313,11 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
   const whenExpanded = collapsed ? "lg:hidden" : "";
   const brand = useResidentialBrand();
 
+  // Un rol personalizado que abre una pantalla fuera de sus módulos va a la primera que sí tiene.
+  if (blocked) return <Navigate to={firstAllowedAdminPath(permisos)} replace />;
+
   return (
-    <div className="nd min-h-screen">
+    <div className="nd min-h-screen" style={/^#[0-9a-f]{6}$/i.test(brand.color) ? ({ "--nd-accent": brand.color } as React.CSSProperties) : undefined}>
       <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[#E6EBF3] bg-white px-4 py-3 lg:hidden">
         <div className="flex min-w-0 items-center gap-3">
           <BrandIcon />
@@ -351,7 +386,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
         </div>
 
         <nav aria-label={"Módulos del administrador"} className="min-h-0 flex-1 overflow-y-auto px-[14px] pb-3">
-          {menuGroups.map(({ group, items }, groupIndex) => (
+          {visibleGroups.map(({ group, items }, groupIndex) => (
             <div key={group} className="flex flex-col gap-0.5">
               <p className={cn("nd-sec", whenExpanded)}>{group}</p>
               {collapsed && groupIndex > 0 ? <div className="mx-2 my-2.5 hidden h-px bg-[#EEF2F7] lg:block" /> : null}
@@ -380,7 +415,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
               <span className="absolute bottom-0 right-0 size-[11px] rounded-full border-2 border-[#F6F8FC] bg-emerald-500" aria-hidden="true" />
             </span>
             <div className={cn("min-w-0", whenExpanded)}>
-              <p className="truncate text-sm font-bold">Administrador</p>
+              <p className="truncate text-sm font-bold">{user?.rol_personalizado?.nombre ?? "Administrador"}</p>
               <p className="truncate text-xs text-slate-500">{user?.email || "admin@residencial.com"}</p>
             </div>
           </div>

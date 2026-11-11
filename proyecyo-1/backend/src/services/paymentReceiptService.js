@@ -149,18 +149,20 @@ async function listResidentRecurrenteReceipts(userId) {
   return receipts;
 }
 
-function createPaymentReceiptPdf(payment) {
+function createPaymentReceiptPdf(payment, brand = require("./pdfBrand").DEFAULT_PDF_BRAND) {
+  const { drawLogo } = require("./pdfBrand");
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "LETTER", margin: 52, info: {
-      Title: `Comprobante ${payment.numero_comprobante}`, Author: "Nexus Residencial",
+      Title: `Comprobante ${payment.numero_comprobante}`, Author: brand.nombre,
     } });
     const chunks = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
-    doc.rect(0, 0, doc.page.width, 112).fill("#0f172a");
-    doc.font("Helvetica-Bold").fontSize(21).fillColor("#ffffff").text("NEXUS RESIDENCIAL", 52, 40);
-    doc.font("Helvetica").fontSize(10).text("Comprobante de pago", 52, 72);
+    doc.rect(0, 0, doc.page.width, 112).fill(brand.personalizada ? brand.color : "#0f172a");
+    const offset = drawLogo(doc, brand, 52, 30, 52);
+    doc.font("Helvetica-Bold").fontSize(21).fillColor("#ffffff").text(String(brand.nombre).toUpperCase() === "NEXUSRESIDENCIAL" ? "NEXUS RESIDENCIAL" : String(brand.nombre).toUpperCase(), 52 + offset, 40, { width: 500 - offset, lineBreak: false });
+    doc.font("Helvetica").fontSize(10).text("Comprobante de pago", 52 + offset, 72);
     if (payment.ambiente === "sandbox") {
       doc.rect(52, 126, 508, 26).fill("#fef3c7");
       doc.font("Helvetica-Bold").fontSize(12).fillColor("#92400e").text("SANDBOX / PRUEBA", 62, 133);
@@ -189,7 +191,15 @@ function createPaymentReceiptPdf(payment) {
       doc.font("Helvetica-Bold").fillColor("#0f172a").text(text, 220, y, { width: 315, align: "right" });
       y += height;
     });
-    doc.font("Helvetica").fontSize(8).fillColor("#64748b").text("Documento generado por NexusResidencial.", 58, Math.max(650, y + 12), { width: 480, align: "center" });
+    if (payment.fel) {
+      const felY = Math.max(600, y + 8);
+      doc.rect(52, felY, 508, 44).fill(payment.fel.simulado ? "#fef3c7" : "#ecfdf5");
+      doc.font("Helvetica-Bold").fontSize(9).fillColor("#0f172a").text(payment.fel.simulado ? "FACTURA ELECTRÓNICA · SIMULACIÓN (sin validez fiscal)" : "FACTURA ELECTRÓNICA EN LÍNEA (FEL)", 62, felY + 7);
+      doc.font("Helvetica").fontSize(8).text(`Serie ${payment.fel.serie} · Número ${payment.fel.numero} · NIT emisor ${payment.fel.nit_emisor} · NIT receptor ${payment.fel.nit_receptor}`, 62, felY + 20);
+      doc.text(`Autorización ${payment.fel.autorizacion}`, 62, felY + 31);
+      y = felY + 50;
+    }
+    doc.font("Helvetica").fontSize(8).fillColor("#64748b").text(brand.personalizada ? `Documento generado por ${brand.nombre} con NexusResidencial.` : "Documento generado por NexusResidencial.", 58, Math.max(650, y + 12), { width: 480, align: "center" });
     doc.end();
   });
 }

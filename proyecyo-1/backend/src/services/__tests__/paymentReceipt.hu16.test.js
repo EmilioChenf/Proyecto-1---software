@@ -63,3 +63,17 @@ test("PDF conserva referencias externas extensas sin truncar datos autoritativos
   const text = receiptPdfText(await createPaymentReceiptPdf(await getPaymentReceipt(3, "residente", 395)));
   expect(text).toContain(reference); expect(text).toContain("Pago 395");
 });
+test("PDF lleva el nombre y color del residencial cuando tiene marca propia", async () => {
+  query.mockResolvedValue([row]);
+  const brand = { nombre: "Residencial Las Brisas", color: "#0E7490", logo: null, personalizada: true };
+  const text = receiptPdfText(await createPaymentReceiptPdf(await getPaymentReceipt(3, "residente", 395), brand));
+  expect(text).toContain("RESIDENCIAL LAS BRISAS");
+  expect(text).toContain("Documento generado por Residencial Las Brisas con NexusResidencial.");
+});
+test("PDF muestra la factura electrónica simulada con su aviso de no validez", async () => {
+  query.mockResolvedValue([row]);
+  const payment = await getPaymentReceipt(3, "residente", 395);
+  const text = receiptPdfText(await createPaymentReceiptPdf({ ...payment, fel: { simulado: true, serie: "SIM2026", numero: "00000395", nit_emisor: "5764424", nit_receptor: "CF", autorizacion: "ABC-123" } }));
+  expect(text).toContain("SIMULACIÓN (sin validez fiscal)");
+  expect(text).toContain("Serie SIM2026");
+});
