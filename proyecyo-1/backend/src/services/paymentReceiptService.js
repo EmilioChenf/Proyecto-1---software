@@ -191,6 +191,14 @@ function createPaymentReceiptPdf(payment, brand = require("./pdfBrand").DEFAULT_
       doc.font("Helvetica-Bold").fillColor("#0f172a").text(text, 220, y, { width: 315, align: "right" });
       y += height;
     });
+    if (payment.fel) {
+      const felY = Math.max(600, y + 8);
+      doc.rect(52, felY, 508, 44).fill(payment.fel.simulado ? "#fef3c7" : "#ecfdf5");
+      doc.font("Helvetica-Bold").fontSize(9).fillColor("#0f172a").text(payment.fel.simulado ? "FACTURA ELECTRÓNICA · SIMULACIÓN (sin validez fiscal)" : "FACTURA ELECTRÓNICA EN LÍNEA (FEL)", 62, felY + 7);
+      doc.font("Helvetica").fontSize(8).text(`Serie ${payment.fel.serie} · Número ${payment.fel.numero} · NIT emisor ${payment.fel.nit_emisor} · NIT receptor ${payment.fel.nit_receptor}`, 62, felY + 20);
+      doc.text(`Autorización ${payment.fel.autorizacion}`, 62, felY + 31);
+      y = felY + 50;
+    }
     doc.font("Helvetica").fontSize(8).fillColor("#64748b").text(brand.personalizada ? `Documento generado por ${brand.nombre} con NexusResidencial.` : "Documento generado por NexusResidencial.", 58, Math.max(650, y + 12), { width: 480, align: "center" });
     doc.end();
   });

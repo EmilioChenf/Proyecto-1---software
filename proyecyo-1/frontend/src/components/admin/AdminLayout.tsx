@@ -100,6 +100,7 @@ const adminMenuItems: AdminMenuItem[] = [
   },
   { label: "Reembolsos de pagos", icon: Wallet, to: "/admin/pagos/reembolsos" },
   { label: "Conciliación de pagos", icon: Wallet, to: "/admin/pagos/conciliacion" },
+  { label: "Pagos en línea y factura", icon: Wallet, to: "/admin/pagos/en-linea" },
   {
     label: "Recordatorios",
     icon: BellRing,
@@ -176,6 +177,7 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/pagos": "Finanzas",
   "/admin/pagos/reembolsos": "Finanzas",
   "/admin/pagos/conciliacion": "Finanzas",
+  "/admin/pagos/en-linea": "Finanzas",
   "/admin/comunicados": "Convivencia",
   "/admin/recordatorios": "Convivencia",
   "/admin/sanciones": "Convivencia",
@@ -202,6 +204,7 @@ const menuIconByPath: Record<string, string> = {
   "/admin/auditoria": "M9 3h6l1 2h3v16H5V5h3zM9 3v3h6V3M9 12h6M9 16h4",
   "/admin/pagos": "M3 6h18v12H3zM3 10h18M7 15h4",
   "/admin/pagos/reembolsos": "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  "/admin/pagos/en-linea": "M3 6h18v12H3zM3 10h18M15 15h3",
   "/admin/pagos/conciliacion": "M5 5h14v16H5zM8 3v4M16 3v4M5 10h14M9 15l2 2 4-4",
   "/admin/comunicados": "M3 11l15-6v14L3 13zM7 12.5V17a2 2 0 0 0 4 0v-2.8",
   "/admin/recordatorios": "M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0",

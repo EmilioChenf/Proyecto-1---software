@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { rolePaths } from "@/routes/rolePaths";
 import { AdminAmenitiesReservationsView } from "@/views/AdminAmenitiesReservationsView";
 import { AdminAccessesView } from "@/views/AdminAccessesView";
+import { AdminPaymentsIntegrationView } from "@/views/AdminPaymentsIntegrationView";
 import { AdminSetupView } from "@/views/AdminSetupView";
 import { AdminImportView } from "@/views/AdminImportView";
 import { AdminCommunityView } from "@/views/AdminCommunityView";
@@ -90,6 +91,7 @@ export function AppRouter() {
           <Route path="/admin/comunicados" element={<AdminCommunicationsView />} />
           <Route path="/admin/pagos" element={<AdminPaymentsView />} />
           <Route path="/admin/pagos/reembolsos" element={<AdminRecurrenteRefundView />} />
+          <Route path="/admin/pagos/en-linea" element={<AdminPaymentsIntegrationView />} />
           <Route path="/admin/pagos/conciliacion" element={<AdminRecurrenteReconciliationView />} />
           <Route path="/admin/recordatorios" element={<AdminRemindersView />} />
           <Route path="/admin/sanciones" element={<AdminSanctionsView />} />

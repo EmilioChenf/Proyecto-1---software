@@ -192,3 +192,20 @@ test('SU01 primeros pasos: avance de la configuración inicial',async()=>{
   assert.equal((await setup.markStepReviewed('visitas')).pasos.find(p=>p.id==='visitas').done,true);
   assert.equal((await setup.setSetupHidden(true)).oculto,true);
 });
+
+test('FE01 datos fiscales y factura simulada por pago',async()=>{
+  const fel=require('../../src/services/felService');
+  await assert.rejects(fel.updateFiscalSettings({modo:'SIMULADO',nit:'5764426',nombre_emisor:'Asociación Las Brisas',direccion:'Zona 16'}),/NIT/);
+  await assert.rejects(fel.updateFiscalSettings({modo:'SIMULADO',nit:'5764424'}),/razón social/);
+  await assert.rejects(fel.updateFiscalSettings({modo:'CERTIFICADOR'}),/certificador/);
+  const saved=await fel.updateFiscalSettings({modo:'SIMULADO',nit:'576442-4',nombre_emisor:'Asociación Las Brisas',direccion:'Km 15 Carretera a El Salvador',regimen:'GENERAL'});
+  assert.equal(saved.nit,'5764424');assert.equal(saved.completos,true);
+  const first=await fel.documentForPayment({id_pago:987654,monto_pagado:450});
+  const again=await fel.documentForPayment({id_pago:987654,monto_pagado:450});
+  assert.equal(first.simulado,true);assert.match(first.serie,/^SIM/);assert.equal(first.autorizacion,again.autorizacion,'un documento por pago');
+  await fel.updateFiscalSettings({modo:'DESACTIVADO'});
+  assert.equal(await fel.documentForPayment({id_pago:987655,monto_pagado:1}),null);
+  const status=await require('../../src/services/paymentsIntegrationService').getIntegrationStatus();
+  assert.equal(status.recurrente.modo,'SANDBOX');assert(status.produccion.length>=4);
+  assert.equal(JSON.stringify(status).includes(process.env.RECURRENTE_SECRET_KEY||'@@nada@@'),false,'nunca expone la llave');
+});

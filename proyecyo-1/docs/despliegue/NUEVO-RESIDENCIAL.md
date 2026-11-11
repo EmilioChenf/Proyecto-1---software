@@ -74,7 +74,9 @@ cámbialo en la referencia.
 | `BOOTSTRAP_DIRECCION` | dirección (opcional) | |
 
 Pagos con Recurrente (opcional): `RECURRENTE_SECRET_KEY`, `RECURRENTE_WEBHOOK_SECRET`,
-`RECURRENTE_SANDBOX_ID` con las llaves **de ese residencial**.
+`RECURRENTE_SANDBOX_ID` con las llaves **de ese residencial**. `PUBLIC_API_URL` (ej. `https://api.brisas.com`)
+solo sirve para mostrar en el panel la dirección del webhook. El estado de la integración y los datos
+fiscales (FEL simulada) se revisan en **Finanzas → Pagos en línea y factura**.
 
 > Nunca copies `SESSION_SECRET`, claves de Gmail o llaves de Recurrente de un cliente a otro.
 
