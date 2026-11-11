@@ -182,3 +182,13 @@ test('IM01 importa viviendas, residentes, inquilinos y saldos desde la plantilla
   const again=await importer.previewImport(base64);
   assert.equal(again.viviendas[0].estado,'YA_EXISTE');assert.equal(again.residentes[0].estado,'YA_EXISTE');
 });
+
+test('SU01 primeros pasos: avance de la configuración inicial',async()=>{
+  const setup=require('../../src/services/setupService');
+  const status=await setup.getSetupStatus();
+  assert.equal(status.total,6);
+  assert.equal(status.pasos.find(p=>p.id==='amenidades').done,true,'AM02 dejó una amenidad activa');
+  assert.equal(status.pasos.find(p=>p.id==='visitas').done,false);
+  assert.equal((await setup.markStepReviewed('visitas')).pasos.find(p=>p.id==='visitas').done,true);
+  assert.equal((await setup.setSetupHidden(true)).oculto,true);
+});

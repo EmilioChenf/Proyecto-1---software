@@ -98,6 +98,7 @@ function createApp({ recurrenteWebhookHandler, recurrenteCheckoutService, recurr
   app.use(require('./routes/indicatorsRoutes'));
   app.use(require('./routes/communityRoutes'));
   app.use(require('./routes/importRoutes'));
+  app.use(require('./routes/setupRoutes'));
   app.use(amenitiesReservationsRoutes);
   app.use(adminAccessesRoutes);
   app.use(notificationsRoutes);

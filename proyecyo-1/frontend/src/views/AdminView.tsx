@@ -1,3 +1,4 @@
+import { SetupBanner } from "@/components/admin/SetupBanner";
 import { useFeedbackState } from "@/hooks/useFeedbackState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -472,6 +473,7 @@ export function AdminView() {
         </>
       }
     >
+      <SetupBanner />
       <div className="flex flex-col gap-[22px]">
         <section aria-label="Indicadores de hoy" className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
           {kpis.map((kpi) => (
