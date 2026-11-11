@@ -3,6 +3,8 @@ import {cleanup,fireEvent,render,screen,waitFor,within} from '@testing-library/r
 import {PropertyContractWizard,firstBillingPeriod,financingPlan} from './PropertyContractWizard';
 import * as service from '@/services/propertyContractsService';
 import {getUsersRequest} from '@/services/usersService';
+import {contractLabels} from '@/types/propertyContracts';
+function chooseType(type:string){fireEvent.click(screen.getByRole('radio',{name:contractLabels[type as keyof typeof contractLabels]}));}
 const house={id_casa:42,codigo:'A-42',numero:'42',torre:'A',modelo:'Los Pinos',activo:true,estado:'DISPONIBLE',area_construccion:100,habitaciones:3,banos:2};
 vi.mock('./HousePicker',()=>({HousePicker:({role,onChange}:{role:string;onChange:(h:unknown)=>void})=><button onClick={()=>onChange(house)}>Mapa 3D · {role} · Elegir A-42</button>}));
 vi.mock('@/services/propertyContractsService',()=>({getHouseContractsRequest:vi.fn(),getGlobalMaintenanceRequest:vi.fn(),saveHouseContractRequest:vi.fn()}));
@@ -83,7 +85,7 @@ for(const type of ['RENTA_DIRECTA','COMPRA_FINANCIADA'])it(`R2-A inquilino priva
   await people();fireEvent.change(screen.getByLabelText('Propietario: usuario'),{target:{value:'1'}});
   fireEvent.click(screen.getByLabelText('Agregar inquilino privado'));fireEvent.change(screen.getByLabelText('Inquilino privado: origen'),{target:{value:'new'}});
   fireEvent.change(screen.getByLabelText('Inquilino privado: nombre'),{target:{value:'Borrador incompleto'}});
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:type}});
+  fireEvent.click(screen.getByText('Anterior'));chooseType(type);
   fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'200'}});
   if(type==='COMPRA_FINANCIADA')fireEvent.change(screen.getByLabelText('Meses de financiamiento'),{target:{value:'3'}});
   fireEvent.click(screen.getByText('Continuar'));const label=type==='RENTA_DIRECTA'?'Arrendatario directo':'Comprador';
@@ -95,7 +97,7 @@ for(const type of ['RENTA_DIRECTA','COMPRA_FINANCIADA'])it(`R2-A inquilino priva
 it('R2-B renta a privada reinicia personas y borrador de ocupación de la modalidad anterior',async()=>{
   await people('RENTA_DIRECTA');fireEvent.change(screen.getByLabelText('Arrendatario directo: usuario'),{target:{value:'1'}});
   fireEvent.click(screen.getByLabelText('Arrendatario directo habita la vivienda'));
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'PROPIEDAD_PRIVADA'}});
+  fireEvent.click(screen.getByText('Anterior'));chooseType('PROPIEDAD_PRIVADA');
   fireEvent.click(screen.getByText('Continuar'));expect(screen.getByLabelText('Propietario: usuario')).toHaveValue('');
   expect(screen.getByLabelText('Propietario habita la vivienda')).not.toBeChecked();expect(screen.getByLabelText('Agregar inquilino privado')).not.toBeChecked();
   fireEvent.change(screen.getByLabelText('Propietario: usuario'),{target:{value:'1'}});fireEvent.click(screen.getByText('Continuar'));await submit();
@@ -104,11 +106,11 @@ it('R2-B renta a privada reinicia personas y borrador de ocupación de la modali
 it('R2-C compra a renta a privada no mezcla comprador, arrendatario ni borrador privado descartado',async()=>{
   await people('COMPRA_FINANCIADA');fireEvent.change(screen.getByLabelText('Comprador: origen'),{target:{value:'new'}});
   fireEvent.change(screen.getByLabelText('Comprador: nombre'),{target:{value:'Comprador borrador'}});
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'RENTA_DIRECTA'}});
+  fireEvent.click(screen.getByText('Anterior'));chooseType('RENTA_DIRECTA');
   fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'300'}});fireEvent.click(screen.getByText('Continuar'));
   expect(screen.getByLabelText('Arrendatario directo: origen')).toHaveValue('existing');expect(screen.getByLabelText('Arrendatario directo: usuario')).toHaveValue('');
   fireEvent.change(screen.getByLabelText('Arrendatario directo: usuario'),{target:{value:'1'}});
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'PROPIEDAD_PRIVADA'}});
+  fireEvent.click(screen.getByText('Anterior'));chooseType('PROPIEDAD_PRIVADA');
   fireEvent.click(screen.getByText('Continuar'));expect(screen.getByLabelText('Propietario: usuario')).toHaveValue('');
   fireEvent.change(screen.getByLabelText('Propietario: usuario'),{target:{value:'1'}});fireEvent.click(screen.getByText('Continuar'));await submit();
   expect(service.saveHouseContractRequest).toHaveBeenCalledWith(42,expect.objectContaining({responsable:{id_usuario:1},inquilino_privado:null,meses_financiamiento:null}));
@@ -116,7 +118,7 @@ it('R2-C compra a renta a privada no mezcla comprador, arrendatario ni borrador 
 it('R2-D después de cambiar modalidad atrás y adelante conserva solamente la persona aplicable',async()=>{
   await people();fireEvent.click(screen.getByLabelText('Agregar inquilino privado'));fireEvent.change(screen.getByLabelText('Inquilino privado: origen'),{target:{value:'new'}});
   fireEvent.change(screen.getByLabelText('Inquilino privado: nombre'),{target:{value:'Descartado'}});
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'RENTA_DIRECTA'}});
+  fireEvent.click(screen.getByText('Anterior'));chooseType('RENTA_DIRECTA');
   fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'400'}});fireEvent.click(screen.getByText('Continuar'));
   fireEvent.change(screen.getByLabelText('Arrendatario directo: usuario'),{target:{value:'1'}});
   fireEvent.click(screen.getByText('Anterior'));fireEvent.click(screen.getByText('Continuar'));expect(screen.getByLabelText('Arrendatario directo: usuario')).toHaveValue('1');
@@ -126,7 +128,7 @@ it('R2-D después de cambiar modalidad atrás y adelante conserva solamente la p
 it('R2 resumen y payload omiten al inquilino privado completo de otra modalidad',async()=>{
   await people();fireEvent.change(screen.getByLabelText('Propietario: usuario'),{target:{value:'1'}});
   fireEvent.click(screen.getByLabelText('Agregar inquilino privado'));fireEvent.change(screen.getByLabelText('Inquilino privado: usuario'),{target:{value:'2'}});
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'RENTA_DIRECTA'}});
+  fireEvent.click(screen.getByText('Anterior'));chooseType('RENTA_DIRECTA');
   fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'200'}});fireEvent.click(screen.getByText('Continuar'));
   fireEvent.change(screen.getByLabelText('Arrendatario directo: usuario'),{target:{value:'1'}});fireEvent.click(screen.getByText('Continuar'));
   expect(screen.getByText('Inquilino privado').parentElement).toHaveTextContent('No aplica');await submit();
@@ -135,16 +137,16 @@ it('R2 resumen y payload omiten al inquilino privado completo de otra modalidad'
 it('R2 volver a privada descarta el borrador privado anterior de forma determinista',async()=>{
   await people();fireEvent.click(screen.getByLabelText('Agregar inquilino privado'));fireEvent.change(screen.getByLabelText('Inquilino privado: origen'),{target:{value:'new'}});
   fireEvent.change(screen.getByLabelText('Inquilino privado: nombre'),{target:{value:'Borrador descartado'}});
-  fireEvent.click(screen.getByText('Anterior'));fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'RENTA_DIRECTA'}});
-  fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'PROPIEDAD_PRIVADA'}});fireEvent.click(screen.getByText('Continuar'));
+  fireEvent.click(screen.getByText('Anterior'));chooseType('RENTA_DIRECTA');
+  chooseType('PROPIEDAD_PRIVADA');fireEvent.click(screen.getByText('Continuar'));
   expect(screen.getByLabelText('Agregar inquilino privado')).not.toBeChecked();expect(screen.queryByLabelText('Inquilino privado: nombre')).not.toBeInTheDocument();
 });
 async function submit(){fireEvent.click(screen.getByLabelText(/Confirmo vivienda/));fireEvent.click(screen.getByText('Guardar configuración'));await waitFor(()=>expect(saved).toHaveBeenCalledOnce());}
 afterEach(cleanup);
 function open(){return render(<PropertyContractWizard open onClose={closed} onSaved={saved}/>);}
-async function contract(){open();fireEvent.click(screen.getByText(/Mapa 3D/));await waitFor(()=>expect(screen.queryByText('Cargando configuración contractual…')).not.toBeInTheDocument());fireEvent.click(screen.getByText('Continuar'));await screen.findByLabelText('Tipo contractual');}
+async function contract(){open();fireEvent.click(screen.getByText(/Mapa 3D/));await waitFor(()=>expect(screen.queryByText('Cargando configuración contractual…')).not.toBeInTheDocument());fireEvent.click(screen.getByText('Continuar'));await screen.findByRole('radiogroup',{name:'Tipo contractual'});}
 async function people(type='PROPIEDAD_PRIVADA'){
-  await contract();fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:type}});
+  await contract();chooseType(type);
   if(type!=='PROPIEDAD_PRIVADA')fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'4000'}});
   if(type==='COMPRA_FINANCIADA')fireEvent.change(screen.getByLabelText('Meses de financiamiento'),{target:{value:'36'}});
   await screen.findByText('Q500.00');fireEvent.click(screen.getByText('Continuar'));await screen.findByText(/habita la vivienda/);
@@ -153,15 +155,16 @@ async function confirm(type='PROPIEDAD_PRIVADA'){await people(type);const label=
 describe('Asistente contractual',()=>{
   it('F01 mantiene exactamente cuatro pasos y el selector 3D',()=>{open();expect(within(screen.getByLabelText('Pasos del asistente')).getAllByRole('listitem')).toHaveLength(4);expect(screen.getByText(/Mapa 3D · contrato/)).toBeInTheDocument();});
   it('F02 exige seleccionar la vivienda antes de continuar',()=>{open();fireEvent.click(screen.getByText('Continuar'));expect(screen.getByRole('alert')).toHaveTextContent('Selecciona una vivienda');});
-  it('F03 compra muestra cuota y plazo',async()=>{await contract();fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'COMPRA_FINANCIADA'}});expect(screen.getByLabelText('Cuota mensual')).toBeInTheDocument();expect(screen.getByLabelText('Meses de financiamiento')).toBeInTheDocument();});
-  it('F04 renta muestra renta y omite plazo',async()=>{await contract();fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'RENTA_DIRECTA'}});expect(screen.getByLabelText('Cuota mensual')).toBeInTheDocument();expect(screen.queryByLabelText('Meses de financiamiento')).not.toBeInTheDocument();});
+  it('F03 compra muestra cuota y plazo',async()=>{await contract();chooseType('COMPRA_FINANCIADA');expect(screen.getByLabelText('Cuota mensual')).toBeInTheDocument();expect(screen.getByLabelText('Meses de financiamiento')).toBeInTheDocument();});
+  it('F04 renta muestra renta y omite plazo',async()=>{await contract();chooseType('RENTA_DIRECTA');expect(screen.getByLabelText('Cuota mensual')).toBeInTheDocument();expect(screen.queryByLabelText('Meses de financiamiento')).not.toBeInTheDocument();});
   it('F05 privada sólo muestra mantenimiento global',async()=>{await contract();expect(screen.queryByLabelText('Cuota mensual')).not.toBeInTheDocument();expect(screen.getByText('Q500.00')).toBeInTheDocument();expect(screen.queryByRole('textbox',{name:/mantenimiento/i})).not.toBeInTheDocument();});
-  it('F06 total suma vivienda y tarifa sin monto hardcodeado',async()=>{await contract();fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'RENTA_DIRECTA'}});fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'4000'}});expect(screen.getByText(/Total mensual/)).toHaveTextContent('Q4,500.00');});
-  it('F07 rechaza compra sin plazo',async()=>{await contract();fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'COMPRA_FINANCIADA'}});fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'4000'}});fireEvent.click(screen.getByText('Continuar'));expect(screen.getByRole('alert')).toHaveTextContent('plazo');});
+  it('F06 total suma vivienda y tarifa sin monto hardcodeado',async()=>{await contract();chooseType('RENTA_DIRECTA');fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'4000'}});expect(screen.getByText(/Total mensual/)).toHaveTextContent('Q4,500.00');});
+  it('F07 rechaza compra sin plazo',async()=>{await contract();chooseType('COMPRA_FINANCIADA');fireEvent.change(screen.getByLabelText('Cuota mensual'),{target:{value:'4000'}});fireEvent.click(screen.getByText('Continuar'));expect(screen.getByRole('alert')).toHaveTextContent('plazo');});
   it('F08 sin tarifa bloquea guardar la configuración',async()=>{vi.mocked(service.getGlobalMaintenanceRequest).mockResolvedValue({vigente:null,historial:[]});await contract();fireEvent.click(screen.getByText('Continuar'));expect(screen.getByRole('alert')).toHaveTextContent('mantenimiento global');});
   it('F09 permite crear personas dentro del mismo guardado',async()=>{await people();fireEvent.change(screen.getByLabelText('Propietario: origen'),{target:{value:'new'}});expect(screen.getByLabelText('Propietario: nombre')).toBeInTheDocument();expect(service.saveHouseContractRequest).not.toHaveBeenCalled();});
   it('F10 inquilino privado: por defecto paga el mantenimiento y se puede asignar al propietario',async()=>{await people();fireEvent.change(screen.getByLabelText('Propietario: usuario'),{target:{value:'1'}});fireEvent.click(screen.getByLabelText('Agregar inquilino privado'));expect(screen.getByLabelText(/El inquilino \(le cae el mantenimiento/)).toBeChecked();expect(screen.getByText(/Q0 de obligaciones/)).toBeInTheDocument();fireEvent.change(screen.getByLabelText('Inquilino privado: usuario'),{target:{value:'2'}});fireEvent.click(screen.getByText('Continuar'));await submit();expect(service.saveHouseContractRequest).toHaveBeenCalledWith(42,expect.objectContaining({mantenimiento_paga:'INQUILINO',inquilino_privado:{id_usuario:2}}));});
-  it('F16 compra con precio y enganche calcula la cuota mensual sola',async()=>{await contract();fireEvent.change(screen.getByLabelText('Tipo contractual'),{target:{value:'COMPRA_FINANCIADA'}});fireEvent.change(screen.getByLabelText('Precio de la vivienda'),{target:{value:'1000'}});fireEvent.change(screen.getByLabelText('Enganche'),{target:{value:'100'}});fireEvent.change(screen.getByLabelText('Meses de financiamiento'),{target:{value:'7'}});expect(screen.getByLabelText('Cuota mensual')).toHaveValue('128.57');expect(screen.getByText(/6 cuotas de Q128.57 y la última de Q128.58/)).toBeInTheDocument();expect(screen.getByText(/Total mensual/)).toHaveTextContent('Q628.57');});
+  it('F16 compra con precio y enganche calcula la cuota mensual sola',async()=>{await contract();chooseType('COMPRA_FINANCIADA');fireEvent.change(screen.getByLabelText('Precio de la vivienda'),{target:{value:'1000'}});fireEvent.change(screen.getByLabelText('Enganche'),{target:{value:'100'}});fireEvent.change(screen.getByLabelText('Meses de financiamiento'),{target:{value:'7'}});expect(screen.getByLabelText('Cuota mensual')).toHaveValue('128.57');expect(screen.getByText(/6 cuotas de Q128.57 y la última de Q128.58/)).toBeInTheDocument();expect(screen.getByText(/Total mensual/)).toHaveTextContent('Q628.57');});
+  it('F18 al escribir el enganche muestra al instante lo que resta por pagar y el porcentaje',async()=>{await contract();chooseType('COMPRA_FINANCIADA');fireEvent.change(screen.getByLabelText('Precio de la vivienda'),{target:{value:'1000000'}});fireEvent.click(screen.getByRole('button',{name:'20'}));expect(screen.getByLabelText('Enganche')).toHaveValue('200000');expect(screen.getByText('Resta por pagar').nextSibling).toHaveTextContent('Q800,000.00');expect(screen.getByText(/= 20% del precio/)).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'10 años'}));expect(screen.getByLabelText('Cuota mensual')).toHaveValue('6666.66');});
   it('F17 el plan de financiamiento reparte el saldo exacto',()=>{expect(financingPlan('1000','100','7')).toEqual({financed:900,base:128.57,last:128.58});expect(financingPlan('1000','1000','7')).toBeNull();expect(financingPlan('1000','0','0')).toBeNull();});
   it('F11 exige confirmación explícita antes de guardar',async()=>{await confirm();expect(screen.getByText('Guardar configuración')).toBeDisabled();fireEvent.click(screen.getByLabelText(/Confirmo vivienda/));expect(screen.getByText('Guardar configuración')).toBeEnabled();});
   it('F12 guarda vivienda, responsable y vigencia en una petición',async()=>{await confirm();fireEvent.click(screen.getByLabelText(/Confirmo vivienda/));fireEvent.click(screen.getByText('Guardar configuración'));await waitFor(()=>expect(saved).toHaveBeenCalledOnce());expect(service.saveHouseContractRequest).toHaveBeenCalledWith(42,expect.objectContaining({tipo:'PROPIEDAD_PRIVADA',responsable:{id_usuario:1},version:0,confirmado:true}));});
