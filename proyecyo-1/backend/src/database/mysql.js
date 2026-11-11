@@ -373,6 +373,27 @@ async function ensureNotificationsSchema() {
       ADD INDEX idx_notificacion_usuario_leido (id_usuario, leido, creado_en)
     `);
   }
+
+  // Copia por correo: cada notificacion nueva queda PENDIENTE y el despachador la envia.
+  // Al agregar la columna, las notificaciones que ya existian no se envian (OMITIDO).
+  if (!(await columnExists("NOTIFICACION", "correo_estado"))) {
+    await query(`
+      ALTER TABLE NOTIFICACION
+      ADD COLUMN correo_estado VARCHAR(12) NOT NULL DEFAULT 'PENDIENTE',
+      ADD COLUMN correo_intentos TINYINT UNSIGNED NOT NULL DEFAULT 0,
+      ADD COLUMN correo_proximo_intento DATETIME NULL,
+      ADD COLUMN correo_enviado_en DATETIME NULL,
+      ADD COLUMN correo_error VARCHAR(160) NULL
+    `);
+    await query("UPDATE NOTIFICACION SET correo_estado = 'OMITIDO'");
+  }
+
+  if (!(await indexExists("NOTIFICACION", "idx_notificacion_correo"))) {
+    await query(`
+      ALTER TABLE NOTIFICACION
+      ADD INDEX idx_notificacion_correo (correo_estado, correo_proximo_intento, id_notificacion)
+    `);
+  }
 }
 
 async function ensureActiveSessionsSchema() {

@@ -29,10 +29,10 @@ test("permite solamente nombres explicitos de validacion y restauracion", () => 
 });
 test("configura el aislamiento antes de cargar la app y desactiva proveedores externos", () => {
   process.env.DB_NAME = "nexus_residencial";
-  for (const key of ["RECURRENTE_SECRET_KEY", "RECURRENTE_WEBHOOK_SECRET", "RECURRENTE_SANDBOX_ID", "EMAIL_API_URL", "EMAIL_API_KEY"]) process.env[key] = "fake-disabled-test-fixture";
+  for (const key of ["RECURRENTE_SECRET_KEY", "RECURRENTE_WEBHOOK_SECRET", "RECURRENTE_SANDBOX_ID", "EMAIL_API_URL", "EMAIL_API_KEY", "SMTP_USER", "SMTP_PASS"]) process.env[key] = "fake-disabled-test-fixture";
   const config = configureTestEnvironment();
   expect(process.env.DB_NAME).toBe(config.database);
   expect(process.env.DB_HOST).toBe("127.0.0.1");
   expect(process.env.DB_PORT).toBe(String(config.port));
-  for (const key of ["RECURRENTE_SECRET_KEY", "RECURRENTE_WEBHOOK_SECRET", "RECURRENTE_SANDBOX_ID", "EMAIL_API_URL", "EMAIL_API_KEY"]) expect(process.env[key]).toBe("");
+  for (const key of ["RECURRENTE_SECRET_KEY", "RECURRENTE_WEBHOOK_SECRET", "RECURRENTE_SANDBOX_ID", "EMAIL_API_URL", "EMAIL_API_KEY", "SMTP_USER", "SMTP_PASS"]) expect(process.env[key]).toBe("");
 });
