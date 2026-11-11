@@ -24,6 +24,7 @@
     "test:isolated:backend": "node scripts/run-isolated-tests.js backend",
     "start:hu13:sandbox": "node scripts/start-hu13-sandbox.js",
     "start:hu14:sandbox": "node scripts/start-hu13-sandbox.js",
+    "bootstrap:residencial": "node scripts/bootstrap-residencial.js",
     "dev": "node server.js",
     "start": "node server.js",
     "test": "node --test --test-concurrency=1 test/app.routes.test.js test/restores.test.js test/adminSanctions.test.js test/amenitiesReservations.test.js test/configuration.test.js test/visitorType.test.js test/financialRules.test.js test/sanctionHistory.test.js test/residentMonthlySummary.test.js test/reportExport.test.js test/dateTimeValidation.test.js test/automaticBackups.test.js test/demoRequests.test.js test/recordatoriosPago.test.js test/detalleFinanciero.test.js test/residentAccount.test.js test/tenantAccount.test.js test/visits.test.js test/visits.c03.test.js test/providers.huc06.test.js test/authSecurity.test.js && jest --runInBand",

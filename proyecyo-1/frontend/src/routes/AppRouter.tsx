@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { loadResidentialBrand, type ResidentialBrand } from "@/hooks/useResidentialBrand";
 import { TenantAmenitiesHistoryView } from "@/views/TenantAmenitiesHistoryView";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -61,7 +63,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingView />} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/privacidad" element={<PrivacyView />} />
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginView />} />
@@ -145,4 +147,12 @@ export function AppRouter() {
       </Routes>
     </BrowserRouter>
   );
+}
+
+/** Las copias de clientes (PUBLIC_LANDING=false) abren directo el inicio de sesión. */
+function HomeRoute() {
+  const [brand, setBrand] = useState<ResidentialBrand | null>(null);
+  useEffect(() => { let active = true; void loadResidentialBrand().then((value) => { if (active) setBrand(value); }); return () => { active = false; }; }, []);
+  if (!brand) return null;
+  return brand.mostrar_landing ? <LandingView /> : <Navigate to="/login" replace />;
 }

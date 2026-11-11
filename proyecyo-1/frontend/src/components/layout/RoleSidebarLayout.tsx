@@ -3,6 +3,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { BrandIcon } from "@/components/layout/BrandIcon";
+import { brandSubtitle, useResidentialBrand } from "@/hooks/useResidentialBrand";
 import {
   findActiveNavItem,
   isNavItemActive,
@@ -120,6 +121,7 @@ export function RoleSidebarLayout<Badge extends string>({
 
   // Al contraer solo se ocultan los textos en escritorio; el panel movil siempre es completo.
   const whenExpanded = collapsed ? "lg:hidden" : "";
+  const brand = useResidentialBrand();
   const accentStyle = (config.accent ? { "--nd-accent": config.accent } : undefined) as CSSProperties | undefined;
 
   return (
@@ -175,7 +177,7 @@ export function RoleSidebarLayout<Badge extends string>({
               <span className="block text-[17px] font-extrabold leading-tight tracking-[-0.02em] text-[color-mix(in_srgb,var(--nd-accent)_85%,#000)]">
                 NexusResidencial
               </span>
-              <span className="block whitespace-nowrap text-xs text-slate-500" aria-hidden="true">{config.panelLabel}</span>
+              <span className="block max-w-[180px] truncate whitespace-nowrap text-xs text-slate-500" aria-hidden="true">{brandSubtitle(brand, config.panelLabel)}</span>
             </span>
           </Link>
           <button

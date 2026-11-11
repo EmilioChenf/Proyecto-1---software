@@ -329,6 +329,50 @@ async function updateGeneralConfiguration(payload) {
   }
 }
 
+// ===== Marca del residencial (cada copia del sistema es un cliente) =====
+const BRAND_KEYS = { LOGO: "residencial_logo_url", COLOR: "residencial_color" };
+const DEFAULT_BRAND_COLOR = "#2563EB";
+
+function validateBrand(payload = {}) {
+  const logo = normalizeString(payload.logo_url);
+  const color = normalizeString(payload.color).toUpperCase() || DEFAULT_BRAND_COLOR;
+  if (logo && (logo.length > 200 || !/^https:\/\/[^\s"'<>]+$/i.test(logo))) {
+    const error = new Error("El logo debe ser una dirección https:// de hasta 200 caracteres.");
+    error.status = 400;
+    throw error;
+  }
+  if (!/^#[0-9A-F]{6}$/.test(color)) {
+    const error = new Error("El color debe tener el formato #RRGGBB.");
+    error.status = 400;
+    throw error;
+  }
+  return { logo_url: logo, color };
+}
+
+/** Datos que cualquiera puede ver (login, encabezados, correos): nunca incluye credenciales. */
+async function getPublicBrand() {
+  const rows = await query(
+    "SELECT clave, valor FROM CONFIGURACION WHERE clave IN (?, ?, ?)",
+    [GENERAL_CONFIG_KEYS.NOMBRE, BRAND_KEYS.LOGO, BRAND_KEYS.COLOR],
+  );
+  const config = Object.fromEntries(rows.map((row) => [row.clave, row.valor]));
+  return {
+    nombre: config[GENERAL_CONFIG_KEYS.NOMBRE] || DEFAULT_GENERAL_CONFIG.nombre,
+    logo_url: config[BRAND_KEYS.LOGO] || "",
+    color: config[BRAND_KEYS.COLOR] || DEFAULT_BRAND_COLOR,
+    // Las copias de clientes ocultan la pagina comercial y abren directo el inicio de sesion.
+    mostrar_landing: String(process.env.PUBLIC_LANDING || "true").toLowerCase() !== "false",
+  };
+}
+
+async function updateBrand(payload) {
+  const brand = validateBrand(payload);
+  for (const [key, value] of [[BRAND_KEYS.LOGO, brand.logo_url], [BRAND_KEYS.COLOR, brand.color]]) {
+    await query("INSERT INTO CONFIGURACION (clave, valor) VALUES (?, ?) ON DUPLICATE KEY UPDATE valor = VALUES(valor)", [key, value]);
+  }
+  return getPublicBrand();
+}
+
 module.exports = {
   getVisitScheduleConfig,
   updateVisitScheduleConfig,
@@ -342,4 +386,7 @@ module.exports = {
   getGeneralConfiguration,
   updateGeneralConfiguration,
   validateGeneralConfiguration,
+  validateBrand,
+  getPublicBrand,
+  updateBrand,
 };

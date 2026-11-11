@@ -26,3 +26,7 @@ export function updateVisitScheduleConfigRequest(payload: UpdateVisitSchedulePay
     body: payload,
   });
 }
+
+export function updateBrandRequest(payload: { logo_url: string; color: string }) {
+  return apiRequest<import("@/hooks/useResidentialBrand").ResidentialBrand>("/admin/configuracion/marca", { method: "PUT", body: payload });
+}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getGeneralConfigurationRequest, updateGeneralConfigurationRequest } from "@/services/configurationService";
 import type { GeneralConfiguration } from "@/types/configuration";
+import { patchResidentialBrand } from "@/hooks/useResidentialBrand";
 
 const INITIAL: GeneralConfiguration = {
   nombre: "NexusResidencial",
@@ -43,7 +44,9 @@ export function GeneralSettings() {
     }
     try {
       setSaving(true);
-      setForm(await updateGeneralConfigurationRequest(form));
+      const saved = await updateGeneralConfigurationRequest(form);
+      setForm(saved);
+      patchResidentialBrand({ nombre: saved.nombre });
       setSuccess("La configuracion general fue guardada correctamente.");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No fue posible guardar la configuracion.");

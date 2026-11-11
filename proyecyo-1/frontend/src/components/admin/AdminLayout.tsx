@@ -22,6 +22,7 @@ import {
 import { NavLink, useLocation } from "react-router-dom";
 
 import { BrandIcon } from "@/components/layout/BrandIcon";
+import { brandSubtitle, useResidentialBrand } from "@/hooks/useResidentialBrand";
 import { cn } from "@/components/ui/utils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -278,6 +279,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
 
   // Al contraer solo se ocultan los textos en escritorio; el panel movil siempre es completo.
   const whenExpanded = collapsed ? "lg:hidden" : "";
+  const brand = useResidentialBrand();
 
   return (
     <div className="nd min-h-screen">
@@ -286,7 +288,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
           <BrandIcon />
           <div className="min-w-0">
             <p className="text-[17px] font-extrabold leading-tight tracking-[-0.02em] text-[color-mix(in_srgb,var(--nd-accent)_85%,#000)]">NexusResidencial</p>
-            <p className="truncate text-xs text-slate-500">{"Panel de Administración"}</p>
+            <p className="truncate text-xs text-slate-500">{brandSubtitle(brand, "Panel de Administración")}</p>
           </div>
         </div>
         <button
@@ -332,7 +334,7 @@ export function AdminLayout({ title, subtitle, children, actions }: AdminLayoutP
               <p className="text-[17px] font-extrabold leading-tight tracking-[-0.02em] text-[color-mix(in_srgb,var(--nd-accent)_85%,#000)]">
                 NexusResidencial
               </p>
-              <p className="whitespace-nowrap text-xs text-slate-500">{"Panel de Administración"}</p>
+              <p className="max-w-[170px] truncate whitespace-nowrap text-xs text-slate-500" title={brandSubtitle(brand, "Panel de Administración")}>{brandSubtitle(brand, "Panel de Administración")}</p>
             </div>
           </div>
           <button
