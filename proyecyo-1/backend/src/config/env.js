@@ -41,7 +41,17 @@ const env = {
   PASSWORD_RESET_TTL_MINUTES: getNumber(process.env.PASSWORD_RESET_TTL_MINUTES, 30),
   EMAIL_API_URL: process.env.EMAIL_API_URL || "",
   EMAIL_API_KEY: process.env.EMAIL_API_KEY || "",
-  EMAIL_FROM: process.env.EMAIL_FROM || "no-reply@nexusresidencial.local",
+  // Gmail: SMTP_USER es la cuenta y SMTP_PASS la clave de aplicacion de 16 letras.
+  SMTP_HOST: process.env.SMTP_HOST || "smtp.gmail.com",
+  SMTP_PORT: getNumber(process.env.SMTP_PORT, 465),
+  SMTP_SECURE: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === "true" : getNumber(process.env.SMTP_PORT, 465) === 465,
+  SMTP_USER: String(process.env.SMTP_USER || "").trim(),
+  SMTP_PASS: String(process.env.SMTP_PASS || "").replace(/\s+/g, ""),
+  EMAIL_FROM: process.env.EMAIL_FROM || process.env.SMTP_USER || "no-reply@nexusresidencial.local",
+  EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "NexusResidencial",
+  // Copia por correo de las notificaciones de la app (llegada/salida de visitas, pagos, comunicados...).
+  EMAIL_NOTIFICATIONS_ENABLED: process.env.EMAIL_NOTIFICATIONS_ENABLED !== "false",
+  EMAIL_NOTIFICATIONS_INTERVAL_MS: getNumber(process.env.EMAIL_NOTIFICATIONS_INTERVAL_MS, 15000),
 };
 
 const recurrente = loadRecurrenteConfig();

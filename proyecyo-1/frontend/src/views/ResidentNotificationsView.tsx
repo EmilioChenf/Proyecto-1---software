@@ -32,6 +32,7 @@ const filterOptions: { value: NotificationFilter; label: string }[] = [
 const typeLabels: Record<string, string> = {
   COMUNICADO: "Comunicado",
   LLEGADA_VISITA: "Visita",
+  SALIDA_VISITA: "Salida de visita",
   ACCESO_CANCELADO: "Acceso",
   ACCESO_ESPECIAL: "Acceso especial",
   SOLICITUD_AUTORIZACION: "Autorización",

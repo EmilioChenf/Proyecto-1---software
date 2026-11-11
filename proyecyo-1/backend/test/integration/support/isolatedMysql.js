@@ -11,7 +11,7 @@ function configureTestEnvironment() {
   const config = isolatedConfig();
   Object.assign(process.env, { NODE_ENV: "test", DB_HOST: config.host, DB_PORT: String(config.port), DB_USER: config.user,
     DB_PASSWORD: "", DB_NAME: config.database, SESSION_SECRET: "phase0-isolated-test-only", USE_BCRYPT: "false",
-    RECURRENTE_SECRET_KEY: "", RECURRENTE_WEBHOOK_SECRET: "", RECURRENTE_SANDBOX_ID: "", EMAIL_API_URL: "", EMAIL_API_KEY: "" });
+    RECURRENTE_SECRET_KEY: "", RECURRENTE_WEBHOOK_SECRET: "", RECURRENTE_SANDBOX_ID: "", EMAIL_API_URL: "", EMAIL_API_KEY: "", SMTP_USER: "", SMTP_PASS: "", EMAIL_NOTIFICATIONS_ENABLED: "false" });
   return config;
 }
 async function connect(database, multipleStatements = false) {

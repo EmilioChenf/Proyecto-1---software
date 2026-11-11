@@ -1367,7 +1367,9 @@ async function getVisitById(accessId) {
   return mapVisit(rows[0]);
 }
 
-async function createArrivalNotification(connection, accessId) {
+// Avisa al residente/inquilino que autorizo la visita cuando el guardia registra
+// su ingreso (LLEGADA_VISITA) o su salida (SALIDA_VISITA). Una sola vez por tipo.
+async function createVisitNotification(connection, accessId, kind = "LLEGADA_VISITA") {
   const [rows] = await connection.execute(
     `
       SELECT
@@ -1405,31 +1407,39 @@ async function createArrivalNotification(connection, accessId) {
   }
 
   const casa = `${data.torre ? `${data.torre}-` : ""}${data.numero}`;
-  const titulo = "Tu visita ya llegó";
-  const mensaje = `${data.visitante} llegó a la garita y su ingreso fue registrado para la casa ${casa}.`;
+  const isExit = kind === "SALIDA_VISITA";
+  const titulo = isExit ? "Tu visita ya salió" : "Tu visita ya llegó";
+  const mensaje = isExit
+    ? `${data.visitante} salió del residencial y su salida fue registrada en garita (casa ${casa}).`
+    : `${data.visitante} llegó a la garita y su ingreso fue registrado para la casa ${casa}.`;
+  const tipo = isExit ? "SALIDA_VISITA" : "LLEGADA_VISITA";
 
   await connection.execute(
     `
       INSERT INTO NOTIFICACION (id_usuario, id_acceso, tipo, titulo, mensaje, leido)
-      SELECT ?, ?, 'LLEGADA_VISITA', ?, ?, FALSE
+      SELECT ?, ?, ?, ?, ?, FALSE
       WHERE NOT EXISTS (
         SELECT 1
         FROM NOTIFICACION
         WHERE id_usuario = ?
           AND id_acceso = ?
-          AND tipo = 'LLEGADA_VISITA'
+          AND tipo = ?
       )
     `,
     [
       data.id_residente_usuario,
       accessId,
+      tipo,
       titulo,
       mensaje,
       data.id_residente_usuario,
       accessId,
+      tipo,
     ],
   );
 }
+
+const createArrivalNotification = (connection, accessId) => createVisitNotification(connection, accessId, "LLEGADA_VISITA");
 
 // La auditoria se escribe en la misma transaccion que el cambio de estado:
 // si no se puede registrar al guardia ejecutor, el ingreso/salida no ocurre.
@@ -1475,7 +1485,7 @@ async function registerQrEntry(qrToken, guardUserId = null, metadata = {}) {
       `,
       [visit.id_acceso, guardUserId],
     );
-    await createArrivalNotification(connection, visit.id_acceso);
+    await createVisitNotification(connection, visit.id_acceso, "LLEGADA_VISITA");
     await transactionAudit(connection, {
       userId: guardUserId,
       action: "VISIT_ENTRY_REGISTERED",
@@ -1573,6 +1583,7 @@ async function registerQrExit(qrToken, guardUserId = null, metadata = {}) {
       throw error;
     }
 
+    await createVisitNotification(connection, visit.id_acceso, "SALIDA_VISITA");
     await transactionAudit(connection, {
       userId: guardUserId,
       action: "VISIT_EXIT_REGISTERED",
