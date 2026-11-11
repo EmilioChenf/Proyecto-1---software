@@ -46,7 +46,7 @@ export function InstallAppBanner() {
           : showInstall ? "Instala la app en tu celular para entrar con un toque." : "Activa los avisos para enterarte al instante de visitas, pagos y comunicados."}
       </p>
       {showInstall && installable ? <button type="button" onClick={() => void promptInstall()} className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 font-semibold text-white"><Download className="size-4" />Instalar app</button> : null}
-      {showPush ? <button type="button" disabled={busy} onClick={() => void activate()} className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 font-semibold text-white disabled:opacity-60"><BellRing className="size-4" />Activar avisos</button> : null}
+      {showPush ? <button type="button" disabled={busy} onClick={() => void activate()} className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 font-semibold text-white disabled:opacity-60"><BellRing className="size-4" />{busy ? "Activando…" : "Activar avisos"}</button> : null}
       <button type="button" onClick={hide} aria-label="Ocultar aviso de la app" className="rounded-lg p-1 text-blue-700 hover:bg-blue-100"><X className="size-4" /></button>
     </div>
   );

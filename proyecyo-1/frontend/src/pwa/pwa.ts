@@ -46,15 +46,44 @@ export async function getPushState(): Promise<"no-soportado" | "no-configurado" 
   return subscription ? "activo" : "inactivo";
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+  return Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error(message)), ms))]);
+}
+
+/** Espera a que el service worker quede activo; si falla al instalarse, avisa en lugar de quedarse esperando. */
+async function activeRegistration() {
+  const registration = (await navigator.serviceWorker.getRegistration("/")) ?? (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+  if (registration.active) return registration;
+  const worker = registration.installing ?? registration.waiting;
+  if (worker) {
+    await withTimeout(new Promise<void>((resolve, reject) => {
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "activated") resolve();
+        if (worker.state === "redundant") reject(new Error("No se pudo preparar la app en este navegador. Recarga la página e inténtalo de nuevo."));
+      });
+    }), 15000, "La app tardó demasiado en prepararse. Recarga la página e inténtalo de nuevo.");
+  }
+  return withTimeout(navigator.serviceWorker.ready, 15000, "La app tardó demasiado en prepararse. Recarga la página e inténtalo de nuevo.");
+}
+
 /** Pide permiso y registra este dispositivo para recibir avisos. */
 export async function enablePush() {
+  // El permiso se pide primero, directo del toque: Safari (iPhone) lo ignora si antes hubo una espera de red.
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") throw new Error(permission === "denied"
+    ? "Las notificaciones están bloqueadas. Actívalas en Ajustes del navegador → Notificaciones y vuelve a intentar."
+    : "Debes tocar \"Permitir\" cuando el navegador lo pregunte.");
   const { clave } = await apiRequest<{ activo: boolean; clave: string | null }>("/push/clave-publica");
   if (!clave) throw new Error("Las notificaciones push aún no están activadas en el servidor.");
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") throw new Error("Debes permitir las notificaciones en el navegador.");
-  const registration = (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.register("/sw.js"));
-  await navigator.serviceWorker.ready;
-  const subscription = (await registration.pushManager.getSubscription()) ?? (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(clave) }));
+  const registration = await activeRegistration();
+  let subscription = await registration.pushManager.getSubscription();
+  if (!subscription) {
+    try {
+      subscription = await withTimeout(registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(clave) }), 20000, "El servicio de avisos del celular no respondió. Inténtalo de nuevo.");
+    } catch (error) {
+      throw new Error(error instanceof Error && /tard|respondi/.test(error.message) ? error.message : "Este navegador no pudo activar los avisos. Revisa que la llave pública del servidor sea correcta o prueba con Chrome.");
+    }
+  }
   await apiRequest("/push/suscripciones", { method: "POST", body: subscription.toJSON() });
 }
 

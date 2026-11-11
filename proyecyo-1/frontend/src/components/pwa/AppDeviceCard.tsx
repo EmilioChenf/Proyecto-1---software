@@ -38,7 +38,7 @@ export function AppDeviceCard() {
               : isIos() ? <p className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200">En iPhone: toca <Share className="size-3.5" /> Compartir y luego “Agregar a inicio”.</p>
               : <p className="rounded-xl bg-white px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200">Abre el menú del navegador y elige “Instalar app” o “Agregar a la pantalla de inicio”.</p>}
             {push === "activo" || push === "inactivo" ? (
-              <Button type="button" variant={push === "activo" ? "outline" : "default"} disabled={busy} onClick={() => void togglePush()}><BellRing className="size-4" />{push === "activo" ? "Desactivar avisos aquí" : "Activar avisos en este dispositivo"}</Button>
+              <Button type="button" variant={push === "activo" ? "outline" : "default"} disabled={busy} onClick={() => void togglePush()}><BellRing className="size-4" />{busy ? "Un momento…" : push === "activo" ? "Desactivar avisos aquí" : "Activar avisos en este dispositivo"}</Button>
             ) : push === "bloqueado" ? <p className="text-xs text-amber-700">Bloqueaste las notificaciones: actívalas en la configuración del navegador.</p>
               : push === "no-soportado" ? <p className="text-xs text-slate-500">{isIos() ? "En iPhone, los avisos funcionan después de instalar la app (iOS 16.4 o superior)." : "Este navegador no admite avisos push."}</p> : null}
           </div>
