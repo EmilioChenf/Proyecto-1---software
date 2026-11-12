@@ -99,7 +99,7 @@ function getVisitBadge(visit: VisitRecord): { label: string; className: string }
 
   if (visit.qr_status === "NOT_YET_VALID") {
     return {
-      label: "QR aun no vigente",
+      label: "QR aún no vigente",
       className: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
     };
   }
@@ -511,7 +511,7 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
 
   async function handleManualValidation() {
     if (!manualCode.trim()) {
-      setErrorMessage("Ingresa un codigo QR valido.");
+      setErrorMessage("Ingresa un código QR valido.");
       return;
     }
 
@@ -549,7 +549,7 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
 
   async function handleRegisterExit(visit: VisitRecord) {
     if (!visit.token_qr) {
-      setErrorMessage("Este acceso no tiene codigo QR para registrar salida.");
+      setErrorMessage("Este acceso no tiene código QR para registrar salida.");
       return;
     }
 
@@ -595,7 +595,7 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
 
       {successMessage ? (
         <Alert className="border-emerald-200 bg-emerald-50 text-emerald-700">
-          <AlertTitle>Operacion exitosa</AlertTitle>
+          <AlertTitle>Operación exitosa</AlertTitle>
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}
@@ -732,7 +732,7 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button type="button" onClick={() => void handleStartScanner()} className="rounded-2xl">
                   <Camera className="size-4" />
-                  Iniciar camara
+                  Iniciar cámara
                 </Button>
                 <Button type="button" variant="outline" onClick={stopScanner} className="rounded-2xl">
                   <ScanLine className="size-4" />
@@ -747,12 +747,12 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
               <p className="mt-3 text-xs text-slate-500">
                 {isScanning
                   ? "Escaneando QR en tiempo real..."
-                  : "Funciona en compu y telefono. Para usar camara fuera de localhost, la web debe abrirse con HTTPS."}
+                  : "Funciona en computadora y teléfono. Para usar cámara fuera de localhost, la web debe abrirse con HTTPS."}
               </p>
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-medium text-slate-900">Codigo manual</p>
+              <p className="text-sm font-medium text-slate-900">Código manual</p>
               <div className="mt-3 flex flex-col gap-3 md:flex-row">
                 <input
                   aria-label="Código QR manual"
@@ -771,8 +771,8 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
 
         <Card className="border-slate-200">
           <CardHeader>
-            <CardTitle>Resultado de validacion</CardTitle>
-            <CardDescription>Si el QR es valido, aqui aparece la visita autorizada.</CardDescription>
+            <CardTitle>Resultado de validación</CardTitle>
+            <CardDescription>Si el QR es válido, aquí aparece la visita autorizada.</CardDescription>
           </CardHeader>
           <CardContent>
             {validatedVisit ? (
@@ -785,13 +785,13 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
                 </div>
                 <div className="space-y-2 text-slate-700">
                   <p>DPI: {validatedVisit.dpi}</p>
-                  <p>Placa: {validatedVisit.placa}</p>
+                  <p>Placa: {validatedVisit.placa || "Sin placa"}</p>
                   <p>Casa: {validatedVisit.casa}</p>
                   <p>Fecha: {formatDate(validatedVisit.fecha)}</p>
                   <p>Hora: {validatedVisit.hora_inicio} - {validatedVisit.hora_fin}</p>
                   <p>Salida: {validatedVisit.hora_salida || "Sin registro"}</p>
                   <p>Tipo: {validatedVisit.tipo_visita}</p>
-                  <p>Estado: {validatedVisit.estado_acceso}</p>
+                  <p>Estado: {String(validatedVisit.estado_acceso || "").replace(/_/g, " ").toLowerCase().replace(/^./, (c) => c.toUpperCase())}</p>
                   {validatedVisit.observaciones ? (
                     <p>Observaciones: {validatedVisit.observaciones}</p>
                   ) : null}
@@ -843,7 +843,7 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
         <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>Control de ingresos</CardTitle>
-            <CardDescription>Listado operativo para revision rapida desde garita.</CardDescription>
+            <CardDescription>Listado operativo para revisión rápida desde garita.</CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-slate-500">

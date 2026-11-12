@@ -177,11 +177,11 @@ export function ResidenteAccountView() {
       iconClassName: "bg-rose-50 text-rose-700",
     },
     {
-      label: "Proximo vencimiento",
+      label: "Próximo vencimiento",
       value: statement.resumen.proximo_vencimiento
         ? formatDate(statement.resumen.proximo_vencimiento)
-        : "Al dia",
-      helper: "Se refresca automaticamente",
+        : "Al día",
+      helper: "Se refresca automáticamente",
       icon: CalendarClock,
       iconClassName: "bg-amber-50 text-amber-700",
     },

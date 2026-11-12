@@ -15,7 +15,7 @@ vi.mock("@/services/configurationService", () => ({
   updateGeneralConfigurationRequest: vi.fn(), updateBrandRequest: vi.fn(), updateVisitScheduleConfigRequest: vi.fn(),
 }));
 vi.mock("@/services/propertyContractsService", () => ({ getGlobalMaintenanceRequest: vi.fn().mockResolvedValue({ vigente: null, historial: [] }), saveGlobalMaintenanceRequest: vi.fn().mockResolvedValue({}) }));
-vi.mock("@/services/amenitiesService", () => ({ getAmenitiesRequest: vi.fn().mockResolvedValue([]) }));
+vi.mock("@/services/amenitiesService", () => ({ getAdminAmenitiesRequest: vi.fn().mockResolvedValue([]) }));
 vi.mock("@/utils/feedback", () => ({ notifyError: vi.fn(), notifySuccess: vi.fn(), confirmAction: vi.fn() }));
 
 const pasos = (done: string[]) => ["marca", "mantenimiento", "visitas", "amenidades", "viviendas", "guardias"].map((id) => ({ id, label: id, done: done.includes(id) }));

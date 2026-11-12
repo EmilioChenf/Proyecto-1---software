@@ -15,11 +15,11 @@ const actions = [
   ["USER_CREATED", "Usuario creado"],
   ["USER_UPDATED", "Usuario actualizado"],
   ["USER_DELETED", "Usuario eliminado"],
-  ["SESSION_REVOKED", "Sesion cerrada"],
+  ["SESSION_REVOKED", "Sesión cerrada"],
   ["PASSWORD_RESET", "Contrasena recuperada"],
-  ["PASSWORD_CHANGED", "Contrasena cambiada por el usuario"],
+  ["PASSWORD_CHANGED", "Contraseña cambiada por el usuario"],
   ["VISIT_SCHEDULE_UPDATED", "Horario de visitas actualizado"],
-  ["GENERAL_CONFIGURATION_UPDATED", "Configuracion general actualizada"],
+  ["GENERAL_CONFIGURATION_UPDATED", "Configuración general actualizada"],
   ["HOUSE_CREATED", "Vivienda creada"],
   ["HOUSE_UPDATED", "Vivienda actualizada"],
   ["HOUSE_ACTIVATED", "Vivienda activada"],
@@ -27,7 +27,7 @@ const actions = [
   ["VISIT_ENTRY_REGISTERED", "Ingreso de visita registrado"],
   ["VISIT_EXIT_REGISTERED", "Salida de visita registrada"],
   ["VISIT_CANCELLED", "Visita cancelada"],
-  ["VISIT_ARCHIVED", "Visita con historial retirada (eliminacion logica)"],
+  ["VISIT_ARCHIVED", "Visita con historial retirada (eliminación lógica)"],
   ["RESERVATION_CREATED", "Reserva creada"],
   ["RESERVATION_UPDATED", "Reserva modificada"],
   ["RESERVATION_CANCELLED", "Reserva cancelada"],
@@ -63,7 +63,7 @@ export function AdminAuditView() {
   }
 
   return (
-    <AdminLayout title="Auditoria de operaciones" subtitle="Consulta quien realizo cambios sensibles, cuando ocurrieron y que informacion fue modificada.">
+    <AdminLayout title="Auditoria de operaciones" subtitle="Consulta quién realizó cambios sensibles, cuándo ocurrieron y qué información fue modificada.">
       <form className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5" onSubmit={submit}>
         <Input aria-label="Id de usuario" inputMode="numeric" placeholder="Id de usuario" value={filters.userId || ""} onChange={(event) => setFilters((current) => ({ ...current, userId: event.target.value }))} />
         <select aria-label="Accion" className="h-11 rounded-md border border-slate-200 bg-white px-3 text-sm" value={filters.action || ""} onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))}>

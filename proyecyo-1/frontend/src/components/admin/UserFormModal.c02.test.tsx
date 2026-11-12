@@ -19,7 +19,7 @@ function renderModal(onSubmit = vi.fn().mockResolvedValue(undefined)) {
 async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Nombre"), "Ana Lopez");
   await user.type(screen.getByLabelText("Correo"), "ana@ejemplo.com");
-  await user.type(screen.getByLabelText("Contrasena"), "clave123");
+  await user.type(screen.getByLabelText("Contraseña"), "clave123");
   await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "1");
 }
 
@@ -30,7 +30,7 @@ describe("HU-C02 validaciones dentro del modal de usuarios", () => {
     await user.click(screen.getByRole("button", { name: "Crear usuario" }));
 
     for (const [label, message] of [["Nombre", "El nombre es obligatorio."], ["Correo", "El correo es obligatorio."],
-      ["Contrasena", "La contrasena es obligatoria."], ["Tipo de usuario", "Seleccione un rol."]] as const) {
+      ["Contraseña", "La contrasena es obligatoria."], ["Tipo de usuario", "Seleccione un rol."]] as const) {
       const field = screen.getByLabelText(label);
       expect(field).toHaveAttribute("aria-invalid", "true");
       expect(field).toHaveAccessibleDescription(message);

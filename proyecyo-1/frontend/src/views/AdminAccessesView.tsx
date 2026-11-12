@@ -206,7 +206,7 @@ function AdminAccessHourlyChart({
               Accesos por hora
             </h2>
             <p className="mt-1 text-[0.8rem] text-slate-500">
-              Distribucion de ingresos registrados durante el dia.
+              Distribucion de ingresos registrados durante el día.
             </p>
           </div>
         </div>
@@ -325,7 +325,7 @@ function AdminAccessDailyChart({
               id="admin-accesses-daily-chart-heading"
               className="text-[0.98rem] font-semibold text-slate-900"
             >
-              Accesos por dia (ultimos 7 dias)
+              Accesos por día (últimos 7 días)
             </h2>
             <p className="mt-1 text-[0.8rem] text-slate-500">
               Tendencia diaria para identificar patrones semanales.

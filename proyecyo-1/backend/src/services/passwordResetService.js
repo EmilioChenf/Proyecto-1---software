@@ -114,7 +114,7 @@ async function resetPassword({ token, password }, metadata = {}) {
       metadata,
     }, (sql, params) => connection.execute(sql, params));
     await connection.commit();
-    return { message: "Contrasena actualizada. Ya puedes iniciar sesion." };
+    return { message: "Contraseña actualizada. Ya puedes iniciar sesion." };
   } catch (error) {
     await connection.rollback();
     throw error;

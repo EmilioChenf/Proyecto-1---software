@@ -17,7 +17,7 @@ const paymentStatusStyles: Record<AdminPaymentStatus, string> = {
 };
 
 const paymentStatusLabels: Record<AdminPaymentStatus, string> = {
-  PAGADO: "Al dia",
+  PAGADO: "Al día",
   PENDIENTE: "Pendiente",
   MOROSO: "Moroso",
 };
@@ -111,7 +111,7 @@ export function AdminPaymentsView() {
 
     return [
       {
-        label: "Al dia",
+        label: "Al día",
         value: payments.filter((payment) => payment.estado === "PAGADO").length,
         icon: BadgeCheck,
         iconClassName: "bg-emerald-50 text-emerald-600",
@@ -190,7 +190,7 @@ export function AdminPaymentsView() {
           <option value="TODOS">Todos los estados</option>
           <option value="MOROSO">Morosos</option>
           <option value="PENDIENTE">Pendientes</option>
-          <option value="PAGADO">Al dia</option>
+          <option value="PAGADO">Al día</option>
         </select>
       </section>
 
@@ -204,7 +204,7 @@ export function AdminPaymentsView() {
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-[1.24rem] font-semibold text-slate-950">Estado de cuenta por residente</h2>
           <p className="mt-1 text-[0.82rem] text-slate-500">
-            {isRefreshing ? "Actualizando..." : "Monto pendiente y fecha limite mas proxima por unidad."}
+            {isRefreshing ? "Actualizando..." : "Monto pendiente y fecha límite más próxima por unidad."}
           </p>
         </div>
 

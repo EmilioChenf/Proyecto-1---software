@@ -22,13 +22,13 @@ describe("HU32 Configuración", () => {
     vi.mocked(getRestoreHistoryRequest).mockRejectedValue(new Error("Historial no disponible"));
     render(<MemoryRouter><AdminSettingsView /></MemoryRouter>);
     expect(await screen.findByRole("alert")).toHaveTextContent("Historial no disponible");
-    expect(screen.queryByText("Aun no hay restauraciones registradas.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Aún no hay restauraciones registradas.")).not.toBeInTheDocument();
   });
 
   it("con historial vacío muestra el estado vacío y la sección de recargos sigue disponible", async () => {
     vi.mocked(getRestoreHistoryRequest).mockResolvedValue([]);
     render(<MemoryRouter><AdminSettingsView /></MemoryRouter>);
-    expect(await screen.findByText("Aun no hay restauraciones registradas.")).toBeInTheDocument();
+    expect(await screen.findByText("Aún no hay restauraciones registradas.")).toBeInTheDocument();
     expect(screen.getByText("Reglas financieras")).toBeInTheDocument();
   });
 });

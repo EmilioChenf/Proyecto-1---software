@@ -1026,7 +1026,7 @@ export function AdminAmenitiesReservationsView() {
           <Card className="border-slate-200 shadow-[0_20px_48px_rgba(15,23,42,0.07)]">
             <CardHeader className="px-4 pt-4">
               <CardTitle className="text-lg font-semibold text-slate-950">
-                Acciones Rapidas
+                Acciones rápidas
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2.5 px-4 pb-4">
@@ -1108,7 +1108,7 @@ export function AdminAmenitiesReservationsView() {
               Proximas Reservas
             </CardTitle>
             <CardDescription>
-              Reservas activas y proximas con informacion real de residente e inmueble.
+              Reservas activas y próximas con información real de residente e inmueble.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">

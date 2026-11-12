@@ -38,7 +38,7 @@ function formatDateTime(value: string) {
 export function AdminCommunicationsView() {
   const [announcements, setAnnouncements] = useState<AnnouncementRecord[]>([]);
   const [titulo, setTitulo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
+  const [descripcion, setDescripción] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState<AnnouncementRecipientType>("todos");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,7 +92,7 @@ export function AdminCommunicationsView() {
       });
       setAnnouncements((current) => [created, ...current]);
       setTitulo("");
-      setDescripcion("");
+      setDescripción("");
       setTipoUsuario("todos");
       setShowConfirmation(false);
       setSuccessMessage(
@@ -135,7 +135,7 @@ export function AdminCommunicationsView() {
               Crear formulario comunicado
             </CardTitle>
             <CardDescription>
-              Selecciona tipo de usuario e implementa envio masivo.
+              Selecciona tipo de usuario e envía un comunicado masivo.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -153,12 +153,12 @@ export function AdminCommunicationsView() {
             </div>
             <div>
               <label htmlFor="descripcion-comunicado" className="mb-2 block text-sm font-medium text-slate-700">
-                Descripcion
+                Descripción
               </label>
               <textarea
                 id="descripcion-comunicado"
                 value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
+                onChange={(e) => setDescripción(e.target.value)}
                 rows={5}
                 placeholder="Escribe el contenido del aviso..."
                 className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-300"
@@ -183,7 +183,7 @@ export function AdminCommunicationsView() {
             </div>
             <Button type="button" onClick={handleOpenConfirmation} className="rounded-xl">
               <Send className="size-4" />
-              Implementar envio masivo
+              Implementar envío masivo
             </Button>
           </CardContent>
         </Card>
@@ -203,7 +203,7 @@ export function AdminCommunicationsView() {
               </div>
             ) : announcements.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-                Aun no hay comunicados enviados.
+                Aún no hay comunicados enviados.
               </div>
             ) : (
               announcements.map((item) => (
@@ -236,9 +236,9 @@ export function AdminCommunicationsView() {
                 <BellRing className="size-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">Crear confirmacion de envio</h2>
+                <h2 className="text-lg font-semibold text-slate-950">Confirmar envío</h2>
                 <p className="text-sm text-slate-500">
-                  El comunicado se enviara a {selectedRecipientLabel.toLowerCase()}.
+                  El comunicado se enviará a {selectedRecipientLabel.toLowerCase()}.
                 </p>
               </div>
             </div>
@@ -269,7 +269,7 @@ export function AdminCommunicationsView() {
                 disabled={isSubmitting}
                 className="rounded-xl"
               >
-                {isSubmitting ? "Enviando..." : "Confirmar envio"}
+                {isSubmitting ? "Enviando..." : "Confirmar envío"}
               </Button>
             </div>
           </div>

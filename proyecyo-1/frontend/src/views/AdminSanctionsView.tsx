@@ -467,7 +467,7 @@ export function AdminSanctionsView() {
               ) : history.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-slate-500">
-                    Aun no hay eventos en el historial de sanciones.
+                    Aún no hay eventos en el historial de sanciones.
                   </td>
                 </tr>
               ) : (

@@ -54,7 +54,7 @@ interface EditVisitorForm {
 const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 
 const steps = [
-  { id: 1, label: "Datos del Visitante", description: "Informacion basica de identificacion" },
+  { id: 1, label: "Datos del Visitante", description: "Información básica de identificación" },
   { id: 2, label: "Horario y Acceso", description: "Define fecha, horario y tipo de visita" },
   { id: 3, label: "Confirmacion", description: "Revisa la informacion antes de autorizar" },
 ];
@@ -306,7 +306,7 @@ export function ResidenteVisitsView() {
       return;
     }
 
-    // Al llegar al horario, si el sugerido ya no es valido (p. ej. de noche), se propone
+    // Al llegar al horario, si el sugerido ya no es válido (p. ej. de noche), se propone
     // el primer horario permitido en lugar de dejar que el usuario choque con el error.
     if (step === 1 && visitSchedule && validateVisitTimesAgainstSchedule(form.hora_inicio, form.hora_fin, visitSchedule)) {
       setForm((current) => ({ ...current, ...suggestVisitWindow(visitSchedule) }));
@@ -673,7 +673,7 @@ export function ResidenteVisitsView() {
           <div className="bg-[linear-gradient(90deg,#a855f7_0%,#9333ea_45%,#9d00ff_100%)] px-5 py-6 text-white">
             <div className="flex items-center gap-3">
               <Zap className="size-5" />
-              <h3 className="text-2xl font-semibold">Acceso Rapido</h3>
+              <h3 className="text-2xl font-semibold">Acceso rápido</h3>
               <span className="rounded-full bg-white/15 px-3 py-1 text-sm">¡1 click!</span>
             </div>
             <p className="mt-3 text-lg text-white/95">
@@ -706,7 +706,7 @@ export function ResidenteVisitsView() {
                       </p>
                       <p className="text-xs text-slate-400">
                         {visitor.total_visitas} visita{visitor.total_visitas !== 1 ? "s" : ""}
-                        {visitor.ultima_fecha ? ` • Ultima: ${formatDate(visitor.ultima_fecha)}` : ""}
+                        {visitor.ultima_fecha ? ` • Última: ${formatDate(visitor.ultima_fecha)}` : ""}
                       </p>
                     </div>
                   </div>
@@ -803,7 +803,7 @@ export function ResidenteVisitsView() {
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-slate-800">Placa del Vehiculo (Opcional)</span>
+                  <span className="text-sm font-medium text-slate-800">Placa del vehículo (Opcional)</span>
                   <Input
                     value={form.placa}
                     onChange={(event) => updateForm("placa", event.target.value.toUpperCase())}

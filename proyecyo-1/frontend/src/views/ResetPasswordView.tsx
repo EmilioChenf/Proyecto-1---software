@@ -54,9 +54,9 @@ export function ResetPasswordView() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
-            {message ? <Alert><AlertTitle>Contrasena actualizada</AlertTitle><AlertDescription>{message}</AlertDescription></Alert> : null}
+            {message ? <Alert><AlertTitle>Contraseña actualizada</AlertTitle><AlertDescription>{message}</AlertDescription></Alert> : null}
             {error ? <Alert variant="destructive"><AlertTitle>No fue posible continuar</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
-            <div><label htmlFor="new-password" className="mb-2 block text-sm font-medium text-slate-700">Nueva contrasena</label><Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={Boolean(message)} /></div>
+            <div><label htmlFor="new-password" className="mb-2 block text-sm font-medium text-slate-700">Nueva contraseña</label><Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={Boolean(message)} /></div>
             <div><label htmlFor="confirm-password" className="mb-2 block text-sm font-medium text-slate-700">Confirmar contrasena</label><Input id="confirm-password" type="password" autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} disabled={Boolean(message)} /></div>
             <Button type="submit" className="w-full bg-blue-900" disabled={!token || submitting || Boolean(message)}>{submitting ? "Guardando..." : "Guardar nueva contrasena"}</Button>
             <Link to="/login" className="block text-center text-sm font-semibold text-blue-700 hover:text-blue-900">Ir al inicio de sesion</Link>

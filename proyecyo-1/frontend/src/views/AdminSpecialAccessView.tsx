@@ -234,7 +234,7 @@ export function AdminSpecialAccessView() {
   return (
     <AdminLayout
       title="Accesos especiales"
-      subtitle="Accesos especiales para administrador con validacion de horarios."
+      subtitle="Accesos especiales para administrador con validación de horarios."
     >
       {errorMessage ? (
         <Alert variant="destructive" className="mb-4">
@@ -448,7 +448,7 @@ export function AdminSpecialAccessView() {
         <CardContent className="space-y-3">
           {history.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-              Aun no hay excepciones registradas.
+              Aún no hay excepciones registradas.
             </div>
           ) : (
             history.map((item) => (

@@ -113,7 +113,7 @@ test("ensureQrExitCanBeRegistered rejects cancelled accesses", () => {
       }),
     (error) => {
       assert.equal(error.status, 410);
-      assert.match(error.message, /QR ya no es valido/);
+      assert.match(error.message, /QR ya no es v[aá]lido/);
       return true;
     },
   );

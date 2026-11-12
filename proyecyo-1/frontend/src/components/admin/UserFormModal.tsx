@@ -208,7 +208,7 @@ export function UserFormModal({
 
             <div>
               <label htmlFor="user-password" className="mb-2 block text-sm text-slate-700">
-                {editingUser ? "Nueva contrasena (opcional)" : "Contrasena"}
+                {editingUser ? "Nueva contraseña (opcional)" : "Contraseña"}
               </label>
               <Input type="password" id="user-password" value={values.password} onChange={(event) => handleChange("password", event.target.value)}
                 aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "user-password-error" : undefined} />
@@ -216,7 +216,7 @@ export function UserFormModal({
             </div>
 
             <div>
-              <label htmlFor="user-phone" className="mb-2 block text-sm text-slate-700">Telefono</label>
+              <label htmlFor="user-phone" className="mb-2 block text-sm text-slate-700">Teléfono</label>
               <Input id="user-phone" value={values.telefono} onChange={(event) => handleChange("telefono", event.target.value)} />
             </div>
 

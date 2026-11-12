@@ -33,7 +33,7 @@ describe("UserFormModal", () => {
     render(<UserFormModal isOpen isSubmitting={false} userTypes={userTypes}
       editingUser={{id_usuario:9,nombre:'Juan',correo:'juan@test.local',telefono:'',id_tipo_usuario:3,rol:'residente',id_casa:null,unidad:null,numero_casa:null,torre:null}}
       onClose={vi.fn()} onSubmit={submit}/>);
-    await user.type(screen.getByLabelText('Telefono'),'55551234');
+    await user.type(screen.getByLabelText('Teléfono'),'55551234');
     await user.click(screen.getByRole('button',{name:'Actualizar usuario'}));
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({telefono:'55551234',id_casa:null,id_tipo_usuario:'3'}));
     expect(screen.queryByText('Selecciona y confirma una vivienda en el mapa.')).not.toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("UserFormModal", () => {
 
     await user.type(screen.getByLabelText("Nombre"), "  Ana Lopez  ");
     await user.type(screen.getByLabelText("Correo"), "  ANA@EJEMPLO.COM  ");
-    await user.type(screen.getByLabelText("Contrasena"), "clave123");
+    await user.type(screen.getByLabelText("Contraseña"), "clave123");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "1");
     await user.click(screen.getByRole("button", { name: "Crear usuario" }));
 

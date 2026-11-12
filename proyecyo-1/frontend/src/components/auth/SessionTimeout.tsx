@@ -114,7 +114,7 @@ export function SessionTimeout() {
         <div className="mt-5 flex gap-3">
           <Button onClick={resetTimer}>Continuar sesion</Button>
           <Button variant="outline" onClick={endSession}>
-            Cerrar sesion ahora
+            Cerrar sesión ahora
           </Button>
         </div>
       </div>
