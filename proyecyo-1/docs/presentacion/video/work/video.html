@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;box-sizing:border-box}body{width:1920px;height:1080px;overflow:hidden;background:#070d1f;font-family:"Plus Jakarta Sans",sans-serif;color:#f1f5ff}
+.s{position:absolute;inset:0;display:grid;place-items:center;opacity:0}
+.bg{position:absolute;inset:0;background:radial-gradient(1100px 700px at 80% -10%,rgba(59,130,246,.28),transparent 60%),radial-gradient(900px 600px at -10% 110%,rgba(20,184,166,.2),transparent 60%)}
+.k{font:600 30px "JetBrains Mono";letter-spacing:.16em;color:#2dd4bf;text-transform:uppercase}
+.h{font-size:150px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.g{background:linear-gradient(90deg,#60a5fa,#2dd4bf);-webkit-background-clip:text;background-clip:text;color:transparent}
+.shot{border-radius:26px;overflow:hidden;box-shadow:0 60px 140px -30px rgba(0,0,0,.85);border:1px solid rgba(255,255,255,.15)}
+.shot img{display:block;width:100%}
+.cap{font-size:58px;font-weight:800;letter-spacing:-.025em}
+.logo{width:150px;height:150px;border-radius:42px;background:linear-gradient(135deg,#3b82f6,#14b8a6);display:grid;place-items:center;font-size:84px}
+.ring{position:absolute;border:6px solid #3b82f6;border-radius:18px;opacity:0}
+</style></head><body><div class="bg"></div>
+<div class="s" id="s1"><div style="text-align:center"><div class="k" id="s1k">Martes · 22:00 · garita</div><div class="h" id="s1h" style="margin-top:30px">¿Quién <span class="g">entró</span>?</div></div></div>
+<div class="s" id="s2"><div style="display:flex;align-items:center;gap:40px"><div class="logo" id="s2l">⌂</div><div class="h" style="font-size:132px" id="s2t">Nexus<span class="g">Residencial</span></div></div></div>
+<div class="s" id="s3"><div style="width:1240px"><div class="cap" id="s3c" style="margin-bottom:34px">El residente autoriza la visita.</div><div class="shot" id="s3i" style="position:relative"><img src="30-residente-dashboard.jpg"><div class="ring" id="s3r" style="right:2.6%;top:7.2%;width:15%;height:6.6%"></div></div></div></div>
+<div class="s" id="s4"><div style="width:1240px"><div class="cap" id="s4c" style="margin-bottom:34px">Garita valida el QR en segundos.</div><div class="shot" id="s4i"><img src="44-guardia-qr-validado.jpg"></div></div></div>
+<div class="s" id="s5"><div style="width:1680px"><div class="cap" id="s5c" style="margin-bottom:34px">La administración ve todo el residencial.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:36px"><div class="shot" id="s5a"><img src="12-admin-viviendas-3d.jpg"></div><div class="shot" id="s5b"><img src="11-admin-indicadores.jpg"></div></div></div></div>
+<div class="s" id="s6"><div style="text-align:center"><div class="cap" id="s6a" style="font-size:96px;max-width:1500px;line-height:1.08">Ahora la respuesta tiene <span class="g">nombre, hora y guardia</span>.</div><div class="k" id="s6b" style="margin-top:46px;font-size:34px;color:#cfe0ff">nexus-residencial.com</div></div></div>
+<script>
+const $=id=>document.getElementById(id);
+const clamp=(x)=>Math.max(0,Math.min(1,x)), ease=(x)=>1-Math.pow(1-clamp(x),3);
+const span=(t,a,b)=>clamp((t-a)/(b-a));
+const scenes=[["s1",0,3.02],["s2",3.02,6.02],["s3",6.02,10.02],["s4",10.02,14.02],["s5",14.02,18.02],["s6",18.02,21.2]];
+window.render=(t)=>{
+  for(const [id,a,b] of scenes){
+    const fin=ease(span(t,a,a+0.45)), fout=1-ease(span(t,b-0.3,b));
+    $(id).style.opacity = (t>=a && t<b+0.01) ? Math.min(fin, id==="s6"?1:fout) : 0;
+  }
+  const up=(el,t0,dy=40)=>{const e=ease(span(t,t0,t0+0.6));el.style.opacity=e;el.style.transform=`translateY(${(1-e)*dy}px)`;};
+  up($("s1k"),0.2); up($("s1h"),0.6,60);
+  const sc=ease(span(t,3.05,3.7)); $("s2l").style.transform=`scale(${0.6+0.4*sc}) rotate(${(1-sc)*-12}deg)`; up($("s2t"),3.3,30);
+  up($("s3c"),6.1); $("s3i").style.transform=`scale(${1.0+0.06*span(t,6.2,10)})`; const r=span(t,7.2,7.8); $("s3r").style.opacity=r>0&&t<9.9?1:0; $("s3r").style.transform=`scale(${1.25-0.25*ease(r)})`;
+  up($("s4c"),10.1); $("s4i").style.transform=`scale(${1.04-0.04*ease(span(t,10.1,11))})`;
+  up($("s5c"),14.1); up($("s5a"),14.3,80); up($("s5b"),14.6,80);
+  up($("s6a"),18.2,50); up($("s6b"),19.0,20);
+};
+render(0);
+</script></body></html>
