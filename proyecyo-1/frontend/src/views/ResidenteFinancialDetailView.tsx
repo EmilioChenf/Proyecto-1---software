@@ -112,7 +112,7 @@ export function ResidenteFinancialDetailView() {
             </div>
             <div className="overflow-x-auto">
               {detail.cargos.length === 0 ? (
-                <p className="p-5 text-sm text-slate-500">No hay cargos en el periodo seleccionado.</p>
+                <p className="p-5 text-sm text-slate-500">No hay cargos en el período seleccionado.</p>
               ) : (
                 <table className="min-w-full">
                   <thead>
@@ -158,7 +158,7 @@ export function ResidenteFinancialDetailView() {
             </div>
             <div className="overflow-x-auto">
               {detail.recargos.length === 0 ? (
-                <p className="p-5 text-sm text-slate-500">No hay recargos en el periodo seleccionado.</p>
+                <p className="p-5 text-sm text-slate-500">No hay recargos en el período seleccionado.</p>
               ) : (
                 <table className="min-w-full">
                   <thead>
@@ -198,7 +198,7 @@ export function ResidenteFinancialDetailView() {
             {downloadError ? <p className="mx-5 mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{downloadError}</p> : null}
             <div className="overflow-x-auto">
               {detail.pagos.length === 0 ? (
-                <p className="p-5 text-sm text-slate-500">No hay pagos en el periodo seleccionado.</p>
+                <p className="p-5 text-sm text-slate-500">No hay pagos en el período seleccionado.</p>
               ) : (
                 <table className="min-w-full">
                   <thead>

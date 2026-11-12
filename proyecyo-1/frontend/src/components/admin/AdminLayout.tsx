@@ -46,7 +46,6 @@ type AdminMenuItem = {
 };
 
 const adminMenuItems: AdminMenuItem[] = [
-  { label: "Finanzas", icon: Wallet, to: "/admin/finanzas" },
   {
     label: "Dashboard",
     icon: LayoutDashboard,
@@ -93,6 +92,7 @@ const adminMenuItems: AdminMenuItem[] = [
     icon: Megaphone,
     to: "/admin/comunicados",
   },
+  { label: "Finanzas", icon: Wallet, to: "/admin/finanzas" },
   {
     label: "Pagos",
     icon: Wallet,
@@ -175,6 +175,7 @@ const menuGroupByPath: Record<string, string> = {
   "/admin/accesos": "Seguridad",
   "/admin/accesos-especiales": "Seguridad",
   "/admin/auditoria": "Seguridad",
+  "/admin/finanzas": "Finanzas",
   "/admin/pagos": "Finanzas",
   "/admin/pagos/reembolsos": "Finanzas",
   "/admin/pagos/conciliacion": "Finanzas",
@@ -203,6 +204,7 @@ const menuIconByPath: Record<string, string> = {
   "/admin/accesos": "M8 21a5 5 0 1 1 4.6-7L21 5.6M17 9.5l2.5 2.5M14.5 12l2 2",
   "/admin/accesos-especiales": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4",
   "/admin/auditoria": "M9 3h6l1 2h3v16H5V5h3zM9 3v3h6V3M9 12h6M9 16h4",
+  "/admin/finanzas": "M4 19h16M6 16V9M10 16V5M14 16v-6M18 16V8",
   "/admin/pagos": "M3 6h18v12H3zM3 10h18M7 15h4",
   "/admin/pagos/reembolsos": "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
   "/admin/pagos/en-linea": "M3 6h18v12H3zM3 10h18M15 15h3",

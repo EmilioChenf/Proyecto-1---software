@@ -18,6 +18,14 @@ const monthNames = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
+// Las fechas llegan como fecha ISO (a veces con hora UTC); se muestran como "15 nov 2026".
+function formatActivityDate(value: string) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return value;
+  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  return `${Number(match[3])} ${months[Number(match[2]) - 1]} ${match[1]}`;
+}
+
 export function ResidentMonthlySummaryView() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -97,7 +105,7 @@ export function ResidentMonthlySummaryView() {
                 <ul className="divide-y divide-slate-100">
                   {data.actividades_recientes.map((activity, index) => (
                     <li key={index} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm first:pt-0 last:pb-0">
-                      <span className="text-slate-500">{activity.fecha}</span>
+                      <span className="text-slate-500">{formatActivityDate(activity.fecha)}</span>
                       <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">{activity.tipo}</span>
                       <span className="text-slate-900">{activity.detalle}</span>
                     </li>

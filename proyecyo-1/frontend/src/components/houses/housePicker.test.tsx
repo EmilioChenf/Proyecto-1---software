@@ -28,7 +28,7 @@ function serve(role: "residente" | "inquilino") {
 async function fillUser(roleId: string) {
   await userEvent.type(screen.getByLabelText("Nombre"), "Nuevo");
   await userEvent.type(screen.getByLabelText("Correo"), "nuevo@test.com");
-  await userEvent.type(screen.getByLabelText("Contrasena"), "clave123");
+  await userEvent.type(screen.getByLabelText("Contraseña"), "clave123");
   await userEvent.selectOptions(screen.getByLabelText("Tipo de usuario"), roleId);
 }
 const renderModal = (onSubmit = vi.fn().mockResolvedValue(undefined)) => {

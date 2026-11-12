@@ -33,7 +33,7 @@ const fieldClassName =
 
 const typeOptions: Array<{ value: ReminderFilterType; label: string }> = [
   { value: "TODOS", label: "Todos los tipos" },
-  { value: "PROXIMO_VENCIMIENTO", label: "Proximo vencimiento" },
+  { value: "PROXIMO_VENCIMIENTO", label: "Próximo vencimiento" },
   { value: "VENCIDO", label: "Vencido" },
 ];
 
@@ -43,7 +43,7 @@ const typeStyles: Record<ReminderType, string> = {
 };
 
 const typeLabels: Record<ReminderType, string> = {
-  PROXIMO_VENCIMIENTO: "Proximo vencimiento",
+  PROXIMO_VENCIMIENTO: "Próximo vencimiento",
   VENCIDO: "Vencido",
 };
 
@@ -199,7 +199,7 @@ export function AdminRemindersView() {
   return (
     <AdminLayout
       title="Recordatorios de pago"
-      subtitle="Envio automatico de recordatorios de cuotas proximas y vencidas"
+      subtitle="Envío automático de recordatorios de cuotas próximas y vencidas"
       actions={
         <button
           type="button"
@@ -247,7 +247,7 @@ export function AdminRemindersView() {
           <div>
             <h2 className="text-[1rem] font-semibold text-slate-950">Configuracion de envio</h2>
             <p className="mt-1 text-[0.82rem] text-slate-500">
-              Define si los recordatorios estan activos y cuantos dias antes del vencimiento se avisa.
+              Define si los recordatorios están activos y cuántos días antes del vencimiento se avisa.
             </p>
           </div>
         </div>
@@ -265,7 +265,7 @@ export function AdminRemindersView() {
 
           <div className="flex flex-col gap-1">
             <label htmlFor="dias-antes" className="text-[0.78rem] font-medium text-slate-600">
-              Dias de anticipacion (0 a 60)
+              Días de anticipación (0 a 60)
             </label>
             <input
               id="dias-antes"
@@ -286,7 +286,7 @@ export function AdminRemindersView() {
             disabled={isSavingConfig}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-blue-600 px-4 text-sm font-medium text-blue-700 transition hover:bg-blue-50 disabled:opacity-60"
           >
-            {isSavingConfig ? "Guardando..." : "Guardar configuracion"}
+            {isSavingConfig ? "Guardando..." : "Guardar configuración"}
           </button>
         </div>
       </section>
@@ -333,7 +333,7 @@ export function AdminRemindersView() {
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-[1.24rem] font-semibold text-slate-950">Historial de recordatorios</h2>
           <p className="mt-1 text-[0.82rem] text-slate-500">
-            Recordatorios enviados a los residentes segun la configuracion vigente.
+            Recordatorios enviados a los residentes según la configuración vigente.
           </p>
         </div>
 

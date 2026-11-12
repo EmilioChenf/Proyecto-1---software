@@ -146,7 +146,7 @@ async function changeOwnPassword(userId, sessionId, payload, metadata = {}) {
     await connection.commit();
 
     return {
-      message: "Contrasena actualizada. Se cerraron tus demas sesiones.",
+      message: "Contraseña actualizada. Se cerraron tus demas sesiones.",
       id: snapshot.id,
       email: snapshot.email,
       role: snapshot.role,

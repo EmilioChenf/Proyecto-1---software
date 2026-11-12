@@ -31,7 +31,7 @@ it("cierra un dispositivo ajeno a la sesion actual y lo elimina de la lista", as
   vi.mocked(closeActiveSessionRequest).mockResolvedValue({ id_sesion: "phone", cerrada: true, actual: false });
   render(<MemoryRouter><ActiveSessionsView /></MemoryRouter>);
   expect(await screen.findByText("Safari en iOS")).toBeInTheDocument();
-  const buttons = screen.getAllByRole("button", { name: "Cerrar sesion" });
+  const buttons = screen.getAllByRole("button", { name: "Cerrar sesión" });
   fireEvent.click(buttons[1]);
   expect(await screen.findByText("Chrome en Windows")).toBeInTheDocument();
   expect(screen.queryByText("Safari en iOS")).not.toBeInTheDocument();
@@ -49,7 +49,7 @@ it("si el usuario responde \"No, cancelar\" en la confirmación, la sesión no s
   vi.mocked(confirmAction).mockResolvedValueOnce(false);
   render(<MemoryRouter><ActiveSessionsView /></MemoryRouter>);
   expect(await screen.findByText("Safari en iOS")).toBeInTheDocument();
-  fireEvent.click(screen.getAllByRole("button", { name: "Cerrar sesion" })[1]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Cerrar sesión" })[1]);
   await waitFor(() => expect(confirmAction).toHaveBeenCalledWith(expect.objectContaining({ title: "¿Cerrar esta sesión?", tone: "danger" })));
   expect(closeActiveSessionRequest).not.toHaveBeenCalled();
   expect(screen.getByText("Safari en iOS")).toBeInTheDocument();

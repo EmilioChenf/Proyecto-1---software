@@ -81,7 +81,7 @@ export function ActiveSessionsView() {
       <Card className="border-slate-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><ShieldCheck className="size-5 text-blue-700" /> Dispositivos conectados</CardTitle>
-          <CardDescription>Al cerrar una sesion, su token deja de ser valido inmediatamente.</CardDescription>
+          <CardDescription>Al cerrar una sesión, su acceso deja de ser válido inmediatamente.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {loading ? <p className="py-8 text-center text-sm text-slate-500">Cargando sesiones...</p> : null}
@@ -92,12 +92,12 @@ export function ActiveSessionsView() {
                 <p className="flex items-center gap-2 font-semibold text-slate-950"><Laptop className="size-5 text-blue-700" /> {session.dispositivo}</p>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                   <span className="flex items-center gap-1"><MapPin className="size-3.5" /> {session.direccion_ip || "IP no disponible"}</span>
-                  <span className="flex items-center gap-1"><Clock3 className="size-3.5" /> Ultima actividad: {formatDate(session.ultima_actividad_en)}</span>
+                  <span className="flex items-center gap-1"><Clock3 className="size-3.5" /> Última actividad: {formatDate(session.ultima_actividad_en)}</span>
                 </div>
                 {session.actual ? <span className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Este dispositivo</span> : null}
               </div>
               <Button type="button" variant={session.actual ? "default" : "outline"} disabled={closing !== null} onClick={() => void closeSession(session)}>
-                {closing === session.id_sesion ? "Cerrando..." : "Cerrar sesion"}
+                {closing === session.id_sesion ? "Cerrando..." : "Cerrar sesión"}
               </Button>
             </article>
           ))}

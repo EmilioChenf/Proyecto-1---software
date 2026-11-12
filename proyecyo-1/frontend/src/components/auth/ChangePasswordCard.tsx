@@ -14,9 +14,9 @@ type Field = "currentPassword" | "newPassword" | "confirmPassword";
 const EMPTY = { currentPassword: "", newPassword: "", confirmPassword: "" };
 
 const FIELDS: Array<{ name: Field; label: string; autoComplete: string }> = [
-  { name: "currentPassword", label: "Contrasena actual", autoComplete: "current-password" },
-  { name: "newPassword", label: "Nueva contrasena", autoComplete: "new-password" },
-  { name: "confirmPassword", label: "Confirmar nueva contrasena", autoComplete: "new-password" },
+  { name: "currentPassword", label: "Contraseña actual", autoComplete: "current-password" },
+  { name: "newPassword", label: "Nueva contraseña", autoComplete: "new-password" },
+  { name: "confirmPassword", label: "Confirmar nueva contraseña", autoComplete: "new-password" },
 ];
 
 // HU-C01: el usuario cambia su propia contrasena. Las reglas definitivas las aplica
@@ -73,12 +73,12 @@ export function ChangePasswordCard({ onChanged }: { onChanged?: () => void }) {
   return (
     <Card className="border-slate-200">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><KeyRound className="size-5 text-blue-700" /> Cambiar contrasena</CardTitle>
+        <CardTitle className="flex items-center gap-2"><KeyRound className="size-5 text-blue-700" /> Cambiar contraseña</CardTitle>
         <CardDescription>Usa al menos 8 caracteres con letras y numeros. Al guardar se cerraran tus demas sesiones.</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={submit} noValidate>
-          {message ? <Alert><AlertTitle>Contrasena actualizada</AlertTitle><AlertDescription>{message}</AlertDescription></Alert> : null}
+          {message ? <Alert><AlertTitle>Contraseña actualizada</AlertTitle><AlertDescription>{message}</AlertDescription></Alert> : null}
           {error ? <Alert variant="destructive"><AlertTitle>No fue posible cambiar la contrasena</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
           {FIELDS.map((field) => (
             <div key={field.name}>
@@ -96,7 +96,7 @@ export function ChangePasswordCard({ onChanged }: { onChanged?: () => void }) {
               {fieldErrors[field.name] ? <p id={`change-${field.name}-error`} className="mt-1 text-sm text-rose-700">{fieldErrors[field.name]}</p> : null}
             </div>
           ))}
-          <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : "Cambiar contrasena"}</Button>
+          <Button type="submit" disabled={submitting}>{submitting ? "Guardando..." : "Cambiar contraseña"}</Button>
         </form>
       </CardContent>
     </Card>

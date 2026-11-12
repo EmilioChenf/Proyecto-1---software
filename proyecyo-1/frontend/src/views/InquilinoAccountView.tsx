@@ -346,7 +346,7 @@ export function InquilinoAccountView() {
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium text-slate-900">
-            Unidad {statement.casa.unidad} - Propietario: {statement.casa.propietario}
+            Unidad {statement.casa.unidad}{statement.casa.propietario ? ` · Propietario: ${statement.casa.propietario}` : ""}
           </p>
           <p className="mt-1 text-sm text-slate-500">
             Ultima actualizacion: {formatUpdatedAt(statement.resumen.actualizado_en)}
@@ -410,13 +410,13 @@ export function InquilinoAccountView() {
         <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="font-medium text-slate-950">
-              Proximo vencimiento:{" "}
+              Próximo vencimiento:{" "}
               {statement.resumen.proximo_vencimiento
                 ? formatDate(statement.resumen.proximo_vencimiento)
                 : "Sin saldos pendientes"}
             </p>
             <p className="mt-1 text-sm text-slate-500">
-              La informacion se refresca automaticamente cada 30 segundos.
+              La información se refresca automáticamente cada 30 segundos.
             </p>
           </div>
 
@@ -469,7 +469,7 @@ export function InquilinoAccountView() {
           <Button type="button" onClick={() => void loadAccount()}>Aplicar filtro</Button></CardContent></Card>
 
       <Card className="border-slate-200 bg-white"><CardHeader><CardTitle>Recargos</CardTitle></CardHeader><CardContent>
-        {statement.recargos.length === 0 ? <p className="text-sm text-slate-500">No hay recargos en el periodo.</p> : statement.recargos.map((item) =>
+        {statement.recargos.length === 0 ? <p className="text-sm text-slate-500">No hay recargos en el período.</p> : statement.recargos.map((item) =>
           <div key={item.id_recargo} className="flex justify-between border-b py-3 text-sm"><span>{item.servicio} · {formatDate(item.fecha_aplicacion)}</span><strong>{formatCurrency(item.monto_recargo)}</strong></div>)}
       </CardContent></Card>
 

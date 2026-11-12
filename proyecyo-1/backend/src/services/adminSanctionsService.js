@@ -6,7 +6,7 @@ const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 const OVERDUE_FEE_RULE = {
   codigo: "CUOTA_VENCIDA",
   nombre: "Cuota vencida",
-  descripcion: "Genera una sancion cuando una cuota supera su fecha limite sin pago completo.",
+  descripcion: "Genera una sanción cuando una cuota supera su fecha límite sin pago completo.",
   monto_base: 50,
   porcentaje: 10,
 };

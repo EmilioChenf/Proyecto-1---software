@@ -43,7 +43,7 @@ async function logout(req, res, next) {
       newData: { actual: true, cerrada: true },
       metadata: getRequestMetadata(req),
     });
-    res.status(200).json({ message: "Sesion cerrada." });
+    res.status(200).json({ message: "Sesión cerrada." });
   } catch (error) {
     next(error);
   }

@@ -233,7 +233,7 @@ function normalizeQrToken(value) {
     : normalized;
 
   if (!token || token.length > 64) {
-    const error = new Error("El codigo QR es obligatorio.");
+    const error = new Error("El código QR es obligatorio.");
     error.status = 400;
     error.code = "QR_INVALID";
     throw error;
@@ -1237,7 +1237,7 @@ async function validateQrVisit(qrToken, guardUserId = null) {
   if (mappedVisit.qr_status === "NOT_YET_VALID") {
     await reject(
       "AUN_NO_VIGENTE",
-      "Este QR aun no esta vigente. Espere hasta la hora de inicio programada.",
+      "Este QR aún no está vigente. Espere hasta la hora de inicio programada.",
       409,
       "QR_NOT_YET_VALID",
     );
@@ -1530,7 +1530,7 @@ function ensureQrExitCanBeRegistered(visit) {
   const status = String(visit.estado_acceso || "").toUpperCase();
 
   if (status === "CANCELADA" || visit.qr_status === "CANCELLED") {
-    const error = new Error("Este QR ya no es valido.");
+    const error = new Error("Este QR ya no es válido.");
     error.status = 410;
     throw error;
   }

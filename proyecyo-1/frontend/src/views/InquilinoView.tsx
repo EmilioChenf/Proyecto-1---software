@@ -79,7 +79,7 @@ const RESIDENTIAL_TIMEZONE = "America/Guatemala";
 const PROVIDER_FORM_STORAGE_KEY = "nexus.tenant-provider-draft";
 
 const steps = [
-  { id: 1, label: "Datos del Visitante", description: "Informacion basica de identificacion" },
+  { id: 1, label: "Datos del Visitante", description: "Información básica de identificación" },
   { id: 2, label: "Horario y Acceso", description: "Define fecha, horario y tipo de visita" },
   { id: 3, label: "Confirmacion", description: "Revisa la informacion antes de autorizar" },
 ];
@@ -718,7 +718,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
       return;
     }
 
-    await createVisit(form, "Visita autorizada correctamente. El QR ya esta disponible.");
+    await createVisit(form, "Visita autorizada correctamente. El QR ya está disponible.");
   }
 
   async function handleQuickAuthorize(visitor: FrequentVisitor) {
@@ -920,7 +920,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
               className="rounded-2xl bg-blue-600 text-white hover:bg-blue-700"
             >
               <ShieldAlert className="size-4" />
-              Solicitar autorizacion
+              Solicitar autorización
             </Button>
           </div>
         </CardHeader>
@@ -996,7 +996,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                 Gestion de proveedores
               </CardTitle>
               <CardDescription className="mt-2">
-                Administra los servicios asociados a tu unidad y revisa su estado de validacion.
+                Administra los servicios asociados a tu unidad y revisa su estado de validación.
               </CardDescription>
             </div>
 
@@ -1214,7 +1214,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
         <div className="bg-[linear-gradient(90deg,#a855f7_0%,#9333ea_45%,#9d00ff_100%)] px-5 py-6 text-white">
           <div className="flex items-center gap-3">
             <Zap className="size-5" />
-            <h3 className="text-2xl font-semibold">Acceso Rapido</h3>
+            <h3 className="text-2xl font-semibold">Acceso rápido</h3>
             <span className="rounded-full bg-white/15 px-3 py-1 text-sm">1 click</span>
           </div>
           <p className="mt-3 text-lg text-white/95">
@@ -1245,7 +1245,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
                   </p>
                   <p className="text-xs text-slate-400">
                     {visitor.total_visitas} visita{visitor.total_visitas !== 1 ? "s" : ""}
-                    {visitor.ultima_fecha ? ` | Ultima: ${formatDate(visitor.ultima_fecha)}` : ""}
+                    {visitor.ultima_fecha ? ` | Última: ${formatDate(visitor.ultima_fecha)}` : ""}
                   </p>
                 </div>
                 {editingVisitor?.id_visitante === visitor.id_visitante ? (
@@ -1368,7 +1368,7 @@ export function InquilinoView({ section }: { section: InquilinoSection }) {
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-slate-800">Placa del Vehiculo (Opcional)</span>
+                <span className="text-sm font-medium text-slate-800">Placa del vehículo (Opcional)</span>
                 <Input
                   value={form.placa}
                   onChange={(event) => updateForm("placa", event.target.value.toUpperCase())}

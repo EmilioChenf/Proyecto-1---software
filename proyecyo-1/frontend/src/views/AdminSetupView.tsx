@@ -7,7 +7,7 @@ import { AmenityCatalogDialog } from "@/components/amenities/AmenityCatalogDialo
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { setResidentialBrand, useResidentialBrand } from "@/hooks/useResidentialBrand";
-import { getAmenitiesRequest } from "@/services/amenitiesService";
+import { getAdminAmenitiesRequest } from "@/services/amenitiesService";
 import { getAdminVisitScheduleConfigRequest, getGeneralConfigurationRequest, updateBrandRequest, updateGeneralConfigurationRequest, updateVisitScheduleConfigRequest } from "@/services/configurationService";
 import { getGlobalMaintenanceRequest, saveGlobalMaintenanceRequest } from "@/services/propertyContractsService";
 import { getSetupStatusRequest, hideSetupRequest, markSetupStepRequest, type SetupStatus } from "@/services/setupService";
@@ -42,7 +42,7 @@ export function AdminSetupView() {
 
   async function refresh() { const s = await getSetupStatusRequest(); setStatus(s); return s; }
   useEffect(() => {
-    Promise.all([refresh(), getGeneralConfigurationRequest(), getAdminVisitScheduleConfigRequest(), getGlobalMaintenanceRequest(), getAmenitiesRequest()])
+    Promise.all([refresh(), getGeneralConfigurationRequest(), getAdminVisitScheduleConfigRequest(), getGlobalMaintenanceRequest(), getAdminAmenitiesRequest()])
       .then(([s, g, v, m, a]) => {
         setGeneral(g); setSchedule(v); setAmenities(a);
         if (m.historial?.[0]) setCurrentFee(`Q${Number(m.historial[0].monto).toFixed(2)} desde ${m.historial[0].vigente_desde}`);
@@ -139,7 +139,7 @@ export function AdminSetupView() {
               <p className="text-sm text-slate-600">Piscina, salón social, rancho, gimnasio… cada una con su horario, foto y reglas.</p>
               {amenities.length ? <ul className="flex flex-wrap gap-2">{amenities.map((a) => <li key={a.id_amenidad} className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-800">{a.nombre}</li>)}</ul> : null}
               <Button type="button" onClick={() => setCatalogOpen(true)}><Waves className="size-4" />{amenities.length ? "Gestionar amenidades" : "Agregar amenidades"}</Button>
-              <AmenityCatalogDialog open={catalogOpen} onClose={() => setCatalogOpen(false)} amenities={amenities} onChanged={async () => { setAmenities(await getAmenitiesRequest()); await refresh(); }} />
+              <AmenityCatalogDialog open={catalogOpen} onClose={() => setCatalogOpen(false)} amenities={amenities} onChanged={async () => { setAmenities(await getAdminAmenitiesRequest()); await refresh(); }} />
             </div>
           ) : step === "viviendas" ? (
             <div className="space-y-4">

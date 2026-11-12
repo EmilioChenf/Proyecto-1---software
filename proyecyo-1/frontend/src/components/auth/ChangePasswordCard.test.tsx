@@ -25,10 +25,10 @@ function renderCard(onChanged = vi.fn()) {
 
 async function fill(current: string, next: string, confirmation: string) {
   const user = userEvent.setup();
-  if (current) await user.type(screen.getByLabelText("Contrasena actual"), current);
-  if (next) await user.type(screen.getByLabelText("Nueva contrasena"), next);
-  if (confirmation) await user.type(screen.getByLabelText("Confirmar nueva contrasena"), confirmation);
-  await user.click(screen.getByRole("button", { name: "Cambiar contrasena" }));
+  if (current) await user.type(screen.getByLabelText("Contraseña actual"), current);
+  if (next) await user.type(screen.getByLabelText("Nueva contraseña"), next);
+  if (confirmation) await user.type(screen.getByLabelText("Confirmar nueva contraseña"), confirmation);
+  await user.click(screen.getByRole("button", { name: "Cambiar contraseña" }));
 }
 
 const changeCalls = () => fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/auth/password/change"));
@@ -36,7 +36,7 @@ const storedSession = () => JSON.parse(window.localStorage.getItem("nexus.sessio
 
 beforeEach(() => {
   window.localStorage.setItem("nexus.session", JSON.stringify(SESSION));
-  changeReply = { status: 200, body: { message: "Contrasena actualizada. Se cerraron tus demas sesiones.", id: 7, email: "residente@test.com", role: "residente", token: "token-nuevo" } };
+  changeReply = { status: 200, body: { message: "Contraseña actualizada. Se cerraron tus demas sesiones.", id: 7, email: "residente@test.com", role: "residente", token: "token-nuevo" } };
   fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     const reply = url.endsWith("/auth/password/change") ? changeReply : { status: 200, body: { id: 7, email: "residente@test.com", role: "residente" } };
@@ -55,14 +55,14 @@ describe("HU-C01 cambio de contrasena propia", () => {
     const onChanged = renderCard();
     await fill("Inicial123", "Renovada456", "Renovada456");
 
-    expect(await screen.findByText("Contrasena actualizada. Se cerraron tus demas sesiones.")).toBeInTheDocument();
+    expect(await screen.findByText("Contraseña actualizada. Se cerraron tus demas sesiones.")).toBeInTheDocument();
     const [, init] = changeCalls()[0];
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ currentPassword: "Inicial123", newPassword: "Renovada456", confirmPassword: "Renovada456" });
     expect(new Headers(init.headers).get("Authorization")).toBe("Bearer token-anterior");
     expect(storedSession()).toEqual({ id: 7, email: "residente@test.com", role: "residente", token: "token-nuevo" });
     expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText("Contrasena actual")).toHaveValue("");
+    expect(screen.getByLabelText("Contraseña actual")).toHaveValue("");
   });
 
   it("no llama al servidor si falta un campo, la confirmacion difiere o la contrasena es debil", async () => {
@@ -70,9 +70,9 @@ describe("HU-C01 cambio de contrasena propia", () => {
     await fill("", "Renovada456", "Distinta456");
     expect(screen.getByText("Ingresa tu contrasena actual.")).toBeInTheDocument();
     expect(screen.getByText("La confirmacion no coincide con la nueva contrasena.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Confirmar nueva contrasena")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Confirmar nueva contraseña")).toHaveAttribute("aria-invalid", "true");
 
-    await userEvent.setup().clear(screen.getByLabelText("Nueva contrasena"));
+    await userEvent.setup().clear(screen.getByLabelText("Nueva contraseña"));
     await fill("Inicial123", "corta", "");
     expect(screen.getByText("La contrasena debe tener entre 8 y 128 caracteres e incluir letras y numeros.")).toBeInTheDocument();
     expect(changeCalls()).toHaveLength(0);
@@ -84,7 +84,7 @@ describe("HU-C01 cambio de contrasena propia", () => {
     await fill("Equivocada1", "Renovada456", "Renovada456");
 
     expect(await screen.findAllByText("La contrasena actual es incorrecta.")).toHaveLength(2);
-    expect(screen.getByLabelText("Contrasena actual")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("Contraseña actual")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByTestId("sesion")).toHaveTextContent("autenticado");
     expect(storedSession().token).toBe("token-anterior");
   });

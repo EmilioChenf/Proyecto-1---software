@@ -70,7 +70,7 @@ describe("HU-C02 acciones de usuarios con SweetAlert2", () => {
     await user.click(await screen.findByRole("button", { name: "Crear usuario" }));
     await user.type(screen.getByLabelText("Nombre"), "Luis");
     await user.type(screen.getByLabelText("Correo"), "luis@ejemplo.com");
-    await user.type(screen.getByLabelText("Contrasena"), "clave123");
+    await user.type(screen.getByLabelText("Contraseña"), "clave123");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "1");
     await user.click(screen.getAllByRole("button", { name: "Crear usuario" }).at(-1)!);
 
@@ -85,7 +85,7 @@ describe("HU-C02 acciones de usuarios con SweetAlert2", () => {
     await user.click(await screen.findByRole("button", { name: "Crear usuario" }));
     await user.type(screen.getByLabelText("Nombre"), "Luis");
     await user.type(screen.getByLabelText("Correo"), "ana@ejemplo.com");
-    await user.type(screen.getByLabelText("Contrasena"), "clave123");
+    await user.type(screen.getByLabelText("Contraseña"), "clave123");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "1");
     await user.click(screen.getAllByRole("button", { name: "Crear usuario" }).at(-1)!);
 

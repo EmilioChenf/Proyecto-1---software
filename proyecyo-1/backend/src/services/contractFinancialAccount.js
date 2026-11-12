@@ -53,7 +53,8 @@ async function account(userId,role,filters={}) {
     alquiler_pendiente:sum('saldo_pendiente',quotas.filter(q=>q.es_alquiler)),cuotas_adicionales_pendientes:sum('saldo_pendiente',quotas.filter(q=>!q.es_alquiler)),
     proximo_vencimiento:quotas.filter(q=>q.saldo_pendiente>0&&q.fecha_limite>=guatemalaToday()).map(q=>q.fecha_limite).sort()[0]||null,actualizado_en:new Date().toISOString()};
   const house=houses[0];
-  return {casa:{id_casa:house?.id_casa||null,unidad:house?(house.torre?`${house.torre}-${house.numero}`:house.numero):'Sin vivienda',propietario:'',},
+  const [owner]=house?await query(`SELECT u.nombre FROM CASA c JOIN RESIDENTE r ON r.id_residente=c.id_residente JOIN USUARIO u ON u.id_usuario=r.id_usuario WHERE c.id_casa=?`,[house.id_casa]):[];
+  return {casa:{id_casa:house?.id_casa||null,unidad:house?(house.torre?`${house.torre}-${house.numero}`:house.numero):'Sin vivienda',propietario:owner?.nombre||'',},
     resumen:summary,cuotas:quotas,alquiler:quotas.filter(q=>q.es_alquiler),cuotas_adicionales:quotas.filter(q=>!q.es_alquiler),
     pagos:payments.map(p=>({...p,monto_pagado:Number(p.monto_pagado),numero_comprobante:`NXR-${String(p.id_pago).padStart(8,'0')}`})),
     recargos:surcharges.map(r=>({...r,monto_recargo:Number(r.monto_recargo),monto_original:Number(r.monto_original)})),reembolsos:refunds,periodo:{desde:from,hasta:to},

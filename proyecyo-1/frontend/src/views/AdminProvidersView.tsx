@@ -194,7 +194,7 @@ export function AdminProvidersView() {
   return (
     <AdminLayout
       title="Proveedores e Historial"
-      subtitle="Registro y validacion administrativa de proveedores, con revision de cambios"
+      subtitle="Registro y validación administrativa de proveedores, con revisión de cambios"
       actions={
         <button
           type="button"
@@ -332,7 +332,7 @@ export function AdminProvidersView() {
                           Registro: {formatDateTime(provider.fecha_registro)}
                         </span>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
-                          Ultimo cambio: {provider.ultimo_cambio_por}
+                          Último cambio: {provider.ultimo_cambio_por}
                         </span>
                       </div>
                     </div>
@@ -385,7 +385,7 @@ export function AdminProvidersView() {
                       </div>
 
                       <p className="mt-4 text-xs text-slate-500">
-                        Historial total: {provider.frecuencia_cambios} cambios. Ultimo movimiento el{" "}
+                        Historial total: {provider.frecuencia_cambios} cambios. Último movimiento el{" "}
                         {formatDateTime(provider.ultimo_cambio_en)}.
                       </p>
                     </div>

@@ -11,7 +11,7 @@ test("normalizeDate valida filtros seguros", () => {
 test("isRentQuota detects rent concepts by service name or type", () => {
   assert.equal(__private__.isRentQuota({ servicio: "Alquiler residencial", tipo_servicio: "" }), true);
   assert.equal(__private__.isRentQuota({ servicio: "Cuota mensual", tipo_servicio: "Renta" }), true);
-  assert.equal(__private__.isRentQuota({ servicio: "Agua potable", tipo_servicio: "Basico" }), false);
+  assert.equal(__private__.isRentQuota({ servicio: "Agua potable", tipo_servicio: "Básico" }), false);
 });
 
 test("getQuotaStatus separates paid, overdue and pending tenant quotas", () => {

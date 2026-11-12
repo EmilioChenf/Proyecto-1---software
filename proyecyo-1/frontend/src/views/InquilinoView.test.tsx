@@ -113,7 +113,7 @@ describe("Accesos y permisos del inquilino", () => {
 
   it("cada sección muestra solo su propia funcionalidad", async () => {
     const { unmount } = renderView("permisos");
-    expect(await screen.findByRole("button", { name: /Solicitar autorizacion/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Solicitar autorización/ })).toBeInTheDocument();
     expect(screen.queryByText("Gestion de accesos")).not.toBeInTheDocument();
     expect(screen.queryByText("Gestion de proveedores")).not.toBeInTheDocument();
     unmount();
@@ -121,7 +121,7 @@ describe("Accesos y permisos del inquilino", () => {
     render(<MemoryRouter><InquilinoView section="proveedores" /></MemoryRouter>);
     expect(await screen.findByText("Gestion de proveedores")).toBeInTheDocument();
     expect(screen.queryByText("Gestion de accesos")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Solicitar autorizacion/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Solicitar autorización/ })).not.toBeInTheDocument();
   });
 
   it("no muestra alertas fijas ni resumen duplicado del dashboard", async () => {

@@ -178,7 +178,7 @@ export function UsersManagement() {
                       <th className="px-3.5 py-2.5 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Nombre</th>
                       <th className="px-3.5 py-2.5 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Correo</th>
                       <th className="px-3.5 py-2.5 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Vivienda</th>
-                      <th className="px-3.5 py-2.5 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Telefono</th>
+                      <th className="px-3.5 py-2.5 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Teléfono</th>
                       <th className="px-3.5 py-2.5 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Rol</th>
                       <th className="px-3.5 py-2.5 text-right text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500">Acciones</th>
                     </tr>

@@ -28,7 +28,7 @@ it("carga, modifica y confirma la configuracion persistida", async () => {
   render(<GeneralSettings />);
   const name = await screen.findByLabelText("Nombre del residencial");
   fireEvent.change(name, { target: { value: "Residencial Central" } });
-  fireEvent.click(screen.getByRole("button", { name: "Guardar configuracion" }));
+  fireEvent.click(screen.getByRole("button", { name: "Guardar configuración" }));
   expect(await screen.findByText("La configuracion general fue guardada correctamente.")).toBeInTheDocument();
   expect(updateGeneralConfigurationRequest).toHaveBeenCalledWith(expect.objectContaining({ nombre: "Residencial Central" }));
 });

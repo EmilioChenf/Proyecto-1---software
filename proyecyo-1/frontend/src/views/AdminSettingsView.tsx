@@ -198,7 +198,7 @@ export function AdminSettingsView() {
 
   return (
     <AdminLayout
-      title="Restaurar informacion desde respaldos"
+      title="Restaurar información desde respaldos"
       subtitle="Carga, valida y restaura respaldos SQL del sistema residencial."
       actions={
         <Button type="button" variant="outline" onClick={resetSelection} disabled={isBusy}>
@@ -222,7 +222,7 @@ export function AdminSettingsView() {
               <h2 className="mt-4 text-[1.12rem] font-semibold text-slate-950">
                 Respaldo de base de datos
               </h2>
-              <p className="mt-1 text-sm text-slate-500">Archivo SQL, maximo 2 MB.</p>
+              <p className="mt-1 text-sm text-slate-500">Archivo SQL, máximo 2 MB.</p>
             </div>
 
             <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -339,7 +339,7 @@ export function AdminSettingsView() {
               ))
             ) : (
               <p className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-500">
-                Aun no hay restauraciones registradas.
+                Aún no hay restauraciones registradas.
               </p>
             )}
           </div>
