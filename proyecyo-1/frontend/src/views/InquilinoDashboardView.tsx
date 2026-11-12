@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Bell, BriefcaseBusiness, ShieldCheck, UserRoundCheck, Wallet } from "lucide-react";
 
 import {
@@ -61,7 +62,13 @@ export function InquilinoDashboardView() {
     : [];
 
   return (
-    <AppShell role="inquilino" title="Dashboard" subtitle="Resumen de su unidad: saldo, visitas, proveedores y avisos.">
+    <AppShell role="inquilino" title="Dashboard" subtitle="Resumen de su unidad: saldo, visitas, proveedores y avisos."
+      actions={
+        // Neurolab (H2): la pre-autorización de visitas era difícil de encontrar; ahora es la acción principal del panel.
+        <Link to="/inquilino/visitas" className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--nd-accent)] px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow">
+          <UserRoundCheck className="size-4" aria-hidden="true" />Autorizar una visita
+        </Link>
+      }>
       <KpiGrid>
         <KpiCard
           label="Saldo pendiente"

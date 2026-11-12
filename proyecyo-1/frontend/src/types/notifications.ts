@@ -2,6 +2,8 @@ export type NotificationType =
   | "LLEGADA_VISITA"
   | "SALIDA_VISITA"
   | "ACCESO_CANCELADO"
+  | "QR_EXPIRADO"
+  | "SALIDA_PENDIENTE"
   | "PAGO_CONFIRMADO"
   | "PAGO_NO_COMPLETADO"
   | "PAGO_CANCELADO"

@@ -34,6 +34,8 @@ const typeLabels: Record<string, string> = {
   LLEGADA_VISITA: "Visita",
   SALIDA_VISITA: "Salida de visita",
   ACCESO_CANCELADO: "Acceso",
+  QR_EXPIRADO: "QR expirado",
+  SALIDA_PENDIENTE: "Visita sin salida",
   ACCESO_ESPECIAL: "Acceso especial",
   ACCESO_EMERGENCIA: "Acceso de emergencia",
   TICKET: "Reporte de falla",

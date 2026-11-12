@@ -96,6 +96,12 @@ export function ResidenteView() {
       role="residente"
       title="Dashboard"
       subtitle="Resumen de su unidad: saldo, visitas, reservas y avisos."
+      actions={
+        // Neurolab (H2): la pre-autorización de visitas era difícil de encontrar; ahora es la acción principal del panel.
+        <Link to="/residente/visitas" className="inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--nd-accent)] px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow">
+          <UserRoundCheck className="size-4" aria-hidden="true" />Autorizar una visita
+        </Link>
+      }
     >
       {pendingProviders.length > 0 ? (
         <Alert className="border-amber-200 bg-amber-50 text-amber-900">
