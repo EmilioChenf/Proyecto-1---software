@@ -294,6 +294,11 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
     };
   }, []);
 
+  // Visitas que ingresaron y pasaron su hora de fin sin registrar salida (aviso automático del servidor).
+  const overdueAlerts = useMemo(
+    () => notifications.filter((notification) => notification.tipo === "SALIDA_PENDIENTE" && !notification.leido),
+    [notifications],
+  );
   const cancellationAlerts = useMemo(
     () => notifications.filter((notification) => notification.tipo === "ACCESO_CANCELADO" && !notification.leido),
     [notifications],
@@ -601,6 +606,33 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
       ) : null}
 
       {section === "alertas" ? <>
+      {overdueAlerts.length > 0 ? (
+        <Card className="border-amber-200 bg-amber-50/70">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-900">
+              <BellRing className="size-5" />
+              {overdueAlerts.length} visita{overdueAlerts.length !== 1 ? "s" : ""} sin salida registrada
+            </CardTitle>
+            <CardDescription className="text-amber-800">
+              Su autorización ya terminó y siguen dentro. Verifica y registra la salida en Visitas recientes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {overdueAlerts.slice(0, 5).map((alert) => (
+              <div key={alert.id_notificacion} className="flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3">
+                <div className="text-sm">
+                  <p className="font-medium text-slate-900">{alert.titulo}</p>
+                  <p className="text-slate-600">{alert.mensaje}</p>
+                  <p className="mt-1 text-xs text-slate-400">{formatUtcTimestamp(alert.creado_en)}</p>
+                </div>
+                <button type="button" onClick={() => void handleMarkAlertRead(alert.id_notificacion)} className="text-xs font-medium text-amber-700 hover:underline" aria-label="Marcar como leída">
+                  Leída
+                </button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
       {cancellationAlerts.length > 0 ? (
         <Card className="border-rose-200 bg-rose-50/60 shadow-[0_10px_30px_rgba(244,63,94,0.08)]">
           <CardHeader>
@@ -691,9 +723,9 @@ export function GuardiaView({ section }: { section: GuardiaSection }) {
           <AlertDescription>{alertsError}</AlertDescription>
         </Alert>
       ) : null}
-      {!alertsError && cancellationAlerts.length === 0 && specialNotifications.length === 0 ? (
+      {!alertsError && cancellationAlerts.length === 0 && specialNotifications.length === 0 && overdueAlerts.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-200 bg-white py-10 text-center text-sm text-slate-500">
-          No hay alertas pendientes. Las cancelaciones de acceso y los accesos especiales aprobados aparecerán aquí.
+          No hay alertas pendientes. Las visitas sin salida, las cancelaciones de acceso y los accesos especiales aprobados aparecerán aquí.
         </p>
       ) : null}
       </> : null}

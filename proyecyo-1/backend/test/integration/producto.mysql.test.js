@@ -226,3 +226,28 @@ test('PU01 push: suscripción por dispositivo, envío y limpieza de dispositivos
   assert.equal(Number((await query('SELECT COUNT(*) n FROM PUSH_SUSCRIPCION WHERE id_usuario=?',[resident]))[0].n),1,'se borra el dispositivo dado de baja');
   assert.equal((await push.processPushBatch({sender})).sent,0,'no se reenvía');
 });
+
+test('VA01 avisa QR expirado sin usar y visita que no registra salida, una sola vez',async()=>{
+  const alerts=require('../../src/services/visitAlertsService');
+  const resident=await user('residente','Residente alertas');const guard=await user('guardia','Guardia alertas');
+  let [res]=await query('SELECT id_residente FROM RESIDENTE WHERE id_usuario=?',[resident]);
+  const residentId=res?.id_residente||(await query('INSERT INTO RESIDENTE(id_usuario) VALUES(?)',[resident])).insertId;
+  const casa=(await query("INSERT INTO CASA(numero,torre,id_residente) VALUES(?,?,?)",[`AL${Date.now()%100000}`,'AL',residentId])).insertId;
+  const visitante=async(n)=>(await query('INSERT INTO VISITANTE(nombre,dpi) VALUES(?,?)',[n,String(Date.now()).slice(-13).padStart(13,'1')])).insertId;
+  const {date}=alerts.guatemalaNow(new Date());
+  const v1=await visitante('Ana Tarde');const v2=await visitante('Beto Dentro');
+  const a1=(await query("INSERT INTO ACCESO(id_visitante,id_casa,id_usuario_autoriza,fecha,hora_inicio,hora_fin,tipo_visita,token_qr,estado_acceso) VALUES(?,?,?,?, '08:00','10:30','VISITA',?, 'AUTORIZADA')",[v1,casa,resident,date,'tok'+Date.now()])).insertId;
+  const a2=(await query("INSERT INTO ACCESO(id_visitante,id_casa,id_usuario_autoriza,fecha,hora_inicio,hora_fin,tipo_visita,token_qr,estado_acceso) VALUES(?,?,?,?, '08:00','10:30','VISITA',?, 'INGRESO_REGISTRADO')",[v2,casa,resident,date,'tok2'+Date.now()])).insertId;
+  // A las 10:30 aún no expira; a las 10:31 sí (hora de Guatemala = UTC-6).
+  const at=(h,m)=>new Date(`${date}T${String(h+6).padStart(2,'0')}:${String(m).padStart(2,'0')}:00Z`);
+  const before=await alerts.processVisitAlerts({now:at(10,29)});
+  assert.equal(await query('SELECT COUNT(*) n FROM NOTIFICACION WHERE id_acceso IN (?,?)',[a1,a2]).then(r=>Number(r[0].n)),0,JSON.stringify(before));
+  const stats=await alerts.processVisitAlerts({now:at(10,31)});
+  assert(stats.qr_expirados>=1&&stats.salidas_pendientes>=1,JSON.stringify(stats));
+  const [exp]=await query("SELECT titulo,correo_estado,push_estado FROM NOTIFICACION WHERE id_acceso=? AND tipo='QR_EXPIRADO'",[a1]);
+  assert.equal(exp.titulo,'El QR de Ana Tarde expiró');assert.equal(exp.correo_estado,'PENDIENTE','se envía también por correo');assert.equal(exp.push_estado,'PENDIENTE','y como push');
+  const overdue=await query("SELECT id_usuario FROM NOTIFICACION WHERE id_acceso=? AND tipo='SALIDA_PENDIENTE'",[a2]);
+  assert(overdue.some(n=>n.id_usuario===guard),'avisa al guardia');assert(overdue.some(n=>n.id_usuario===resident),'avisa al residente');
+  await alerts.processVisitAlerts({now:at(10,45)});
+  assert.equal(Number((await query("SELECT COUNT(*) n FROM NOTIFICACION WHERE id_acceso=? AND tipo='QR_EXPIRADO'",[a1]))[0].n),1,'no se repite');
+});

@@ -530,6 +530,14 @@ async function ensureProductFeaturesSchema() {
     // Las notificaciones anteriores a esta función nunca se envían como push.
     await query("UPDATE NOTIFICACION SET push_estado = 'OMITIDO'");
   }
+  // Alertas de visitas: se marca cuándo se avisó para no repetir el aviso.
+  for (const column of ["aviso_qr_expirado_en", "alerta_salida_pendiente_en"]) {
+    if (!(await columnExists("ACCESO", column))) {
+      await query(`ALTER TABLE ACCESO ADD COLUMN ${column} DATETIME NULL`);
+      // Las visitas de días anteriores no generan avisos al activar la función.
+      await query(`UPDATE ACCESO SET ${column} = UTC_TIMESTAMP() WHERE fecha < CURDATE()`);
+    }
+  }
   if (!(await tableExists("DIRECTORIO_CONTACTO"))) {
     await query(`
       CREATE TABLE DIRECTORIO_CONTACTO (

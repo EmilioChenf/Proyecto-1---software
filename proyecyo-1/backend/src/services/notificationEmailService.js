@@ -36,6 +36,8 @@ const TYPE_LABELS = {
   ACCESO_EMERGENCIA: { tag: "Emergencia", button: "Revisar solicitud", paths: { admin: "/admin/accesos-especiales", residente: "/residente/visitas", inquilino: "/inquilino/visitas" } },
   COMUNIDAD: { tag: "Comunidad", button: "Ir a Comunidad", paths: { residente: "/residente/comunidad", inquilino: "/inquilino/comunidad" } },
   TICKET: { tag: "Mantenimiento", button: "Ver el reporte", paths: { admin: "/admin/fallas", residente: "/residente/fallas", inquilino: "/inquilino/fallas" } },
+  QR_EXPIRADO: { tag: "Visitas", button: "Crear una nueva autorización", paths: { residente: "/residente/visitas", inquilino: "/inquilino/visitas" } },
+  SALIDA_PENDIENTE: { tag: "Garita", button: "Revisar la visita", paths: { guardia: "/guardia/visitas", residente: "/residente/visitas", inquilino: "/inquilino/visitas" } },
   SOLICITUD_AUTORIZACION: { tag: "Solicitudes", button: "Ver solicitud", paths: { inquilino: "/inquilino/permisos" } },
 };
 
