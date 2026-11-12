@@ -1,56 +1,69 @@
 ---
 title: "Guion de la presentación final — NexusResidencial"
-subtitle: "Pitch con demostración · 14 minutos · 6 integrantes"
+subtitle: "Pitch con demostración en vivo · 14 minutos · 6 integrantes"
 lang: es
 ---
 
 # Cómo usar este guion
 
-- La presentación es `presentacion.html` (ábranla en Chrome). **Flechas / clic** para avanzar, **F** pantalla completa, **N** muestra este mismo guion en pantalla para quien presenta, **T** inicia el cronómetro.
-- **No lean**: aprendan la idea de cada slide y digan el texto con sus palabras (la rúbrica penaliza la lectura).
-- **Relevos**: cada quien termina con la frase de relevo indicada; el siguiente empieza sin pausa.
-- **Tiempo total: 14 minutos.** Si van tarde, recorten en las slides marcadas como opcionales (las de 4 tarjetas), nunca en la demo ni en UX.
-- **Plan B de la demo:** si falla internet, Arodi usa las capturas de las slides 10–13 (ya muestran el flujo completo).
+- La presentación es `presentacion.html` (Chrome). **Flechas / clic** avanzar, **F** pantalla completa, **N** muestra el guion en pantalla, **T** cronómetro.
+- **No lean**: aprendan la idea de cada slide y díganla con sus palabras.
+- **Relevos**: cada quien termina con su frase de relevo; el siguiente arranca sin pausa.
+- **Tiempo total: 14 minutos.** Si van tarde, recorten en las slides de 4 tarjetas, nunca en la demo ni en UX.
+- **Todo lo que se dice existe en producción** (`nexus-residencial.com`). No mencionar funciones que no estén ahí.
 
 | # | Integrante | Sección | Tiempo | Criterio de la rúbrica |
 |---|---|---|---|---|
 | 1 | Denil Parada | Apertura e hilo narrativo | 0:00 – 2:00 | Criterio 1 (hilo narrativo, 1.12 pts) |
 | 2 | Diana Sosa | Problemática del cliente | 2:00 – 4:00 | Criterio 2 (problemática del cliente, 0.96 pts) |
 | 3 | Diego Reyes | Valor e impacto de negocio | 4:00 – 6:00 | Criterio 3 (valor e impacto, 0.80 pts) |
-| 4 | Arodi Chávez | Demo de flujos principales | 6:00 – 9:00 | Criterio 4 (solución y demo, parte de 2.56 pts) |
+| 4 | Arodi Chávez | Demo EN VIVO de flujos principales | 6:00 – 9:00 | Criterio 4 (solución y demo, parte de 2.56 pts) |
 | 5 | Emilio Chen | Resultados UX (Neurolab) y calidad | 9:00 – 11:30 | Criterio 4 (pruebas con usuarios, resultados y mejoras) |
 | 6 | Luis Estrada | Justificación tecnológica y cierre | 11:30 – 14:00 | Criterio 5 (tecnología, 0.80 pts) + cierre del criterio 1 |
 
+# Preparación de la demo en vivo (hacer el día anterior y 15 min antes)
+
+1. **Equipos:** laptop conectada al proyector + celular del guardia con datos móviles (por si falla el WiFi del salón).
+2. **Cuentas de producción listas** (usar cuentas de demostración, nunca datos reales):
+   - Laptop, ventana normal: **residente** con vivienda asignada, saldo pendiente y alguna reserva.
+   - Laptop, ventana de incógnito: **administrador** (pestañas abiertas: Dashboard, Viviendas, Indicadores).
+   - Celular: **guardia** en *Control de acceso*, cámara ya autorizada en el navegador.
+3. **Horario:** la presentación debe caer dentro del horario de visitas (por defecto 06:00–22:00). La visita se crea con **inicio = hora actual** (el sistema da 10 minutos de margen) y fin una hora después.
+4. **Ensayo:** hacer el flujo completo una vez antes de entrar (crear visita → escanear). Borrar o cancelar esa visita de prueba.
+5. **Pantalla:** zoom del navegador al 110–125 % para que el jurado lea; desactivar notificaciones del sistema operativo.
+6. **Plan B:** si falla internet o la cámara, Arodi usa las slides 10–13 (son capturas del mismo flujo) o escribe el código del QR en *Código manual*.
+7. **Tiempo de la demo: 3 minutos.** Si se pasa, saltar el paso de Pagos (slide 12).
+
 # Denil Parada — Apertura e hilo narrativo (0:00 – 2:00)
 
-**Antes de hablar:** la slide 1 es el video de lanzamiento (21 s, con música). Denil se para al frente, lo deja correr sin hablar y al terminar avanza.
-
-**Objetivo:** Enganchar con la pregunta “¿Quién entró?” y anunciar el recorrido.
+**Objetivo:** Abrir con el video, plantear la pregunta “¿Quién entró?” y anunciar el recorrido.
 
 **Cuenta para:** Criterio 1 (hilo narrativo, 1.12 pts)
+
+**Antes de hablar:** la slide 1 es el video de lanzamiento (21 s, con música). Denil se para al frente, lo deja correr sin hablar y al terminar avanza.
 
 ## Slide 1 · 0:00 · Video de lanzamiento (/brag)
 
 (Sin hablar: dejar correr el video de 21 segundos. Al terminar, avanzar.)
 
-## Slide 2 · 0:25 · Portada
+## Slide 2 · 0:25 · Ingeniería de Software 1 · Proyecto final
 
 Buenos días. Somos NexusResidencial, un software para administrar residenciales: visitas con QR, cobros y la convivencia de toda la comunidad en una sola app. Somos seis: Diana, Diego, Arodi, Emilio, Luis y yo, Denil. (Pausa de 2 segundos.) Vuelvo a la pregunta del video.
 
-## Slide 3 · 0:45 · ¿Quién entró?
+## Slide 3 · 0:45 · Martes · 22:00 · garita
 
-Martes, 10 de la noche. Un visitante entra al residencial y nadie anota bien su nombre. Al día siguiente un vecino pregunta: ¿quién entró anoche? ¿Lo autorizó alguien? En la Residencial Colonia Sion, donde hicimos nuestra investigación, nadie podía responder con certeza: la respuesta estaba en una libreta, en un chat de WhatsApp o en la memoria del guardia.
+Martes, 10 de la noche. Un visitante entra al residencial y nadie anota bien su nombre. Al día siguiente un vecino pregunta: ¿quién entró anoche? ¿Lo autorizó alguien? En la mayoría de residenciales nadie puede responder con certeza: la respuesta está en una libreta, en un chat de WhatsApp o en la memoria del guardia. Eso fue lo que escuchamos una y otra vez en nuestras entrevistas.
 
 ## Slide 4 · 1:15 · El hilo de hoy
 
-Hoy les contamos cómo pasamos de esa libreta en garita a un software que ya está en producción y que se puede vender a cualquier residencial. Lo hicimos en 11 meses: primero Design Thinking con un cliente real y después 11 sprints de Scrum. Vamos a ver el problema, el valor para el negocio, la solución funcionando con pruebas reales de usuarios, y por qué la construimos así. Diana nos cuenta quién es el cliente.
+Hoy les contamos cómo pasamos de esa libreta en garita a un software que ya está en producción y que se puede vender a cualquier residencial. Lo hicimos en 11 meses: primero Design Thinking, entrevistando a administradores, residentes, inquilinos y guardias, y después 11 sprints de Scrum. Vamos a ver el problema, el valor para el negocio, la solución funcionando con pruebas reales de usuarios, y por qué la construimos así. Diana nos cuenta quién es el cliente.
 
 **Frase de relevo:** “…Diana nos cuenta quién es el cliente.”
 
 **Preguntas que te pueden tocar:**
 
-- ¿Por qué Colonia Sion? → Fue la residencial donde hicimos las entrevistas de Design Thinking con los 4 perfiles.
 - ¿Cuánto duró el proyecto? → 11 meses: enero–marzo Design Thinking; 16 de marzo–27 de octubre, 11 sprints.
+- ¿Para quién es? → Para cualquier residencial o empresa administradora; lo paga la administración.
 
 # Diana Sosa — Problemática del cliente (2:00 – 4:00)
 
@@ -60,7 +73,7 @@ Hoy les contamos cómo pasamos de esa libreta en garita a un software que ya est
 
 ## Slide 5 · 2:00 · El cliente
 
-Nuestro cliente directo es la administración del residencial: es quien contrata el sistema. Pero el problema lo viven cuatro perfiles: el administrador, que lleva finanzas, contratos y accesos; el residente, que paga cuotas, autoriza visitas y reserva amenidades; el inquilino, que vive ahí pero depende de los permisos del propietario; y el guardia, que controla físicamente quién entra. Lo comprobamos entrevistando a los cuatro perfiles en la Residencial Colonia Sion.
+Nuestro cliente directo es la administración del residencial: es quien contrata el sistema. Pero el problema lo viven cuatro perfiles: el administrador, que lleva finanzas, contratos y accesos; el residente, que paga cuotas, autoriza visitas y reserva amenidades; el inquilino, que vive ahí pero depende de los permisos del propietario; y el guardia, que controla físicamente quién entra. Lo comprobamos entrevistando a los cuatro perfiles durante la fase de Design Thinking. Y es un mercado que crece: los condominios y la vivienda vertical son hoy la tendencia dominante de construcción en Guatemala, y cada uno necesita administrarse.
 
 ## Slide 6 · 2:40 · Cómo funciona hoy
 
@@ -74,8 +87,8 @@ Las consecuencias son concretas. Residentes que disputan sanciones porque nunca 
 
 **Preguntas que te pueden tocar:**
 
-- ¿El cliente es Colonia Sion? → Fue el caso de estudio; el producto se vende a cualquier residencial o administradora.
-- ¿Qué evidencia tienen? → Entrevistas, mapas de empatía e insights (informe del 2 de febrero de 2026).
+- ¿Qué evidencia tienen? → Entrevistas, mapas de empatía e insights de Design Thinking con los 4 perfiles (feb 2026).
+- ¿Por qué ahora? → Los condominios y la vivienda vertical son la tendencia de construcción en Guatemala (E&N 2025).
 
 # Diego Reyes — Valor e impacto de negocio (4:00 – 6:00)
 
@@ -85,41 +98,41 @@ Las consecuencias son concretas. Residentes que disputan sanciones porque nunca 
 
 ## Slide 8 · 4:00 · Valor: antes vs después
 
-¿Qué cambia para el residencial? Comparemos. Autorizar una visita hoy es una llamada y una anotación en libreta, unos 3 minutos; con NexusResidencial el residente genera un QR y garita lo valida en segundos. Con 40 visitas diarias en un residencial de 150 casas, eso es cerca de hora y media diaria de garita. Los cobros: el administrador dedica unas 8 horas al mes a calcular multas; ahora son automáticas y la morosidad se ve mes a mes. Y la trazabilidad pasa de nada a 100 % de accesos registrados. Estos números son estimaciones con los supuestos que ven abajo.
+¿Qué cambia para el residencial? Comparemos. Autorizar una visita hoy es una llamada y una anotación en libreta, unos 3 minutos; con NexusResidencial el residente genera un QR y garita lo valida en segundos. Con 40 visitas diarias en un residencial de 150 casas, eso es cerca de hora y media diaria de garita. Los cobros: el administrador dedica unas 8 horas al mes a calcular multas; ahora las cuotas y recordatorios salen solos y los recargos y sanciones se calculan con un clic según las reglas del residencial. La morosidad se ve mes a mes. Y la trazabilidad pasa de nada a 100 % de accesos registrados. Estos números son estimaciones con los supuestos que ven abajo.
 
 ## Slide 9 · 5:00 · Modelo de negocio
 
 El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación. Un residencial de 150 casas paga Q1,500 al mes; operar su copia en Railway cuesta unos Q155, el correo y los avisos push son gratis, y con soporte el margen queda entre 53 y 56 por ciento. Las comisiones de Recurrente, 4.5 % más Q2, las paga el residencial sobre lo que cobra en línea; el modo de pruebas no cuesta nada. Estamos en el rango del mercado, alrededor de un dólar con treinta por unidad, pero con QR de garita, pagos en quetzales y mapa 3D. Beneficia a la administración, que deja el trabajo manual; a residentes e inquilinos, que ganan transparencia; y a garita. Nuestro desarrollo costó Q1,320,000; con 60 clientes se recupera en unos dos años. Arodi les muestra el sistema.
 
-**Frase de relevo:** “…Arodi les muestra el sistema.”
+**Frase de relevo:** “…Arodi les muestra el sistema, en vivo.”
 
 **Preguntas que te pueden tocar:**
 
 - ¿De dónde salen los números? → Supuestos explícitos: 150 casas, 40 visitas/día, 3 min vs <1 min por visita.
 - ¿Quién paga la comisión de Recurrente? → El residencial, sobre lo que cobra en línea (4.5 % + Q2). El sandbox no cuesta.
-- ¿Cuándo recuperan la inversión? → Con 60 clientes ~2 años; con 30, ~4.5 años (doc. técnico sección 10).
+- ¿Cuándo recuperan la inversión? → Con 60 clientes ~2 años; con 30, ~4.5 años (doc. técnico, sección 10).
 
-# Arodi Chávez — Demo de flujos principales (6:00 – 9:00)
+# Arodi Chávez — Demo EN VIVO de flujos principales (6:00 – 9:00)
 
-**Objetivo:** Mostrar el producto resolviendo el problema que contó Diana: visita → QR → garita → cobros → administración.
+**Objetivo:** Mostrar en vivo el producto resolviendo el problema de Diana: visita → QR → garita → cobros → administración.
 
 **Cuenta para:** Criterio 4 (solución y demo, parte de 2.56 pts)
 
-## Slide 10 · 6:00 · Demo · 1 · el residente autoriza una visita
+## Slide 10 · 6:00 · Demo en vivo · 1 · el residente autoriza una visita
 
-(Demo en vivo; si falla internet, usar estas capturas.) Entro como residente. Lo primero que ve es su saldo, sus visitas y el botón principal: Autorizar una visita. Lleno el nombre del visitante, su DPI o placa, la fecha y la hora. El sistema valida que esté dentro del horario del residencial y genera un QR de un solo uso, que el residente comparte por WhatsApp. El QR no lleva datos personales: solo un código aleatorio.
+EN VIVO (laptop, pestaña del RESIDENTE). Esta slide queda de respaldo. Digo: “Soy residente y viene un amigo a visitarme.” Toco “Autorizar una visita” → nombre “Visita del jurado”, DPI de 13 dígitos → Siguiente → fecha de hoy, inicio = hora actual, fin = una hora después → Siguiente → “Autorizar visita”. Aparece el QR con los botones Descargar y Compartir: “Esto se lo mando por WhatsApp. El QR no lleva datos personales, solo un código aleatorio de un solo uso.”
 
-## Slide 11 · 6:45 · Demo · 2 · garita valida en segundos
+## Slide 11 · 6:45 · Demo en vivo · 2 · garita valida en segundos
 
-Ahora soy el guardia. Escaneo el QR con la cámara del celular o de la computadora. En un segundo veo nombre, DPI, placa, casa y horario autorizados, y el ingreso queda registrado con mi usuario. Si el QR ya se usó, si expiró o si la visita fue cancelada, se rechaza. Si alguien necesita entrar fuera de horario, el residente pide un acceso de emergencia y la administración lo aprueba. Y cuando el visitante se va, el guardia registra la salida.
+EN VIVO (celular del GUARDIA, sesión abierta en Control de acceso). Digo: “Ahora soy el guardia.” Toco “Iniciar cámara” y apunto al QR proyectado. Sale “Visita autorizada e ingreso registrado” con nombre, DPI, casa y horario. Opcional (10 s): escanear otra vez → “Este QR ya fue utilizado”: “No se puede reutilizar.” Cierro: “Si llega tarde, el QR expira; si es fuera de horario, el residente pide un acceso de emergencia que aprueba la administración.” Respaldo si falla la cámara: escribir el código en “Código manual”.
 
-## Slide 12 · 7:30 · Demo · 3 · cobros claros
+## Slide 12 · 7:30 · Demo en vivo · 3 · cobros claros
 
-Del lado financiero, el residente ve cada cuota, su vencimiento y su estado. Las cuotas se generan solas el día uno, los recargos se aplican automáticamente y le llegan recordatorios por correo y al celular. Puede pagar en línea con Recurrente, una pasarela guatemalteca, y recibe su comprobante en PDF con la marca del residencial. Hoy está en modo de pruebas; para cobrar dinero real solo falta la cuenta comercial del cliente.
+EN VIVO (laptop, RESIDENTE) → menú “Mis pagos”. Digo: “El residente ve cada cuota, cuándo vence y cuánto debe.” Señalo el botón Pagar: “Paga con tarjeta en Recurrente, una pasarela guatemalteca; hoy está en modo de pruebas y para cobrar dinero real solo falta la cuenta comercial del residencial.” No completar el pago (ahorra tiempo).
 
-## Slide 13 · 8:15 · Demo · 4 · la administración ve todo
+## Slide 13 · 8:15 · Demo en vivo · 4 · la administración ve todo
 
-Y la administración ve todo el residencial: un mapa 3D con el estado real de cada casa, disponible, ocupada o inactiva, e indicadores de morosidad mes a mes, visitas por día y ocupación de amenidades. Como es un producto para vender, cada residencial puede crear sus propios roles, como un contador que solo ve pagos; hacer votaciones con un voto por casa; recibir reportes de fallas con foto; importar sus viviendas desde Excel el primer día; y sus usuarios instalan la app en el celular y reciben avisos. Pero que funcione no significa que sea fácil de usar. Emilio les cuenta cómo lo probamos.
+EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita que acabamos de autorizar ya aparece aquí, con el guardia que la registró.” → Viviendas: giro el mapa 3D y toco una casa. → Indicadores: morosidad mes a mes y visitas por día. Cierro con las etiquetas de la slide: “Como es un producto para vender, cada residencial crea sus roles, hace votaciones, recibe fallas con foto e importa sus datos desde Excel.” Relevo: “Pero que funcione no significa que sea fácil de usar. Emilio les cuenta cómo lo probamos.”
 
 **Frase de relevo:** “…Emilio les cuenta cómo lo probamos.”
 
@@ -127,7 +140,7 @@ Y la administración ve todo el residencial: un mapa 3D con el estado real de ca
 
 - ¿Qué pasa si la visita llega tarde? → El QR expira y garita lo rechaza; el residente genera otro en segundos.
 - ¿Y si se queda más tiempo? → La salida se registra a cualquier hora; el historial muestra hora autorizada vs hora real.
-- ¿Fuera de horario? → Acceso de emergencia con motivo, aprobado por la administración.
+- ¿Fuera de horario (6:00–22:00)? → Acceso de emergencia con motivo, aprobado por la administración.
 
 # Emilio Chen — Resultados UX (Neurolab) y calidad (9:00 – 11:30)
 
@@ -155,7 +168,7 @@ Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 pu
 
 **Preguntas que te pueden tocar:**
 
-- ¿Por qué el SUS es 69.6 y no más? → El residente batalló con la pre-autorización; por eso la volvimos el botón principal.
+- ¿Por qué el SUS es 69.6? → El residente batalló con la pre-autorización; por eso la volvimos el botón principal (lo acaban de ver en la demo).
 - ¿Repetirán la prueba? → Sí, es el siguiente paso para medir la mejora del residente.
 - ¿Cuántas pruebas automáticas? → 920 + 132 de backend y 575 de frontend.
 
@@ -187,4 +200,4 @@ Empezamos con una pregunta: martes, 10 de la noche, ¿quién entró? Hoy esa res
 
 # Preguntas generales del jurado
 
-Respuestas completas en el documento técnico (sección 12). Reglas: responde quien domina el tema; respuestas de 20–30 segundos; si no se sabe, decir qué se haría.
+Respuestas completas en el documento técnico (sección 12). Responde quien domina el tema, en 20–30 segundos; si no se sabe, decir qué se haría.

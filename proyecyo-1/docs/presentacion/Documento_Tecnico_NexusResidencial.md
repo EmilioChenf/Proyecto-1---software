@@ -14,8 +14,9 @@ lang: es
 |---|---|
 | ¿A quién se le vende? | A la **administración** de residenciales y condominios (o a la empresa administradora). Es quien paga la suscripción. |
 | ¿Quién lo usa? | Cuatro perfiles: **administrador**, **residente** (propietario), **inquilino** y **guardia** de garita. El administrador además puede crear roles propios (contador, junta directiva, recepción…). |
-| ¿Con quién se validó? | Con la **Residencial "Colonia Sion"** (entrevistas de Design Thinking, enero–febrero 2026) y con **pruebas de usabilidad en el Neurolab UVG** (15 de octubre de 2026). |
+| ¿Con quién se validó? | Con **entrevistas de Design Thinking** a administradores, residentes, inquilinos y guardias (enero–febrero 2026) y con **pruebas de usabilidad en el Neurolab UVG** (15 de octubre de 2026). |
 | ¿Cómo empezó? | Como proyecto para un *product owner*. A mitad del curso el enfoque cambió a **producto de software para vender** a cualquier residencial; por eso el sistema permite una copia por cliente con su propia marca. |
+| ¿Por qué ahora? | Los condominios y la vivienda vertical son la tendencia dominante de construcción en Guatemala (Revista E&N, 2025); cada nuevo complejo necesita administrar accesos, cobros y convivencia. |
 | ¿En qué estado está? | En producción en `nexus-residencial.com` (frontend) y `api.nexus-residencial.com` (backend), desplegado en Railway. Pagos en línea en **modo pruebas (sandbox) de Recurrente**; listo para pasar a cobro real cuando el cliente tenga su cuenta comercial. |
 
 **Línea del tiempo del proyecto**
@@ -23,7 +24,7 @@ lang: es
 | Etapa | Fecha | Resultado |
 |---|---|---|
 | Empatía (brief, usuarios, AEIOU) | 20 ene 2026 | 4 perfiles de usuario definidos |
-| Empatía y definición (Colonia Sion) | 2 feb 2026 | Entrevistas, mapas de empatía, insights, "¿Cómo podríamos…?" |
+| Empatía y definición (entrevistas a los 4 perfiles) | 2 feb 2026 | Entrevistas, mapas de empatía, insights, "¿Cómo podríamos…?" |
 | Ideación (Design Studio, sketches) | 16 feb 2026 | Ideas por perfil y restricciones |
 | Prototipos, historias y casos de uso | 16 mar 2026 | Backlog inicial |
 | Sprints 1 → 10 (Scrum, Jira) | 16 mar → 27 oct 2026 | 11 sprints registrados en Jira, **promedio de 51.09 puntos por sprint** |
@@ -122,7 +123,7 @@ MySQL (InnoDB, transacciones)
 
 - **Contrato por vivienda:** compra al contado, compra financiada (enganche, plazo y cuota calculada automáticamente) o renta. El día de pago se toma del día del contrato.
 - **Facturación mensual automática:** el día 1 de cada mes se generan las cuotas de cada vivienda (mantenimiento, cuota de vivienda o alquiler), con una "fotografía" de las reglas vigentes, para que un cambio de tarifa no altere meses anteriores.
-- **Recargos y sanciones automáticos** cuando una cuota pasa su fecha límite, según las reglas que configura el administrador.
+- **Recargos y sanciones calculados por el sistema:** el administrador configura las reglas (día límite, porcentaje o monto mínimo) y con un clic aplica los recargos y genera las sanciones de todas las cuotas vencidas; el sistema evita duplicados y deja todo auditado. *Lo automático en segundo plano* es la facturación del día 1 y los recordatorios de pago y de reservas.
 - **Recordatorios** por campana, correo y push antes del vencimiento.
 - **Pago en línea:** el residente toca "Pagar", el servidor crea el cobro en Recurrente por el monto exacto pendiente y lo redirige a la página de pago de Recurrente. Al pagar, Recurrente avisa a nuestro servidor con un **webhook firmado**; el servidor verifica la firma, aplica el pago **una sola vez** (idempotente, aunque el aviso llegue repetido) y genera el comprobante.
 - **Comprobante PDF** con la marca del residencial; **conciliación** administrativa contra Recurrente y **reembolsos**.
@@ -327,14 +328,14 @@ Las comisiones de Recurrente (4.5 % + Q2) las paga el residencial sobre lo que c
 
 # 11. Valor e impacto (situación actual vs NexusResidencial)
 
-| Proceso | Antes (Colonia Sion: libreta, Excel, llamadas, WhatsApp) | Con NexusResidencial | Métrica |
+| Proceso | Antes (residenciales hoy: libreta, Excel, llamadas, WhatsApp) | Con NexusResidencial | Métrica |
 |---|---|---|---|
 | Autorizar una visita | Llamada o WhatsApp al guardia, que anota en libreta; el guardia no puede verificar que el residente autorizó | El residente autoriza desde el celular; el guardia valida el QR en segundos | Tareas del Neurolab completadas en 6:15 min en promedio para 3 tareas completas |
-| Cobros y morosidad | El administrador calcula vencimientos y multas a mano | Cuotas, recargos, sanciones y recordatorios automáticos | Morosidad visible mes a mes en Indicadores |
+| Cobros y morosidad | El administrador calcula vencimientos y multas a mano | Cuotas y recordatorios automáticos; recargos y sanciones calculados con un clic | Morosidad visible mes a mes en Indicadores |
 | Trazabilidad | "¿Quién entró el martes a las 10 pm?" no tiene respuesta | Cada ingreso, pago y cambio queda registrado | 100 % de los accesos con registro |
 | Amenidades | Reservas por mensaje, choques y sin responsable | Calendario con validación de choques | 0 reservas duplicadas |
 
-*Supuestos:* residencial de ~150 casas, ~40 visitas diarias, un administrador. Si cada visita toma 3 minutos de coordinación telefónica y ahora menos de 1 minuto, se ahorran ~1.5 horas diarias de garita; el cálculo de recargos en Excel (~8 h al mes) se elimina.
+*Supuestos:* residencial de ~150 casas, ~40 visitas diarias, un administrador. Si cada visita toma 3 minutos de coordinación telefónica y ahora menos de 1 minuto, se ahorran ~1.5 horas diarias de garita; el cálculo de recargos en Excel (~8 h al mes) pasa a minutos.
 
 **Beneficiarios:** administración (menos trabajo manual, información confiable), residentes e inquilinos (autonomía y transparencia), guardias (validación rápida y segura). **Alternativas:** seguir con Excel/WhatsApp (gratis pero sin control), software extranjero genérico (sin pagos locales en quetzales ni QR de garita), o desarrollo propio (costoso).
 
@@ -342,7 +343,7 @@ Las comisiones de Recurrente (4.5 % + Q2) las paga el residencial sobre lo que c
 
 # 12. Preguntas frecuentes del jurado (respuestas cortas)
 
-- **¿Es para un residencial o para vender?** Para vender a residenciales; Colonia Sion fue el caso de estudio y validación.
+- **¿Es para un residencial o para vender?** Para vender a cualquier residencial o empresa administradora. El proyecto empezó para un *product owner*; a mitad del curso cambió a producto de software, y por eso cada cliente tiene su propia copia con su marca.
 - **¿Qué pasa si cae el internet en garita?** Sin conexión el QR no se puede validar contra el servidor; garita aplica el protocolo manual del residencial y luego la administración regulariza. *Mejora futura:* modo sin conexión con validación diferida.
 - **¿Se puede hackear el QR?** El token tiene 144 bits aleatorios, sirve una vez y solo en su horario; no lleva datos personales.
 - **¿Guardan tarjetas?** No. El pago ocurre en la página de Recurrente.
@@ -350,4 +351,4 @@ Las comisiones de Recurrente (4.5 % + Q2) las paga el residencial sobre lo que c
 - **¿Cuántos usuarios soporta?** Miles de usuarios activos por instancia según la prueba de carga; escala agregando recursos.
 - **¿Qué aprendieron del Neurolab?** Que la encuesta decía "fácil", pero el residente no encontraba la pre-autorización; lo cambiamos.
 
-*Fuentes de precios (consultadas en noviembre 2026):* recurrente.com/precios; docs.railway.com/pricing; knowledge.workspace.google.com (límites de Gmail); resend.com/pricing; comparasoftware.gt, hestia.com.gt, tucondominio.online, condominos.app, layers.lat.
+*Fuentes (consultadas en noviembre 2026):* revistaeyn.com (auge de la vivienda vertical en Guatemala, 2025); recurrente.com/precios; docs.railway.com/pricing; knowledge.workspace.google.com (límites de Gmail); resend.com/pricing; comparasoftware.gt, hestia.com.gt, tucondominio.online, condominos.app, layers.lat.
