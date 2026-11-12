@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NexusResidencial · Presentación final</title>
+<title>Presentación NexusResidencial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -61,6 +61,9 @@ td.hi{color:#fff;font-weight:700}
 .bar-h{height:18px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:12px}
 .bar-h>i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width 1.4s cubic-bezier(.2,.7,.2,1) .5s}
 .slide.on .bar-h>i{width:var(--w)}
+.playbtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;display:none;padding:26px 46px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(7,13,31,.72);color:#fff;font:700 34px "Plus Jakarta Sans",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
+.playbtn.show{display:block}
+.playbtn:focus-visible{outline:3px solid #2dd4bf;outline-offset:4px}
 #progress{position:fixed;left:0;bottom:0;height:5px;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width .5s;z-index:20}
 #notes{position:fixed;right:24px;bottom:24px;width:560px;max-height:70vh;overflow:auto;background:rgba(7,13,31,.96);border:1px solid var(--line);border-radius:18px;padding:22px 24px;display:none;z-index:30;box-shadow:0 30px 80px rgba(0,0,0,.6)}
 #notes.show{display:block}
@@ -88,6 +91,7 @@ td.hi{color:#fff;font-weight:700}
 <!-- ================= 0 · VIDEO (brag) ================= -->
 <section class="slide" data-who="Denil Parada" data-min="0:00" data-video="1" style="padding:0;background:#000">
   <video src="video/brag.mp4" poster="video/brag.jpg" playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+  <button type="button" class="playbtn" aria-label="Reproducir el video">▶&nbsp; Reproducir video</button>
   <div class="notes">(Sin hablar: dejar correr el video de 21 segundos. Al terminar, avanzar.) </div>
 </section>
 
@@ -455,7 +459,7 @@ td.hi{color:#fff;font-weight:700}
   };
   const show = (n) => {
     i = (n + slides.length) % slides.length;
-    slides.forEach((s, k) => { s.classList.toggle("on", k === i); const v = s.querySelector("video"); if (v) { if (k === i) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); } });
+    slides.forEach((s, k) => { s.classList.toggle("on", k === i); const v = s.querySelector("video"); if (v) { const btn = s.querySelector(".playbtn"); if (k === i) { v.currentTime = 0; v.play().then(() => btn && btn.classList.remove("show")).catch(() => btn && btn.classList.add("show")); } else v.pause(); } });
     slides[i].querySelectorAll("[data-count]").forEach(count);
     document.getElementById("progress").style.width = `${((i + 1) / slides.length) * 100}%`;
     document.getElementById("notesWho").textContent = `${i + 1}/${slides.length} · ${slides[i].dataset.who} · ${slides[i].dataset.min}`;
@@ -473,7 +477,8 @@ td.hi{color:#fff;font-weight:700}
     else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
     else if (e.key.toLowerCase() === "t") { started = started ? null : Date.now(); if (!started) document.getElementById("clock").textContent = "00:00"; }
   });
-  addEventListener("click", (e) => { if (e.target.closest("#notes")) return; show(e.clientX > innerWidth / 3 ? i + 1 : i - 1); });
+  document.querySelectorAll(".playbtn").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); const v = b.parentElement.querySelector("video"); v.currentTime = 0; v.play().then(() => b.classList.remove("show")).catch(() => {}); }));
+  addEventListener("click", (e) => { if (e.target.closest("#notes") || e.target.closest(".playbtn")) return; show(e.clientX > innerWidth / 3 ? i + 1 : i - 1); });
   show(i);
 })();
 </script>
