@@ -31,8 +31,8 @@ lang: es
 3. **Horario:** la presentación debe caer dentro del horario de visitas (por defecto 06:00–22:00). La visita se crea con **inicio = hora actual** (el sistema da 10 minutos de margen) y fin una hora después.
 4. **Ensayo:** hacer el flujo completo una vez antes de entrar (crear visita → escanear). Borrar o cancelar esa visita de prueba.
 5. **Pantalla:** zoom del navegador al 110–125 % para que el jurado lea; desactivar notificaciones del sistema operativo.
-6. **Plan B:** si falla internet o la cámara, Arodi usa las slides 10–13 (son capturas del mismo flujo) o escribe el código del QR en *Código manual*.
-7. **Tiempo de la demo: 3 minutos.** Si se pasa, saltar el paso de Pagos (slide 12).
+6. **Plan B:** si falla internet o la cámara, Arodi usa las slides 11–14 (son capturas del mismo flujo) o escribe el código del QR en *Código manual*.
+7. **Tiempo de la demo: 3 minutos.** Si se pasa, saltar el paso de Pagos (slide 13).
 
 # Denil Parada — Apertura e hilo narrativo (0:00 – 2:00)
 
@@ -100,16 +100,21 @@ Las consecuencias son concretas. Residentes que disputan sanciones porque nunca 
 
 ¿Qué cambia para el residencial? Comparemos. Autorizar una visita hoy es una llamada y una anotación en libreta, unos 3 minutos; con NexusResidencial el residente genera un QR y garita lo valida en segundos. Con 40 visitas diarias en un residencial de 150 casas, eso es cerca de hora y media diaria de garita. Los cobros: el administrador dedica unas 8 horas al mes a calcular multas; ahora las cuotas y recordatorios salen solos y los recargos y sanciones se calculan con un clic según las reglas del residencial. La morosidad se ve mes a mes. Y la trazabilidad pasa de nada a 100 % de accesos registrados. Estos números son estimaciones con los supuestos que ven abajo.
 
-## Slide 9 · 5:00 · Modelo de negocio
+## Slide 9 · 4:45 · Modelo de negocio
 
-El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación. Un residencial de 150 casas paga Q1,500 al mes; operar su copia en Railway cuesta unos Q155, el correo y los avisos push son gratis, y con soporte el margen queda entre 53 y 56 por ciento. Las comisiones de Recurrente, 4.5 % más Q2, las paga el residencial sobre lo que cobra en línea; el modo de pruebas no cuesta nada. Estamos en el rango del mercado, alrededor de un dólar con treinta por unidad, pero con QR de garita, pagos en quetzales y mapa 3D. Beneficia a la administración, que deja el trabajo manual; a residentes e inquilinos, que ganan transparencia; y a garita. Nuestro desarrollo costó Q1,320,000; con 60 clientes se recupera en unos dos años. Arodi les muestra el sistema.
+El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación. Un residencial de 150 casas paga Q1,500 al mes; operarlo cuesta el plan Pro de Railway, 20 dólares al mes, que es el que permite enviar los correos de recuperación y de avisos por Gmail, más el dominio, 11 dólares al año. El correo y los avisos push no cuestan. Con soporte, el margen es de 56 por ciento. Estamos en el rango del mercado, alrededor de un dólar con treinta por unidad, pero con QR de garita, pagos en quetzales y mapa 3D. Beneficia a la administración, que deja el trabajo manual; a residentes e inquilinos, que ganan transparencia; y a garita. Nuestro desarrollo costó Q1,320,000; con 60 clientes se recupera en unos dos años.
+
+## Slide 10 · 5:25 · ¿Cuánto cuesta pagar con tarjeta?
+
+¿Y cuánto cuesta que un residente o inquilino pague con tarjeta? Recurrente cobra 4.5 % más Q2 por cada pago exitoso, sin mensualidad. Si alguien paga su mantenimiento de Q500, la comisión es de Q24.50 y al residencial le llegan Q475.50. Hoy el sistema funciona en el sandbox de Recurrente: es el modo de pruebas, con tarjetas de prueba, sin dinero real y sin comisión. Para cobrar de verdad, el residencial abre su cuenta comercial y cambiamos las llaves. El residencial decide si absorbe la comisión o la contempla en su cuota. Arodi les muestra el sistema, en vivo.
 
 **Frase de relevo:** “…Arodi les muestra el sistema, en vivo.”
 
 **Preguntas que te pueden tocar:**
 
 - ¿De dónde salen los números? → Supuestos explícitos: 150 casas, 40 visitas/día, 3 min vs <1 min por visita.
-- ¿Quién paga la comisión de Recurrente? → El residencial, sobre lo que cobra en línea (4.5 % + Q2). El sandbox no cuesta.
+- ¿Quién paga la comisión de Recurrente? → El residencial decide: la absorbe o la contempla en su cuota (4.5 % + Q2; Q500 → Q24.50). El sandbox no cuesta.
+- ¿Cuánto cuesta operarlo? → Railway Pro USD 20/mes + dominio USD 11/año ≈ USD 251/año.
 - ¿Cuándo recuperan la inversión? → Con 60 clientes ~2 años; con 30, ~4.5 años (doc. técnico, sección 10).
 
 # Arodi Chávez — Demo EN VIVO de flujos principales (6:00 – 9:00)
@@ -118,19 +123,19 @@ El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación.
 
 **Cuenta para:** Criterio 4 (solución y demo, parte de 2.56 pts)
 
-## Slide 10 · 6:00 · Demo en vivo · 1 · el residente autoriza una visita
+## Slide 11 · 6:00 · Demo en vivo · 1 · el residente autoriza una visita
 
 EN VIVO (laptop, pestaña del RESIDENTE). Esta slide queda de respaldo. Digo: “Soy residente y viene un amigo a visitarme.” Toco “Autorizar una visita” → nombre “Visita del jurado”, DPI de 13 dígitos → Siguiente → fecha de hoy, inicio = hora actual, fin = una hora después → Siguiente → “Autorizar visita”. Aparece el QR con los botones Descargar y Compartir: “Esto se lo mando por WhatsApp. El QR no lleva datos personales, solo un código aleatorio de un solo uso.”
 
-## Slide 11 · 6:45 · Demo en vivo · 2 · garita valida en segundos
+## Slide 12 · 6:45 · Demo en vivo · 2 · garita valida en segundos
 
-EN VIVO (celular del GUARDIA, sesión abierta en Control de acceso). Digo: “Ahora soy el guardia.” Toco “Iniciar cámara” y apunto al QR proyectado. Sale “Visita autorizada e ingreso registrado” con nombre, DPI, casa y horario. Opcional (10 s): escanear otra vez → “Este QR ya fue utilizado”: “No se puede reutilizar.” Cierro: “Si llega tarde, el QR expira; si es fuera de horario, el residente pide un acceso de emergencia que aprueba la administración.” Respaldo si falla la cámara: escribir el código en “Código manual”.
+EN VIVO (celular del GUARDIA, sesión abierta en Control de acceso). Digo: “Ahora soy el guardia.” Toco “Iniciar cámara” y apunto al QR proyectado. Sale “Visita autorizada e ingreso registrado” con nombre, DPI, casa y horario. Opcional (10 s): escanear otra vez → “Este QR ya fue utilizado”: “No se puede reutilizar.” Cierro: “Si la visita no llega a tiempo, al minuto de vencer su hora el residente recibe un aviso en la app, push y correo de que el QR expiró y debe crear otro. Si entra y se queda más de lo autorizado, garita y el residente reciben una alerta. Y fuera de horario, el residente pide un acceso de emergencia que aprueba la administración.” Respaldo si falla la cámara: escribir el código en “Código manual”.
 
-## Slide 12 · 7:30 · Demo en vivo · 3 · cobros claros
+## Slide 13 · 7:30 · Demo en vivo · 3 · cobros claros
 
 EN VIVO (laptop, RESIDENTE) → menú “Mis pagos”. Digo: “El residente ve cada cuota, cuándo vence y cuánto debe.” Señalo el botón Pagar: “Paga con tarjeta en Recurrente, una pasarela guatemalteca; hoy está en modo de pruebas y para cobrar dinero real solo falta la cuenta comercial del residencial.” No completar el pago (ahorra tiempo).
 
-## Slide 13 · 8:15 · Demo en vivo · 4 · la administración ve todo
+## Slide 14 · 8:15 · Demo en vivo · 4 · la administración ve todo
 
 EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita que acabamos de autorizar ya aparece aquí, con el guardia que la registró.” → Viviendas: giro el mapa 3D y toco una casa. → Indicadores: morosidad mes a mes y visitas por día. Cierro con las etiquetas de la slide: “Como es un producto para vender, cada residencial crea sus roles, hace votaciones, recibe fallas con foto e importa sus datos desde Excel.” Relevo: “Pero que funcione no significa que sea fácil de usar. Emilio les cuenta cómo lo probamos.”
 
@@ -148,19 +153,19 @@ EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita
 
 **Cuenta para:** Criterio 4 (pruebas con usuarios, resultados y mejoras)
 
-## Slide 14 · 9:00 · Pruebas con usuarios · Neurolab UVG · 15 oct 2026
+## Slide 15 · 9:00 · Pruebas con usuarios · Neurolab UVG · 15 oct 2026
 
 En octubre llevamos el sistema al Neurolab de la UVG. Seis voluntarios, dos por rol: administrador, guardia y residente. No les preguntamos si les gustaba: medimos con seguimiento ocular dónde miraban, con un sensor GSR cuándo se estresaban, y al final llenaron el cuestionario de usabilidad SUS. Aquí ven el mapa de calor de un residente y su señal de estrés.
 
-## Slide 15 · 9:45 · Resultados
+## Slide 16 · 9:40 · Resultados
 
 Resultados: se completó el 94 % de las tareas y el SUS promedio fue 69.6, justo en el umbral de usabilidad aceptable. El administrador tuvo el mejor resultado, 77.5. El residente fue el que más batalló: uno de ellos tardó casi el doble y no logró pre-autorizar una visita sin ayuda. Curiosamente, en la encuesta todos decían que era fácil: el laboratorio nos mostró lo que la encuesta no.
 
-## Slide 16 · 10:30 · Hallazgos → cambios en el producto
+## Slide 17 · 10:20 · Hallazgos → cambios en el producto
 
 Cada hallazgo se volvió un cambio. El más importante, la pre-autorización difícil de encontrar: ahora es el botón principal del panel del residente y del inquilino. El filtro del historial del guardia ahora es grande y está justo sobre la tabla. Las confirmaciones se rediseñaron en toda la aplicación. El menú y la jerarquía del residente mejoraron parcialmente, y el modo oscuro que pidieron los usuarios quedó en el backlog. El siguiente paso es repetir la prueba para medir cuánto sube el SUS del residente.
 
-## Slide 17 · 11:10 · Calidad del proceso
+## Slide 18 · 11:00 · Calidad del proceso
 
 Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 puntos, más de 1,600 pruebas automáticas que corren en backend y frontend, revisiones técnicas formales y, antes de esta entrega, recorrimos las 67 pantallas de los cuatro roles. Luis nos explica con qué está construido y por qué.
 
@@ -178,15 +183,19 @@ Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 pu
 
 **Cuenta para:** Criterio 5 (tecnología, 0.80 pts) + cierre del criterio 1
 
-## Slide 18 · 11:30 · Por qué esta tecnología
+## Slide 19 · 11:30 · Arquitectura y flujo
 
-Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway porque cuesta entre 10 y 25 dólares al mes por cliente y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.
+Así está construido. Los cuatro roles entran desde el celular o la computadora, a una app instalable. El frontend en React habla por HTTPS, con un token de sesión firmado, con nuestra API en Node.js; la API valida el rol en cada petición y guarda todo en MySQL, con una base de datos por residencial. Para pagos se conecta con Recurrente, que nos confirma cada pago con un aviso firmado; para correos usa Gmail, y para avisos al celular, Web Push. Y hay tareas que corren solas: cada 15 segundos salen correos y push, cada minuto se revisan QR expirados y visitas sin salida, y cada mes se factura. Todo vive en Railway: cada vez que hacemos merge a main, se publica la nueva versión sola.
 
-## Slide 19 · 12:30 · Seguridad y escala
+## Slide 20 · 12:10 · Por qué esta tecnología
+
+Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.
+
+## Slide 21 · 12:50 · Seguridad y escala
 
 Sobre seguridad: las contraseñas se guardan con bcrypt; las sesiones son tokens firmados que se pueden cerrar desde cualquier dispositivo y se cierran solas por inactividad; hay límite de intentos de inicio de sesión; todas las consultas son parametrizadas contra inyección SQL; cada cambio sensible queda auditado; los datos de tarjeta se escriben en la página de Recurrente, nunca en la nuestra; y cada residencial tiene su propia base de datos. En escala, hicimos una prueba de carga: una sola instancia atendió 280 peticiones por segundo con sesión y cero errores, del orden de 3,000 usuarios activos a la vez. Un residencial de 300 casas usa menos del 10 % de eso.
 
-## Slide 20 · 13:15 · Martes · 22:00 · garita
+## Slide 22 · 13:25 · Martes · 22:00 · garita
 
 Empezamos con una pregunta: martes, 10 de la noche, ¿quién entró? Hoy esa respuesta tiene nombre, hora y el guardia que lo dejó pasar. Y además el residente sabe cuánto debe, la administración ve su residencial completo y el producto está en producción, probado con usuarios reales y listo para venderse al siguiente residencial. Gracias. ¿Preguntas?
 
@@ -196,7 +205,8 @@ Empezamos con una pregunta: martes, 10 de la noche, ¿quién entró? Hoy esa res
 
 - ¿Qué pasa si dos residenciales compran? → Cada uno tiene su copia y su base de datos; el mismo código para todos; los cambios particulares se vuelven configuración.
 - ¿Cuántos usuarios aguanta? → Prueba de carga: 280 peticiones/s con sesión, 0 errores ≈ 3,000 usuarios activos por instancia.
-- ¿Gmail cobra por correo? → No; límite ~500 destinatarios/día. Si se supera, quedan en cola y la campana y el push siguen funcionando.
+- ¿Gmail cobra por correo? → No; Railway Pro (USD 20/mes) permite enviarlos; límite ~500 destinatarios/día. Si se supera, quedan en cola y la campana y el push siguen funcionando.
+- ¿Qué pasa si la visita no llega o se queda de más? → Al vencer su hora, el residente recibe aviso de QR expirado (app, push y correo); si entró y no salió, garita y residente reciben alerta.
 
 # Preguntas generales del jurado
 

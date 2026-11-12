@@ -180,16 +180,16 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">¿Qué cambia para el residencial? Comparemos. Autorizar una visita hoy es una llamada y una anotación en libreta, unos 3 minutos; con NexusResidencial el residente genera un QR y garita lo valida en segundos. Con 40 visitas diarias en un residencial de 150 casas, eso es cerca de hora y media diaria de garita. Los cobros: el administrador dedica unas 8 horas al mes a calcular multas; ahora las cuotas y recordatorios salen solos y los recargos y sanciones se calculan con un clic según las reglas del residencial. La morosidad se ve mes a mes. Y la trazabilidad pasa de nada a 100 % de accesos registrados. Estos números son estimaciones con los supuestos que ven abajo.</div>
 </section>
 
-<section class="slide" data-who="Diego Reyes" data-min="5:00">
+<section class="slide" data-who="Diego Reyes" data-min="4:45">
   <div class="kicker a">Modelo de negocio</div>
   <div style="display:grid;grid-template-columns:1.05fr 1fr;gap:60px;margin-top:10px">
     <div>
-      <h2 class="a" style="--d:1;font-size:58px">Q10 por vivienda al mes.<br><span class="grad">53–56 % de margen.</span></h2>
+      <h2 class="a" style="--d:1;font-size:58px">Q10 por vivienda al mes.<br><span class="grad">56 % de margen.</span></h2>
       <div class="cards" style="grid-template-columns:1fr 1fr;margin-top:40px">
         <div class="card a" style="--d:2"><div class="big" style="font-size:72px" data-count="1500" data-prefix="Q">Q0</div><div class="unit">ingreso/mes · 150 casas</div></div>
-        <div class="card a" style="--d:3"><div class="big" style="font-size:72px" data-count="155" data-prefix="Q">Q0</div><div class="unit">servidor/mes (Railway)</div></div>
+        <div class="card a" style="--d:3"><div class="big" style="font-size:72px" data-count="20" data-prefix="USD ">USD 0</div><div class="unit">al mes · Railway Pro (servidor + correos)</div></div>
       </div>
-      <p class="a" style="--d:4;margin-top:28px;font-size:24px">Correo y avisos push: gratis · Pagos con Recurrente: 4.5 % + Q2 por cobro, sin mensualidad · Sandbox: Q0.</p>
+      <p class="a" style="--d:4;margin-top:28px;font-size:24px">+ dominio USD 11 al año · Correos de Gmail y avisos push: gratis (el plan Pro permite enviarlos) · Operar hoy: ≈ USD 251 al año.</p>
     </div>
     <div class="a" style="--d:3">
       <table>
@@ -203,7 +203,21 @@ td.hi{color:#fff;font-weight:700}
       <p style="margin-top:24px;font-size:24px">Desarrollo: <b style="color:#fff">Q1,320,000</b> (6 × Q20,000 × 11 meses). Con 60 clientes se recupera en ~2 años.</p>
     </div>
   </div>
-  <div class="notes">El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación. Un residencial de 150 casas paga Q1,500 al mes; operar su copia en Railway cuesta unos Q155, el correo y los avisos push son gratis, y con soporte el margen queda entre 53 y 56 por ciento. Las comisiones de Recurrente, 4.5 % más Q2, las paga el residencial sobre lo que cobra en línea; el modo de pruebas no cuesta nada. Estamos en el rango del mercado, alrededor de un dólar con treinta por unidad, pero con QR de garita, pagos en quetzales y mapa 3D. Beneficia a la administración, que deja el trabajo manual; a residentes e inquilinos, que ganan transparencia; y a garita. Nuestro desarrollo costó Q1,320,000; con 60 clientes se recupera en unos dos años. Arodi les muestra el sistema.</div>
+  <div class="notes">El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación. Un residencial de 150 casas paga Q1,500 al mes; operarlo cuesta el plan Pro de Railway, 20 dólares al mes, que es el que permite enviar los correos de recuperación y de avisos por Gmail, más el dominio, 11 dólares al año. El correo y los avisos push no cuestan. Con soporte, el margen es de 56 por ciento. Estamos en el rango del mercado, alrededor de un dólar con treinta por unidad, pero con QR de garita, pagos en quetzales y mapa 3D. Beneficia a la administración, que deja el trabajo manual; a residentes e inquilinos, que ganan transparencia; y a garita. Nuestro desarrollo costó Q1,320,000; con 60 clientes se recupera en unos dos años.</div>
+</section>
+
+<section class="slide" data-who="Diego Reyes" data-min="5:25">
+  <div class="kicker a">¿Cuánto cuesta pagar con tarjeta?</div>
+  <h2 class="a" style="--d:1;font-size:56px">Recurrente cobra <span class="grad">4.5 % + Q2</span> por pago exitoso.<br>En sandbox: <span class="grad">Q0</span>.</h2>
+  <table class="a" style="--d:2;margin-top:34px">
+    <tr><th>El residente paga</th><th>Comisión</th><th>Le llega al residencial</th><th>En sandbox (pruebas)</th></tr>
+    <tr><td class="hi">Q300 · mantenimiento</td><td>Q15.50</td><td>Q284.50</td><td>Q0</td></tr>
+    <tr><td class="hi">Q500 · mantenimiento</td><td>Q24.50</td><td>Q475.50</td><td>Q0</td></tr>
+    <tr><td class="hi">Q2,500 · cuota de vivienda</td><td>Q114.50</td><td>Q2,385.50</td><td>Q0</td></tr>
+    <tr><td class="hi">Q6,500 · renta</td><td>Q294.50</td><td>Q6,205.50</td><td>Q0</td></tr>
+  </table>
+  <p class="a" style="--d:3;margin-top:24px;font-size:22px">Cuenta comercial. Sin mensualidad. Hoy producción usa el sandbox: tarjetas de prueba, sin dinero real. Para cobrar de verdad, el residencial abre su cuenta en Recurrente y se cambian las llaves.</p>
+  <div class="notes">¿Y cuánto cuesta que un residente o inquilino pague con tarjeta? Recurrente cobra 4.5 % más Q2 por cada pago exitoso, sin mensualidad. Si alguien paga su mantenimiento de Q500, la comisión es de Q24.50 y al residencial le llegan Q475.50. Hoy el sistema funciona en el sandbox de Recurrente: es el modo de pruebas, con tarjetas de prueba, sin dinero real y sin comisión. Para cobrar de verdad, el residencial abre su cuenta comercial y cambiamos las llaves. El residencial decide si absorbe la comisión o la contempla en su cuota. Arodi les muestra el sistema, en vivo.</div>
 </section>
 
 <!-- ================= 4 · ARODI ================= -->
@@ -228,11 +242,11 @@ td.hi{color:#fff;font-weight:700}
       <h3 class="a" style="--d:2">El guardia escanea con la cámara.</h3>
       <p class="a" style="--d:3;margin-top:16px">Ve nombre, DPI, placa, casa y horario autorizados, y el ingreso queda registrado.</p>
       <div class="a" style="--d:4;margin-top:30px;display:flex;flex-wrap:wrap;gap:12px">
-        <span class="pill no">QR expirado → rechazado</span><span class="pill no">QR ya usado → rechazado</span><span class="pill part">Fuera de horario → acceso de emergencia aprobado por admin</span>
+        <span class="pill no">QR ya usado → rechazado</span><span class="pill no">QR expirado → aviso al residente (app, push y correo)</span><span class="pill part">Sin salida al pasar su hora → alerta a garita y residente</span><span class="pill part">Fuera de horario → acceso de emergencia</span>
       </div>
     </div>
   </div>
-  <div class="notes">EN VIVO (celular del GUARDIA, sesión abierta en Control de acceso). Digo: “Ahora soy el guardia.” Toco “Iniciar cámara” y apunto al QR proyectado. Sale “Visita autorizada e ingreso registrado” con nombre, DPI, casa y horario. Opcional (10 s): escanear otra vez → “Este QR ya fue utilizado”: “No se puede reutilizar.” Cierro: “Si llega tarde, el QR expira; si es fuera de horario, el residente pide un acceso de emergencia que aprueba la administración.” Respaldo si falla la cámara: escribir el código en “Código manual”.</div>
+  <div class="notes">EN VIVO (celular del GUARDIA, sesión abierta en Control de acceso). Digo: “Ahora soy el guardia.” Toco “Iniciar cámara” y apunto al QR proyectado. Sale “Visita autorizada e ingreso registrado” con nombre, DPI, casa y horario. Opcional (10 s): escanear otra vez → “Este QR ya fue utilizado”: “No se puede reutilizar.” Cierro: “Si la visita no llega a tiempo, al minuto de vencer su hora el residente recibe un aviso en la app, push y correo de que el QR expiró y debe crear otro. Si entra y se queda más de lo autorizado, garita y el residente reciben una alerta. Y fuera de horario, el residente pide un acceso de emergencia que aprueba la administración.” Respaldo si falla la cámara: escribir el código en “Código manual”.</div>
 </section>
 
 <section class="slide" data-who="Arodi Chávez" data-min="7:30">
@@ -273,7 +287,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">En octubre llevamos el sistema al Neurolab de la UVG. Seis voluntarios, dos por rol: administrador, guardia y residente. No les preguntamos si les gustaba: medimos con seguimiento ocular dónde miraban, con un sensor GSR cuándo se estresaban, y al final llenaron el cuestionario de usabilidad SUS. Aquí ven el mapa de calor de un residente y su señal de estrés.</div>
 </section>
 
-<section class="slide" data-who="Emilio Chen" data-min="9:45">
+<section class="slide" data-who="Emilio Chen" data-min="9:40">
   <div class="kicker a">Resultados</div>
   <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-top:20px">
     <div class="card a" style="--d:1"><div class="big" data-count="94" data-suffix="%">0%</div><div class="unit">tareas completadas (17 de 18)</div></div>
@@ -289,7 +303,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Resultados: se completó el 94 % de las tareas y el SUS promedio fue 69.6, justo en el umbral de usabilidad aceptable. El administrador tuvo el mejor resultado, 77.5. El residente fue el que más batalló: uno de ellos tardó casi el doble y no logró pre-autorizar una visita sin ayuda. Curiosamente, en la encuesta todos decían que era fácil: el laboratorio nos mostró lo que la encuesta no.</div>
 </section>
 
-<section class="slide" data-who="Emilio Chen" data-min="10:30">
+<section class="slide" data-who="Emilio Chen" data-min="10:20">
   <div class="kicker a">Hallazgos → cambios en el producto</div>
   <table class="a" style="--d:1">
     <tr><th>Hallazgo del Neurolab</th><th>Qué cambiamos</th><th>Estado</th></tr>
@@ -302,7 +316,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Cada hallazgo se volvió un cambio. El más importante, la pre-autorización difícil de encontrar: ahora es el botón principal del panel del residente y del inquilino. El filtro del historial del guardia ahora es grande y está justo sobre la tabla. Las confirmaciones se rediseñaron en toda la aplicación. El menú y la jerarquía del residente mejoraron parcialmente, y el modo oscuro que pidieron los usuarios quedó en el backlog. El siguiente paso es repetir la prueba para medir cuánto sube el SUS del residente.</div>
 </section>
 
-<section class="slide" data-who="Emilio Chen" data-min="11:10">
+<section class="slide" data-who="Emilio Chen" data-min="11:00">
   <div class="kicker a">Calidad del proceso</div>
   <div class="cards" style="grid-template-columns:repeat(4,1fr);margin-top:30px">
     <div class="card a" style="--d:1"><div class="big" style="font-size:96px" data-count="11">0</div><div class="unit">sprints en Jira</div></div>
@@ -316,19 +330,64 @@ td.hi{color:#fff;font-weight:700}
 
 <!-- ================= 6 · LUIS ================= -->
 <section class="slide" data-who="Luis Estrada" data-min="11:30">
+  <div class="kicker a">Arquitectura y flujo</div>
+  <svg class="a" style="--d:1;width:100%;max-width:1680px;margin-top:6px" viewBox="0 0 1680 680" font-family="Plus Jakarta Sans, sans-serif">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/></marker>
+      <linearGradient id="gb" x1="0" x2="1"><stop offset="0" stop-color="#1d4ed8"/><stop offset="1" stop-color="#0e7490"/></linearGradient>
+    </defs>
+    <rect x="410" y="20" width="900" height="612" rx="28" fill="rgba(59,130,246,.06)" stroke="rgba(147,197,253,.35)" stroke-dasharray="8 8"/>
+    <text x="440" y="60" fill="#93c5fd" font-size="22" font-weight="700">RAILWAY · plan Pro (USD 20/mes)</text>
+    <g><rect x="20" y="150" width="300" height="200" rx="22" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)"/>
+      <text x="170" y="200" text-anchor="middle" fill="#fff" font-size="28" font-weight="800">Usuarios</text>
+      <text x="170" y="240" text-anchor="middle" fill="#9fb0d4" font-size="20">Celular o PC · app instalable</text>
+      <text x="170" y="275" text-anchor="middle" fill="#9fb0d4" font-size="20">Admin · Residente</text>
+      <text x="170" y="305" text-anchor="middle" fill="#9fb0d4" font-size="20">Inquilino · Guardia</text></g>
+    <g><rect x="450" y="150" width="300" height="200" rx="22" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)"/>
+      <text x="600" y="205" text-anchor="middle" fill="#fff" font-size="28" font-weight="800">Frontend</text>
+      <text x="600" y="245" text-anchor="middle" fill="#9fb0d4" font-size="20">React + TypeScript</text>
+      <text x="600" y="280" text-anchor="middle" fill="#9fb0d4" font-size="20">nexus-residencial.com</text></g>
+    <g><rect x="880" y="90" width="400" height="320" rx="22" fill="url(#gb)" opacity=".9"/>
+      <text x="1080" y="140" text-anchor="middle" fill="#fff" font-size="28" font-weight="800">API Node.js · Express</text>
+      <text x="1080" y="185" text-anchor="middle" fill="#e0f2fe" font-size="20">Sesión firmada y roles en cada petición</text>
+      <text x="1080" y="220" text-anchor="middle" fill="#e0f2fe" font-size="20">Visitas y QR · Finanzas · Comunidad</text>
+      <text x="1080" y="270" text-anchor="middle" fill="#fff" font-size="21" font-weight="700">Tareas automáticas</text>
+      <text x="1080" y="305" text-anchor="middle" fill="#e0f2fe" font-size="16.5">cada 15 s: correos y push</text>
+      <text x="1080" y="335" text-anchor="middle" fill="#e0f2fe" font-size="16.5">cada minuto: QR expirados y visitas sin salida</text>
+      <text x="1080" y="365" text-anchor="middle" fill="#e0f2fe" font-size="16.5">día 1: facturación · recordatorios · respaldos</text></g>
+    <g><rect x="930" y="520" width="300" height="100" rx="22" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)"/>
+      <text x="1080" y="562" text-anchor="middle" fill="#fff" font-size="26" font-weight="800">MySQL</text>
+      <text x="1080" y="595" text-anchor="middle" fill="#9fb0d4" font-size="19">una base por residencial</text></g>
+    <g font-size="22" font-weight="700" fill="#fff">
+      <rect x="1400" y="70" width="270" height="90" rx="18" fill="rgba(34,197,94,.12)" stroke="rgba(134,239,172,.4)"/><text x="1535" y="108" text-anchor="middle">Recurrente</text><text x="1535" y="138" text-anchor="middle" font-size="17" fill="#9fb0d4" font-weight="500">cobro con tarjeta + webhook</text>
+      <rect x="1400" y="205" width="270" height="90" rx="18" fill="rgba(245,158,11,.12)" stroke="rgba(252,211,77,.4)"/><text x="1535" y="243" text-anchor="middle">Gmail SMTP</text><text x="1535" y="273" text-anchor="middle" font-size="17" fill="#9fb0d4" font-weight="500">correos de avisos</text>
+      <rect x="1400" y="340" width="270" height="90" rx="18" fill="rgba(168,85,247,.12)" stroke="rgba(216,180,254,.4)"/><text x="1535" y="378" text-anchor="middle">Web Push</text><text x="1535" y="408" text-anchor="middle" font-size="17" fill="#9fb0d4" font-weight="500">avisos al celular</text>
+    </g>
+    <g stroke="#60a5fa" stroke-width="3" fill="none" marker-end="url(#ar)">
+      <path d="M320 250 H445"/><path d="M750 250 H875"/><path d="M1080 410 V515"/>
+      <path d="M1280 130 H1395"/><path d="M1280 250 H1395"/><path d="M1280 370 H1395"/>
+    </g>
+    <text x="382" y="238" text-anchor="middle" fill="#9fb0d4" font-size="17">HTTPS</text>
+    <text x="812" y="238" text-anchor="middle" fill="#9fb0d4" font-size="17">token</text>
+    <text x="20" y="668" fill="#9fb0d4" font-size="20">GitHub (main) → Railway publica cada cambio automáticamente</text>
+  </svg>
+  <div class="notes">Así está construido. Los cuatro roles entran desde el celular o la computadora, a una app instalable. El frontend en React habla por HTTPS, con un token de sesión firmado, con nuestra API en Node.js; la API valida el rol en cada petición y guarda todo en MySQL, con una base de datos por residencial. Para pagos se conecta con Recurrente, que nos confirma cada pago con un aviso firmado; para correos usa Gmail, y para avisos al celular, Web Push. Y hay tareas que corren solas: cada 15 segundos salen correos y push, cada minuto se revisan QR expirados y visitas sin salida, y cada mes se factura. Todo vive en Railway: cada vez que hacemos merge a main, se publica la nueva versión sola.</div>
+</section>
+
+<section class="slide" data-who="Luis Estrada" data-min="12:10">
   <div class="kicker a">Por qué esta tecnología</div>
   <table class="a" style="--d:1">
     <tr><th>Necesidad</th><th>Elegimos</th><th>En vez de</th><th>Porque</th></tr>
     <tr><td>Interfaz en celular y PC</td><td class="hi">React + TypeScript (app instalable)</td><td>Angular, apps nativas</td><td>Un solo lenguaje; sin tiendas de apps</td></tr>
     <tr><td>Lógica del negocio</td><td class="hi">Node.js + Express</td><td>Django, Spring</td><td>El equipo ya lo dominaba</td></tr>
     <tr><td>Pagos que no fallan a medias</td><td class="hi">MySQL (transacciones)</td><td>MongoDB</td><td>Casa → contrato → cuota → pago</td></tr>
-    <tr><td>Operar barato</td><td class="hi">Railway</td><td>AWS, VPS</td><td>~USD 10–25/mes por cliente, deploy automático</td></tr>
+    <tr><td>Operar barato</td><td class="hi">Railway (Pro)</td><td>AWS, VPS</td><td>USD 20/mes, correos y deploy automático</td></tr>
     <tr><td>Cobrar en quetzales</td><td class="hi">Recurrente</td><td>Stripe, PayPal</td><td>Guatemalteco, sin mensualidad</td></tr>
   </table>
-  <div class="notes">Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway porque cuesta entre 10 y 25 dólares al mes por cliente y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.</div>
+  <div class="notes">Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.</div>
 </section>
 
-<section class="slide" data-who="Luis Estrada" data-min="12:30">
+<section class="slide" data-who="Luis Estrada" data-min="12:50">
   <div class="kicker a">Seguridad y escala</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:10px">
     <div class="card a" style="--d:1">
@@ -347,7 +406,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Sobre seguridad: las contraseñas se guardan con bcrypt; las sesiones son tokens firmados que se pueden cerrar desde cualquier dispositivo y se cierran solas por inactividad; hay límite de intentos de inicio de sesión; todas las consultas son parametrizadas contra inyección SQL; cada cambio sensible queda auditado; los datos de tarjeta se escriben en la página de Recurrente, nunca en la nuestra; y cada residencial tiene su propia base de datos. En escala, hicimos una prueba de carga: una sola instancia atendió 280 peticiones por segundo con sesión y cero errores, del orden de 3,000 usuarios activos a la vez. Un residencial de 300 casas usa menos del 10 % de eso.</div>
 </section>
 
-<section class="slide" data-who="Luis Estrada" data-min="13:15">
+<section class="slide" data-who="Luis Estrada" data-min="13:25">
   <div style="display:grid;place-items:center;height:100%;text-align:center">
     <div>
       <div class="kicker a" style="justify-content:center">Martes · 22:00 · garita</div>
@@ -359,7 +418,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Empezamos con una pregunta: martes, 10 de la noche, ¿quién entró? Hoy esa respuesta tiene nombre, hora y el guardia que lo dejó pasar. Y además el residente sabe cuánto debe, la administración ve su residencial completo y el producto está en producción, probado con usuarios reales y listo para venderse al siguiente residencial. Gracias. ¿Preguntas?</div>
 </section>
 
-<section class="slide" data-who="Equipo" data-min="13:45">
+<section class="slide" data-who="Equipo" data-min="13:50">
   <div style="display:grid;place-items:center;height:100%;text-align:center">
     <div>
       <h1 class="a">¡Gracias!</h1>

@@ -51,21 +51,36 @@ lang: es
 
 **Tamaño del sistema:** unas 50,000 líneas de código, 67 tablas en la base de datos, 233 archivos de pruebas; **920 + 132 pruebas de backend y 575 de frontend pasando**; 67 pantallas entre los 4 roles.
 
-## Arquitectura
+## Arquitectura y flujo del sistema
 
 ```
-Celular / computadora (React, app instalable)
-        │  HTTPS + token de sesión firmado
-        ▼
-API Node.js / Express  ── valida rol y permisos en CADA petición
-        │  consultas parametrizadas
-        ▼
-MySQL (InnoDB, transacciones)
-        │
-        ├─► Recurrente (pagos)   ◄── webhook firmado de confirmación
-        ├─► Gmail SMTP (correos de avisos)
-        └─► Servicio push del navegador (avisos al celular)
+ USUARIOS (4 roles)            RAILWAY (plan Pro, USD 20/mes)                      SERVICIOS EXTERNOS
+ ┌──────────────────┐   HTTPS  ┌───────────────────┐  API REST  ┌──────────────────────┐
+ │ Celular / PC      │ ───────► │ Frontend React     │ ─────────► │ API Node.js/Express   │ ──► Recurrente (cobro con tarjeta)
+ │ app instalable    │          │ nexus-residencial  │  token     │ api.nexus-residencial │ ◄── webhook firmado (pago confirmado)
+ │ admin · residente │ ◄─push── │ .com               │  firmado   │  · sesión y roles      │ ──► Gmail SMTP (correos)
+ │ inquilino·guardia │          └───────────────────┘            │  · visitas y QR        │ ──► Web Push (avisos al celular)
+ └──────────────────┘                                            │  · finanzas · comunidad│
+                                                                  │  · tareas programadas  │
+                                                                  └─────────┬────────────┘
+                                                                            │ consultas parametrizadas
+                                                                  ┌─────────▼────────────┐
+                                                                  │ MySQL 8 (InnoDB)      │
+                                                                  │ una base por cliente  │
+                                                                  └──────────────────────┘
+ GitHub (rama main) ── merge ──► Railway publica solo la nueva versión (despliegue automático)
 ```
+
+**Tareas programadas del servidor (corren solas):**
+
+| Cada | Qué hace |
+|---|---|
+| 15 segundos | Envía los correos y avisos push pendientes (con reintentos). |
+| 1 minuto | Revisa visitas: QR expirados sin usar → aviso al residente; visitas que pasaron su hora sin salida → alerta a guardias y residente. |
+| Periódica | Facturación del día 1 de cada mes, recordatorios de pago y de reservas. |
+| Según configuración | Respaldos automáticos de la base de datos. |
+
+**Ejemplo de flujo de una visita:** el residente autoriza en el celular → la API valida horario y guarda la visita con un token aleatorio → el residente comparte el QR → el guardia lo escanea → la API valida el estado con la hora de Guatemala y registra el ingreso → el residente recibe el aviso de llegada → si pasa su hora sin salida, alerta a garita.
 
 ---
 
@@ -112,8 +127,8 @@ MySQL (InnoDB, transacciones)
 
 | Situación | Qué hace el sistema hoy |
 |---|---|
-| **La visita dijo 9 pm, pero se queda hasta las 12** | Su ingreso ya está registrado; el QR no se vuelve a usar. La salida **se puede registrar a cualquier hora** (no se bloquea), y en el historial queda la hora de fin autorizada y la hora real de salida, así que el administrador ve el exceso. Mientras no salga, aparece en "Dentro ahora" del guardia. *Mejora propuesta:* alerta automática al guardia y al residente cuando una visita pasa su hora de fin sin salida. |
-| **La visita llega después del rango que se puso** | El QR está **expirado** y garita lo rechaza. El residente crea una nueva autorización en segundos desde su celular (si aún está dentro del horario de visitas). |
+| **La visita dijo 9 pm, pero se queda hasta las 12** | Su ingreso ya está registrado; el QR no se vuelve a usar. La salida **se puede registrar a cualquier hora** (no se bloquea), y en el historial queda la hora de fin autorizada y la hora real de salida, así que el administrador ve el exceso. Mientras no salga, aparece en "Dentro ahora" del guardia. **Alerta automática (implementada):** en cuanto pasa su hora de fin sin salida, el sistema avisa a **todos los guardias** ("Visita sin salida registrada", en su pantalla de Alertas) y al **residente** que la autorizó, por la app, notificación push y correo. El aviso se envía una sola vez. |
+| **La visita llega después del rango que se puso** | Al minuto siguiente de la hora de fin (si era hasta las 10:30, a las 10:31) el QR **expira** y el residente recibe el aviso **"El QR de … expiró"** por la app, push y correo: por seguridad el código ya no funciona y, si la visita aún viene, debe crear una nueva autorización. Si el visitante llega con el QR viejo, garita lo rechaza. |
 | **Necesito un QR fuera del horario (6 am–10 pm)** | No se puede crear una visita normal fuera de horario. Para urgencias existe **"Solicitar acceso de emergencia"**: el residente escribe el motivo, la administración recibe la alerta, lo aprueba o rechaza, y solo entonces el QR funciona. El guardia ve la solicitud como "Acceso especial pendiente". |
 | **Una visita que cruza la medianoche (23:00 → 02:00)** | Se rechaza con un mensaje claro: debe empezar y terminar el mismo día; si es urgente, usar acceso de emergencia. |
 | **Le paso el QR a otra persona** | El QR solo sirve una vez y solo en su horario; el guardia ve en pantalla el nombre, DPI y placa autorizados y compara con quien llega. |
@@ -237,12 +252,12 @@ MySQL (InnoDB, transacciones)
 
 | Servicio | Costo | Notas |
 |---|---|---|
-| Railway (por residencial) | **~USD 10–25 al mes** (≈ Q80–Q195) | Pago por uso: USD 10 por GB de RAM al mes, USD 20 por vCPU al mes, USD 0.15 por GB de disco. Plan Pro USD 20/mes por cuenta, incluye USD 20 de uso. |
+| Railway, plan Pro | **USD 20 al mes** (≈ Q154) | Hospeda frontend, backend y MySQL. **El plan Pro es necesario para que el servidor pueda enviar correos por Gmail (SMTP)**: recuperación de contraseña y avisos. Incluye USD 20 de consumo; solo se paga extra si un residencial muy grande lo supera. |
 | Recurrente (pagos reales) | **4.5 % + Q2 por transacción exitosa** (cuenta comercial) | Sin mensualidad. Cuenta personal: 5.25 % + Q2. **El sandbox (modo pruebas) no cobra nada**: no mueve dinero real. Ejemplo: cuota de Q500 → comisión de Q24.50. |
 | Gmail (correos) | **Gratis** | No cobra por correo. Límite de ~500 destinatarios al día (cuenta normal) o 2,000 (Google Workspace). Un comunicado a todos cuenta un correo por persona. |
 | Alternativa de correo | Resend: gratis hasta 3,000/mes (100/día); USD 20/mes por 50,000 | Para residenciales grandes o muchos clientes. |
 | Avisos push | **Gratis** | Estándar del navegador. |
-| Dominio | ~Q100–Q150 al año | Un dominio para todos los clientes con subdominios. |
+| Dominio (`nexus-residencial.com`) | **USD 11 al año** (≈ Q85) | Un dominio para todos los clientes, con subdominios. |
 | Almacenamiento de PDF | **Q0 adicional** | Comprobantes y reportes **no se guardan**: se generan al momento desde la base. Documentos de comunidad (máx. 3 MB) y fotos comprimidas se guardan en MySQL; si el volumen crece, se pasan a almacenamiento de objetos (S3/R2). |
 
 **Si se acaba el límite de Gmail:** los correos quedan en cola y se reintentan (hasta 24 horas); la campana dentro de la app y los avisos push siguen funcionando, porque no dependen del correo.
@@ -306,23 +321,35 @@ Coincide con el costo que el equipo reportó en los informes de sprint: **6 desa
 | Concepto | Mensual | Anual |
 |---|---|---|
 | Ingreso por suscripción | Q1,500 | Q18,000 |
-| Railway | −Q155 | −Q1,860 |
-| Correo (Gmail gratis; Workspace si se necesita) | Q0 a −Q55 | Q0 a −Q660 |
+| Railway Pro (incluye envío de correos) | −Q154 | −Q1,848 |
+| Dominio (USD 11/año) | −Q7 | −Q85 |
 | Soporte (4 h × Q125) | −Q500 | −Q6,000 |
-| **Ganancia** | **≈ Q790–Q845 (53–56 %)** | **≈ Q9,500–Q10,100** |
+| **Ganancia** | **≈ Q839 (56 %)** | **≈ Q10,068** |
 
 Las comisiones de Recurrente (4.5 % + Q2) las paga el residencial sobre lo que cobra en línea, no NexusResidencial.
 
-**Escenarios anuales** (150 casas promedio por cliente, ganancia ≈ Q820/mes por cliente)
+**¿Cuánto cuesta que un residente o inquilino pague con tarjeta?** (Recurrente, cuenta comercial: 4.5 % + Q2 por pago exitoso; cuenta personal: 5.25 % + Q2; sin mensualidad)
+
+| Monto que paga el residente | Comisión (comercial) | Le llega al residencial | Comisión en sandbox |
+|---|---|---|---|
+| Q300 (mantenimiento) | Q15.50 | Q284.50 | Q0 |
+| Q500 (mantenimiento) | Q24.50 | Q475.50 | Q0 |
+| Q1,000 | Q47.00 | Q953.00 | Q0 |
+| Q2,500 (cuota de vivienda) | Q114.50 | Q2,385.50 | Q0 |
+| Q6,500 (renta) | Q294.50 | Q6,205.50 | Q0 |
+
+El **sandbox** es el modo de pruebas de Recurrente: se usan tarjetas de prueba, no se mueve dinero y no cobra comisión. Es lo que está activo hoy en producción. Para cobrar dinero real, el residencial abre su cuenta comercial en Recurrente y se cambian las llaves en Railway. El residencial decide si absorbe la comisión o la contempla en su cuota.
+
+**Escenarios anuales** (150 casas promedio por cliente; costo conservador de un plan Railway Pro por cliente, ganancia ≈ Q839/mes por cliente)
 
 | Clientes | Ingreso anual | Costo de operación anual | Ganancia anual |
 |---|---|---|---|
-| 1 | Q18,000 | Q8,160 | Q9,840 |
-| 10 | Q180,000 | Q81,600 | Q98,400 |
-| 30 | Q540,000 | Q244,800 | Q295,200 |
-| 60 | Q1,080,000 | Q489,600 | Q590,400 |
+| 1 | Q18,000 | Q7,932 | Q10,068 |
+| 10 | Q180,000 | Q79,320 | Q100,680 |
+| 30 | Q540,000 | Q237,960 | Q302,040 |
+| 60 | Q1,080,000 | Q475,920 | Q604,080 |
 
-**Punto de equilibrio contra el costo de desarrollo (Q1,320,000):** con ~30 clientes se recupera en unos 4.5 años; con 60 clientes, en poco más de 2 años. **Si se cuenta como pérdida:** con un solo cliente la operación sí deja ganancia mensual, pero no recupera el desarrollo; el negocio depende de vender a varios residenciales, y el modelo de copia por cliente permite sumar uno nuevo el mismo día.
+**Punto de equilibrio contra el costo de desarrollo (Q1,320,000):** con ~30 clientes se recupera en unos 4.4 años; con 60 clientes, en unos 2.2 años. **Si se cuenta como pérdida:** con un solo cliente la operación sí deja ganancia mensual, pero no recupera el desarrollo; el negocio depende de vender a varios residenciales, y el modelo de copia por cliente permite sumar uno nuevo el mismo día.
 
 ---
 
@@ -347,7 +374,8 @@ Las comisiones de Recurrente (4.5 % + Q2) las paga el residencial sobre lo que c
 - **¿Qué pasa si cae el internet en garita?** Sin conexión el QR no se puede validar contra el servidor; garita aplica el protocolo manual del residencial y luego la administración regulariza. *Mejora futura:* modo sin conexión con validación diferida.
 - **¿Se puede hackear el QR?** El token tiene 144 bits aleatorios, sirve una vez y solo en su horario; no lleva datos personales.
 - **¿Guardan tarjetas?** No. El pago ocurre en la página de Recurrente.
-- **¿Cuánto cuesta operarlo?** ~USD 10–25 al mes de servidor por residencial; correo y push gratis al volumen actual.
+- **¿Cuánto cuesta operarlo?** Hoy: Railway Pro USD 20 al mes (incluye el envío de correos) + dominio USD 11 al año ≈ USD 251 al año (≈ Q1,930). Correo de Gmail y push: gratis.
+- **¿Cuánto cuesta que un residente pague con tarjeta?** 4.5 % + Q2 por pago exitoso (Recurrente, cuenta comercial). Cuota de Q500 → Q24.50. En sandbox (pruebas) no cuesta nada.
 - **¿Cuántos usuarios soporta?** Miles de usuarios activos por instancia según la prueba de carga; escala agregando recursos.
 - **¿Qué aprendieron del Neurolab?** Que la encuesta decía "fácil", pero el residente no encontraba la pre-autorización; lo cambiamos.
 
