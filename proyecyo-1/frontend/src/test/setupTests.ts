@@ -22,6 +22,8 @@ if (!Object.getOwnPropertyDescriptor(HTMLElement.prototype, "innerText")) {
 }
 
 afterEach(() => {
+  // La sesión de cada pestaña (sessionStorage) no debe pasar de una prueba a otra.
+  try { window.sessionStorage.clear(); } catch { /* jsdom sin almacenamiento */ }
   // Ninguna ventana de SweetAlert2 abierta o en cola pasa a la siguiente prueba.
   clearToasts();
   Swal.close();

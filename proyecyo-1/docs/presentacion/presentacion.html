@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NexusResidencial · Presentación final</title>
+<title>Presentación NexusResidencial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -61,6 +61,9 @@ td.hi{color:#fff;font-weight:700}
 .bar-h{height:18px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:12px}
 .bar-h>i{display:block;height:100%;width:0;border-radius:9px;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width 1.4s cubic-bezier(.2,.7,.2,1) .5s}
 .slide.on .bar-h>i{width:var(--w)}
+.playbtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;display:none;padding:26px 46px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(7,13,31,.72);color:#fff;font:700 34px "Plus Jakarta Sans",sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
+.playbtn.show{display:block}
+.playbtn:focus-visible{outline:3px solid #2dd4bf;outline-offset:4px}
 #progress{position:fixed;left:0;bottom:0;height:5px;background:linear-gradient(90deg,var(--blue),var(--teal));transition:width .5s;z-index:20}
 #notes{position:fixed;right:24px;bottom:24px;width:560px;max-height:70vh;overflow:auto;background:rgba(7,13,31,.96);border:1px solid var(--line);border-radius:18px;padding:22px 24px;display:none;z-index:30;box-shadow:0 30px 80px rgba(0,0,0,.6)}
 #notes.show{display:block}
@@ -68,7 +71,8 @@ td.hi{color:#fff;font-weight:700}
 #notes p{font-size:16px;line-height:1.6;color:#dbe5fb}
 #hud{position:fixed;left:24px;top:20px;font:600 14px "JetBrains Mono";color:#6b7da6;z-index:20;display:flex;gap:16px}
 #hud b{color:#cfe0ff}
-:fullscreen #hud{display:none}
+:fullscreen #hud .hint{display:none}
+:fullscreen #hud{opacity:.75}
 .notes{display:none}
 @media print{
   @page{size:1920px 1080px;margin:0}
@@ -86,13 +90,14 @@ td.hi{color:#fff;font-weight:700}
 <div id="stage"><div id="deck">
 
 <!-- ================= 0 · VIDEO (brag) ================= -->
-<section class="slide" data-who="Denil Parada" data-min="0:00" data-video="1" style="padding:0;background:#000">
+<section class="slide" data-who="Luis Estrada" data-min="0:00" data-video="1" style="padding:0;background:#000">
   <video src="video/brag.mp4" poster="video/brag.jpg" playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+  <button type="button" class="playbtn" aria-label="Reproducir el video">▶&nbsp; Reproducir video</button>
   <div class="notes">(Sin hablar: dejar correr el video de 21 segundos. Al terminar, avanzar.) </div>
 </section>
 
 <!-- ================= 1 · DENIL ================= -->
-<section class="slide" data-who="Denil Parada" data-min="0:25">
+<section class="slide" data-who="Luis Estrada" data-min="0:25">
   <div style="position:absolute;right:-170px;top:190px;width:1000px;--d:3" class="zoom">
     <div class="shot"><div class="bar"><span></span><span></span><span></span><em>nexus-residencial.com</em></div><img src="img/12-admin-viviendas-3d.jpg" alt="Mapa 3D del residencial"></div>
   </div>
@@ -102,10 +107,10 @@ td.hi{color:#fff;font-weight:700}
     <p class="lead a" style="--d:2">Visitas, cobros y convivencia de un residencial, en una sola app.</p>
     <p class="a" style="--d:3;margin-top:60px;font-size:24px">Denil Parada · Diana Sosa · Diego Reyes · Arodi Chávez · Emilio Chen · Luis Estrada</p>
   </div>
-  <div class="notes">Buenos días. Somos NexusResidencial, un software para administrar residenciales: visitas con QR, cobros y la convivencia de toda la comunidad en una sola app. Somos seis: Diana, Diego, Arodi, Emilio, Luis y yo, Denil. (Pausa de 2 segundos.) Vuelvo a la pregunta del video.</div>
+  <div class="notes">Buenos días. Somos NexusResidencial, un software para administrar residenciales: visitas con QR, cobros y la convivencia de toda la comunidad en una sola app. Somos seis: Diana, Arodi, Emilio, Diego, Denil y yo, Luis. (Pausa de 2 segundos.) Vuelvo a la pregunta del video.</div>
 </section>
 
-<section class="slide" data-who="Denil Parada" data-min="0:45">
+<section class="slide" data-who="Luis Estrada" data-min="0:45">
   <div style="display:grid;place-items:center;height:100%;text-align:center">
     <div>
       <div class="kicker a" style="justify-content:center">Martes · 22:00 · garita</div>
@@ -116,7 +121,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Martes, 10 de la noche. Un visitante entra al residencial y nadie anota bien su nombre. Al día siguiente un vecino pregunta: ¿quién entró anoche? ¿Lo autorizó alguien? En la mayoría de residenciales nadie puede responder con certeza: la respuesta está en una libreta, en un chat de WhatsApp o en la memoria del guardia. Eso fue lo que escuchamos una y otra vez en nuestras entrevistas.</div>
 </section>
 
-<section class="slide" data-who="Denil Parada" data-min="1:15">
+<section class="slide" data-who="Luis Estrada" data-min="1:15">
   <div class="kicker a">El hilo de hoy</div>
   <h2 class="a" style="--d:1">De una libreta en garita a un sistema que <span class="grad">se puede vender</span>.</h2>
   <div class="cards" style="grid-template-columns:repeat(4,1fr)">
@@ -163,11 +168,11 @@ td.hi{color:#fff;font-weight:700}
     <div class="card a" style="--d:4"><h3 style="margin-top:0">El inquilino se entera tarde</h3><p>La información no llega igual a todos, sobre todo a inquilinos.</p></div>
   </div>
   <p class="lead a" style="--d:5">Horas de trabajo administrativo perdidas cada semana y una sensación de desorden que afecta la convivencia y el valor de la propiedad.</p>
-  <div class="notes">Las consecuencias son concretas. Residentes que disputan sanciones porque nunca recibieron aviso. Visitantes que entran sin una autorización verificable. Amenidades usadas sin reserva y sin responsable. E inquilinos que se enteran tarde porque la información no les llega. Todo esto son horas de trabajo administrativo perdidas cada semana y una percepción de desorden que afecta la convivencia y el valor de la propiedad. Diego nos explica cuánto vale resolver esto.</div>
+  <div class="notes">Las consecuencias son concretas. Residentes que disputan sanciones porque nunca recibieron aviso. Visitantes que entran sin una autorización verificable. Amenidades usadas sin reserva y sin responsable. E inquilinos que se enteran tarde porque la información no les llega. Todo esto son horas de trabajo administrativo perdidas cada semana y una percepción de desorden que afecta la convivencia y el valor de la propiedad. Arodi nos explica cuánto vale resolver esto.</div>
 </section>
 
 <!-- ================= 3 · DIEGO ================= -->
-<section class="slide" data-who="Diego Reyes" data-min="4:00">
+<section class="slide" data-who="Arodi Chávez" data-min="4:00">
   <div class="kicker a">Valor: antes vs después</div>
   <table class="a" style="--d:1;margin-top:10px">
     <tr><th>Proceso</th><th>Hoy</th><th>Con NexusResidencial</th><th>Métrica</th></tr>
@@ -180,7 +185,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">¿Qué cambia para el residencial? Comparemos. Autorizar una visita hoy es una llamada y una anotación en libreta, unos 3 minutos; con NexusResidencial el residente genera un QR y garita lo valida en segundos. Con 40 visitas diarias en un residencial de 150 casas, eso es cerca de hora y media diaria de garita. Los cobros: el administrador dedica unas 8 horas al mes a calcular multas; ahora las cuotas y recordatorios salen solos y los recargos y sanciones se calculan con un clic según las reglas del residencial. La morosidad se ve mes a mes. Y la trazabilidad pasa de nada a 100 % de accesos registrados. Estos números son estimaciones con los supuestos que ven abajo.</div>
 </section>
 
-<section class="slide" data-who="Diego Reyes" data-min="4:45">
+<section class="slide" data-who="Arodi Chávez" data-min="4:45">
   <div class="kicker a">Modelo de negocio</div>
   <div style="display:grid;grid-template-columns:1.05fr 1fr;gap:60px;margin-top:10px">
     <div>
@@ -206,7 +211,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación. Un residencial de 150 casas paga Q1,500 al mes; operarlo cuesta el plan Pro de Railway, 20 dólares al mes, que es el que permite enviar los correos de recuperación y de avisos por Gmail, más el dominio, 11 dólares al año. El correo y los avisos push no cuestan. Con soporte, el margen es de 56 por ciento. Estamos en el rango del mercado, alrededor de un dólar con treinta por unidad, pero con QR de garita, pagos en quetzales y mapa 3D. Beneficia a la administración, que deja el trabajo manual; a residentes e inquilinos, que ganan transparencia; y a garita. Nuestro desarrollo costó Q1,320,000; con 60 clientes se recupera en unos dos años.</div>
 </section>
 
-<section class="slide" data-who="Diego Reyes" data-min="5:25">
+<section class="slide" data-who="Arodi Chávez" data-min="5:25">
   <div class="kicker a">¿Cuánto cuesta pagar con tarjeta?</div>
   <h2 class="a" style="--d:1;font-size:56px">Recurrente cobra <span class="grad">4.5 % + Q2</span> por pago exitoso.<br>En sandbox: <span class="grad">Q0</span>.</h2>
   <table class="a" style="--d:2;margin-top:34px">
@@ -217,11 +222,11 @@ td.hi{color:#fff;font-weight:700}
     <tr><td class="hi">Q6,500 · renta</td><td>Q294.50</td><td>Q6,205.50</td><td>Q0</td></tr>
   </table>
   <p class="a" style="--d:3;margin-top:24px;font-size:22px">Cuenta comercial. Sin mensualidad. Hoy producción usa el sandbox: tarjetas de prueba, sin dinero real. Para cobrar de verdad, el residencial abre su cuenta en Recurrente y se cambian las llaves.</p>
-  <div class="notes">¿Y cuánto cuesta que un residente o inquilino pague con tarjeta? Recurrente cobra 4.5 % más Q2 por cada pago exitoso, sin mensualidad. Si alguien paga su mantenimiento de Q500, la comisión es de Q24.50 y al residencial le llegan Q475.50. Hoy el sistema funciona en el sandbox de Recurrente: es el modo de pruebas, con tarjetas de prueba, sin dinero real y sin comisión. Para cobrar de verdad, el residencial abre su cuenta comercial y cambiamos las llaves. El residencial decide si absorbe la comisión o la contempla en su cuota. Arodi les muestra el sistema, en vivo.</div>
+  <div class="notes">¿Y cuánto cuesta que un residente o inquilino pague con tarjeta? Recurrente cobra 4.5 % más Q2 por cada pago exitoso, sin mensualidad. Si alguien paga su mantenimiento de Q500, la comisión es de Q24.50 y al residencial le llegan Q475.50. Hoy el sistema funciona en el sandbox de Recurrente: es el modo de pruebas, con tarjetas de prueba, sin dinero real y sin comisión. Para cobrar de verdad, el residencial abre su cuenta comercial y cambiamos las llaves. El residencial decide si absorbe la comisión o la contempla en su cuota. Emilio les muestra el sistema, en vivo.</div>
 </section>
 
 <!-- ================= 4 · ARODI ================= -->
-<section class="slide" data-who="Arodi Chávez" data-min="6:00">
+<section class="slide" data-who="Emilio Chen" data-min="6:00">
   <div class="kicker a">Demo en vivo · 1 · el residente autoriza una visita</div>
   <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:56px;align-items:center;margin-top:6px">
     <div class="shot zoom" style="--d:1"><div class="bar"><span></span><span></span><span></span><em>/residente</em></div><img src="img/30-residente-dashboard.jpg" alt=""></div>
@@ -234,7 +239,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">EN VIVO (laptop, pestaña del RESIDENTE). Esta slide queda de respaldo. Digo: “Soy residente y viene un amigo a visitarme.” Toco “Autorizar una visita” → nombre “Visita del jurado”, DPI de 13 dígitos → Siguiente → fecha de hoy, inicio = hora actual, fin = una hora después → Siguiente → “Autorizar visita”. Aparece el QR con los botones Descargar y Compartir: “Esto se lo mando por WhatsApp. El QR no lleva datos personales, solo un código aleatorio de un solo uso.”</div>
 </section>
 
-<section class="slide" data-who="Arodi Chávez" data-min="6:45">
+<section class="slide" data-who="Emilio Chen" data-min="6:45">
   <div class="kicker a">Demo en vivo · 2 · garita valida en segundos</div>
   <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:56px;align-items:center;margin-top:6px">
     <div class="shot zoom" style="--d:1"><div class="bar"><span></span><span></span><span></span><em>/guardia/control</em></div><img src="img/44-guardia-qr-validado.jpg" alt=""></div>
@@ -249,7 +254,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">EN VIVO (celular del GUARDIA, sesión abierta en Control de acceso). Digo: “Ahora soy el guardia.” Toco “Iniciar cámara” y apunto al QR proyectado. Sale “Visita autorizada e ingreso registrado” con nombre, DPI, casa y horario. Opcional (10 s): escanear otra vez → “Este QR ya fue utilizado”: “No se puede reutilizar.” Cierro: “Si la visita no llega a tiempo, al minuto de vencer su hora el residente recibe un aviso en la app, push y correo de que el QR expiró y debe crear otro. Si entra y se queda más de lo autorizado, garita y el residente reciben una alerta. Y fuera de horario, el residente pide un acceso de emergencia que aprueba la administración.” Respaldo si falla la cámara: escribir el código en “Código manual”.</div>
 </section>
 
-<section class="slide" data-who="Arodi Chávez" data-min="7:30">
+<section class="slide" data-who="Emilio Chen" data-min="7:30">
   <div class="kicker a">Demo en vivo · 3 · cobros claros</div>
   <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:56px;align-items:center;margin-top:6px">
     <div class="shot zoom" style="--d:1"><div class="bar"><span></span><span></span><span></span><em>/residente/pagos</em></div><img src="img/32-residente-estado-cuenta.jpg" alt=""></div>
@@ -262,7 +267,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">EN VIVO (laptop, RESIDENTE) → menú “Mis pagos”. Digo: “El residente ve cada cuota, cuándo vence y cuánto debe.” Señalo el botón Pagar: “Paga con tarjeta en Recurrente, una pasarela guatemalteca; hoy está en modo de pruebas y para cobrar dinero real solo falta la cuenta comercial del residencial.” No completar el pago (ahorra tiempo).</div>
 </section>
 
-<section class="slide" data-who="Arodi Chávez" data-min="8:15">
+<section class="slide" data-who="Emilio Chen" data-min="8:15">
   <div class="kicker a">Demo en vivo · 4 · la administración ve todo</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:6px">
     <div class="shot zoom" style="--d:1"><div class="bar"><span></span><span></span><span></span><em>/admin/viviendas</em></div><img src="img/12-admin-viviendas-3d.jpg" alt=""></div>
@@ -271,7 +276,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="row a" style="--d:3;margin-top:36px;flex-wrap:wrap;gap:14px">
     <span class="tag">Roles propios (Contador, Junta)</span><span class="tag">Votaciones · 1 voto por casa</span><span class="tag">Fallas con foto</span><span class="tag">Importar desde Excel</span><span class="tag">App instalable + avisos push</span>
   </div>
-  <div class="notes">EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita que acabamos de autorizar ya aparece aquí, con el guardia que la registró.” → Viviendas: giro el mapa 3D y toco una casa. → Indicadores: morosidad mes a mes y visitas por día. Cierro con las etiquetas de la slide: “Como es un producto para vender, cada residencial crea sus roles, hace votaciones, recibe fallas con foto e importa sus datos desde Excel.” Relevo: “Pero que funcione no significa que sea fácil de usar. Emilio les cuenta cómo lo probamos.”</div>
+  <div class="notes">EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita que acabamos de autorizar ya aparece aquí, con el guardia que la registró.” → Viviendas: giro el mapa 3D y toco una casa. → Indicadores: morosidad mes a mes y visitas por día. Cierro con las etiquetas de la slide: “Como es un producto para vender, cada residencial crea sus roles, hace votaciones, recibe fallas con foto e importa sus datos desde Excel.” Transición: “Pero que funcione no significa que sea fácil de usar, así que lo probamos con usuarios reales.”</div>
 </section>
 
 <!-- ================= 5 · EMILIO ================= -->
@@ -284,10 +289,10 @@ td.hi{color:#fff;font-weight:700}
       <p class="a" style="--d:3;margin-top:22px">6 voluntarios · 3 roles · seguimiento ocular · sensor de estrés GSR · cuestionario SUS.</p>
     </div>
   </div>
-  <div class="notes">En octubre llevamos el sistema al Neurolab de la UVG. Seis voluntarios, dos por rol: administrador, guardia y residente. No les preguntamos si les gustaba: medimos con seguimiento ocular dónde miraban, con un sensor GSR cuándo se estresaban, y al final llenaron el cuestionario de usabilidad SUS. Aquí ven el mapa de calor de un residente y su señal de estrés.</div>
+  <div class="notes">En octubre llevamos el sistema al Neurolab de la UVG. Seis voluntarios, dos por rol: administrador, guardia y residente. No les preguntamos si les gustaba: medimos con seguimiento ocular dónde miraban, con un sensor GSR cuándo se estresaban, y al final llenaron el cuestionario de usabilidad SUS. Aquí ven el mapa de calor de un residente y su señal de estrés. Diego les muestra qué encontramos.</div>
 </section>
 
-<section class="slide" data-who="Emilio Chen" data-min="9:40">
+<section class="slide" data-who="Diego Reyes" data-min="9:40">
   <div class="kicker a">Resultados</div>
   <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-top:20px">
     <div class="card a" style="--d:1"><div class="big" data-count="94" data-suffix="%">0%</div><div class="unit">tareas completadas (17 de 18)</div></div>
@@ -303,7 +308,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Resultados: se completó el 94 % de las tareas y el SUS promedio fue 69.6, justo en el umbral de usabilidad aceptable. El administrador tuvo el mejor resultado, 77.5. El residente fue el que más batalló: uno de ellos tardó casi el doble y no logró pre-autorizar una visita sin ayuda. Curiosamente, en la encuesta todos decían que era fácil: el laboratorio nos mostró lo que la encuesta no.</div>
 </section>
 
-<section class="slide" data-who="Emilio Chen" data-min="10:20">
+<section class="slide" data-who="Diego Reyes" data-min="10:20">
   <div class="kicker a">Hallazgos → cambios en el producto</div>
   <table class="a" style="--d:1">
     <tr><th>Hallazgo del Neurolab</th><th>Qué cambiamos</th><th>Estado</th></tr>
@@ -316,20 +321,20 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Cada hallazgo se volvió un cambio. El más importante, la pre-autorización difícil de encontrar: ahora es el botón principal del panel del residente y del inquilino. El filtro del historial del guardia ahora es grande y está justo sobre la tabla. Las confirmaciones se rediseñaron en toda la aplicación. El menú y la jerarquía del residente mejoraron parcialmente, y el modo oscuro que pidieron los usuarios quedó en el backlog. El siguiente paso es repetir la prueba para medir cuánto sube el SUS del residente.</div>
 </section>
 
-<section class="slide" data-who="Emilio Chen" data-min="11:00">
+<section class="slide" data-who="Diego Reyes" data-min="11:00">
   <div class="kicker a">Calidad del proceso</div>
   <div class="cards" style="grid-template-columns:repeat(4,1fr);margin-top:30px">
     <div class="card a" style="--d:1"><div class="big" style="font-size:96px" data-count="11">0</div><div class="unit">sprints en Jira</div></div>
     <div class="card a" style="--d:2"><div class="big" style="font-size:96px" data-count="51">0</div><div class="unit">puntos por sprint en promedio</div></div>
-    <div class="card a" style="--d:3"><div class="big" style="font-size:96px" data-count="1627">0</div><div class="unit">pruebas automáticas pasando</div></div>
+    <div class="card a" style="--d:3"><div class="big" style="font-size:96px" data-count="1630">0</div><div class="unit">pruebas automáticas pasando</div></div>
     <div class="card a" style="--d:4"><div class="big" style="font-size:96px" data-count="67">0</div><div class="unit">pantallas en 4 roles</div></div>
   </div>
   <p class="lead a" style="--d:5">Revisiones técnicas formales, pruebas de regresión en cada cambio y un recorrido completo de los 4 roles antes de cada entrega.</p>
-  <div class="notes">Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 puntos, más de 1,600 pruebas automáticas que corren en backend y frontend, revisiones técnicas formales y, antes de esta entrega, recorrimos las 67 pantallas de los cuatro roles. Luis nos explica con qué está construido y por qué.</div>
+  <div class="notes">Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 puntos, más de 1,600 pruebas automáticas que corren en backend y frontend, revisiones técnicas formales y, antes de esta entrega, recorrimos las 67 pantallas de los cuatro roles. Denil nos explica con qué está construido y por qué.</div>
 </section>
 
 <!-- ================= 6 · LUIS ================= -->
-<section class="slide" data-who="Luis Estrada" data-min="11:30">
+<section class="slide" data-who="Denil Parada" data-min="11:30">
   <div class="kicker a">Arquitectura y flujo</div>
   <svg class="a" style="--d:1;width:100%;max-width:1680px;margin-top:6px" viewBox="0 0 1680 680" font-family="Plus Jakarta Sans, sans-serif">
     <defs>
@@ -374,7 +379,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Así está construido. Los cuatro roles entran desde el celular o la computadora, a una app instalable. El frontend en React habla por HTTPS, con un token de sesión firmado, con nuestra API en Node.js; la API valida el rol en cada petición y guarda todo en MySQL, con una base de datos por residencial. Para pagos se conecta con Recurrente, que nos confirma cada pago con un aviso firmado; para correos usa Gmail, y para avisos al celular, Web Push. Y hay tareas que corren solas: cada 15 segundos salen correos y push, cada minuto se revisan QR expirados y visitas sin salida, y cada mes se factura. Todo vive en Railway: cada vez que hacemos merge a main, se publica la nueva versión sola.</div>
 </section>
 
-<section class="slide" data-who="Luis Estrada" data-min="12:10">
+<section class="slide" data-who="Denil Parada" data-min="12:10">
   <div class="kicker a">Por qué esta tecnología</div>
   <table class="a" style="--d:1">
     <tr><th>Necesidad</th><th>Elegimos</th><th>En vez de</th><th>Porque</th></tr>
@@ -387,7 +392,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.</div>
 </section>
 
-<section class="slide" data-who="Luis Estrada" data-min="12:50">
+<section class="slide" data-who="Denil Parada" data-min="12:50">
   <div class="kicker a">Seguridad y escala</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:10px">
     <div class="card a" style="--d:1">
@@ -406,7 +411,7 @@ td.hi{color:#fff;font-weight:700}
   <div class="notes">Sobre seguridad: las contraseñas se guardan con bcrypt; las sesiones son tokens firmados que se pueden cerrar desde cualquier dispositivo y se cierran solas por inactividad; hay límite de intentos de inicio de sesión; todas las consultas son parametrizadas contra inyección SQL; cada cambio sensible queda auditado; los datos de tarjeta se escriben en la página de Recurrente, nunca en la nuestra; y cada residencial tiene su propia base de datos. En escala, hicimos una prueba de carga: una sola instancia atendió 280 peticiones por segundo con sesión y cero errores, del orden de 3,000 usuarios activos a la vez. Un residencial de 300 casas usa menos del 10 % de eso.</div>
 </section>
 
-<section class="slide" data-who="Luis Estrada" data-min="13:25">
+<section class="slide" data-who="Denil Parada" data-min="13:25">
   <div style="display:grid;place-items:center;height:100%;text-align:center">
     <div>
       <div class="kicker a" style="justify-content:center">Martes · 22:00 · garita</div>
@@ -431,7 +436,7 @@ td.hi{color:#fff;font-weight:700}
 
 </div></div>
 <div id="progress"></div>
-<div id="hud"><span>N notas</span><span>F pantalla completa</span><span>T cronómetro <b id="clock">00:00</b></span></div>
+<div id="hud"><span class="hint">N notas</span><span class="hint">F pantalla completa</span><span><span class="hint">T </span>cronómetro <b id="clock">00:00</b></span></div>
 <div id="notes"><h4 id="notesWho"></h4><p id="notesText"></p></div>
 
 <script>
@@ -455,7 +460,7 @@ td.hi{color:#fff;font-weight:700}
   };
   const show = (n) => {
     i = (n + slides.length) % slides.length;
-    slides.forEach((s, k) => { s.classList.toggle("on", k === i); const v = s.querySelector("video"); if (v) { if (k === i) { v.currentTime = 0; v.play().catch(() => {}); } else v.pause(); } });
+    slides.forEach((s, k) => { s.classList.toggle("on", k === i); const v = s.querySelector("video"); if (v) { const btn = s.querySelector(".playbtn"); if (k === i) { v.currentTime = 0; v.play().then(() => btn && btn.classList.remove("show")).catch(() => btn && btn.classList.add("show")); } else v.pause(); } });
     slides[i].querySelectorAll("[data-count]").forEach(count);
     document.getElementById("progress").style.width = `${((i + 1) / slides.length) * 100}%`;
     document.getElementById("notesWho").textContent = `${i + 1}/${slides.length} · ${slides[i].dataset.who} · ${slides[i].dataset.min}`;
@@ -473,7 +478,8 @@ td.hi{color:#fff;font-weight:700}
     else if (e.key.toLowerCase() === "f") { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
     else if (e.key.toLowerCase() === "t") { started = started ? null : Date.now(); if (!started) document.getElementById("clock").textContent = "00:00"; }
   });
-  addEventListener("click", (e) => { if (e.target.closest("#notes")) return; show(e.clientX > innerWidth / 3 ? i + 1 : i - 1); });
+  document.querySelectorAll(".playbtn").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); const v = b.parentElement.querySelector("video"); v.currentTime = 0; v.play().then(() => b.classList.remove("show")).catch(() => {}); }));
+  addEventListener("click", (e) => { if (e.target.closest("#notes") || e.target.closest(".playbtn")) return; show(e.clientX > innerWidth / 3 ? i + 1 : i - 1); });
   show(i);
 })();
 </script>

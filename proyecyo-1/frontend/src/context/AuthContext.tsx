@@ -6,7 +6,7 @@ import { clearToasts } from "@/utils/toastStore";
 import { changePasswordRequest, getSessionRequest, loginRequest, logoutRequest } from "@/services/authService";
 import type { AuthUser, ChangePasswordPayload, ChangePasswordResponse, LoginPayload, LoginResponse } from "@/types/auth";
 
-const STORAGE_KEY = "nexus.session";
+import { clearSession as clearStoredSession, readSession, writeSession } from "@/services/sessionStore";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -25,13 +25,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const persistSession = useCallback((session: AuthUser) => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    writeSession(JSON.stringify(session));
     setUser(session);
   }, []);
 
   const clearSession = useCallback(() => {
     clearToasts();
-    window.localStorage.removeItem(STORAGE_KEY);
+    clearStoredSession();
     setUser(null);
   }, []);
 
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Consulta al backend el rol y estado actuales del usuario y actualiza la sesion
   // si cambiaron los permisos. Si el usuario fue desactivado o eliminado, cierra la sesion.
   const refreshSession = useCallback(async () => {
-    const rawSession = window.localStorage.getItem(STORAGE_KEY);
+    const rawSession = readSession();
 
     if (!rawSession) {
       return;
@@ -77,13 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession, persistSession]);
 
   useEffect(() => {
-    const rawSession = window.localStorage.getItem(STORAGE_KEY);
+    const rawSession = readSession();
 
     if (rawSession) {
       try {
         setUser(JSON.parse(rawSession) as AuthUser);
       } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
+        clearStoredSession();
       }
     }
 
