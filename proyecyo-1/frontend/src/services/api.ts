@@ -1,7 +1,7 @@
 import { getApiErrorMessage, getFieldErrors, type FieldError } from "@/utils/errorMessages";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-const SESSION_STORAGE_KEY = "nexus.session";
+import { clearSession, readSession } from "@/services/sessionStore";
 
 type RequestOptions = Omit<RequestInit, "body"> & {
   body?: unknown;
@@ -23,7 +23,7 @@ function getRequestHeaders(initial?: HeadersInit) {
   const headers = new Headers(initial);
   headers.set("Content-Type", "application/json");
 
-  const rawSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
+  const rawSession = readSession();
 
   if (rawSession) {
     try {
@@ -33,7 +33,7 @@ function getRequestHeaders(initial?: HeadersInit) {
         headers.set("Authorization", `Bearer ${session.token}`);
       }
     } catch {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      clearSession();
     }
   }
 

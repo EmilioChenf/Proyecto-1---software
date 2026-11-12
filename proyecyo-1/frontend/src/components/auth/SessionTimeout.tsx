@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { currentSessionUserId } from "@/services/sessionStore";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -36,7 +37,7 @@ export function SessionTimeout() {
   const endSession = useCallback(() => {
     clearTimers();
     setShowWarning(false);
-    localStorage.setItem(LOGOUT_EVENT_KEY, String(Date.now()));
+    try { localStorage.setItem(LOGOUT_EVENT_KEY, `${currentSessionUserId() ?? ""}:${Date.now()}`); } catch { /* sin almacenamiento */ }
     logout();
   }, [clearTimers, logout]);
 
@@ -81,7 +82,9 @@ export function SessionTimeout() {
 
     // Sincroniza el cierre de sesion entre pestañas abiertas.
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === LOGOUT_EVENT_KEY) {
+      // Solo cierra las pestañas del mismo usuario: las de otros roles siguen abiertas.
+      const sender = String(event.newValue || "").split(":")[0];
+      if (event.key === LOGOUT_EVENT_KEY && (!sender || sender === String(currentSessionUserId() ?? ""))) {
         logout();
       }
     };
