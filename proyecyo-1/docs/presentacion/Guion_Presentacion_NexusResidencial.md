@@ -10,37 +10,37 @@ lang: es
 - **No lean**: aprendan la idea de cada slide y díganla con sus palabras.
 - **Relevos**: cada quien termina con su frase de relevo; el siguiente arranca sin pausa.
 - **Tiempo total: 14 minutos.** Si van tarde, recorten en las slides de 4 tarjetas, nunca en la demo ni en UX.
+- **Pestañas para la demo:** en el mismo navegador abran una pestaña por rol (administrador, guardia, residente e inquilino) e inicien sesión en cada una; cada pestaña conserva su rol aunque se recargue. Háganlo unos 10 minutos antes: tras 30 minutos sin tocar una pestaña, el sistema cierra esa sesión por seguridad.
 - **Todo lo que se dice existe en producción** (`nexus-residencial.com`). No mencionar funciones que no estén ahí.
 
 | # | Integrante | Sección | Tiempo | Criterio de la rúbrica |
 |---|---|---|---|---|
-| 1 | Denil Parada | Apertura e hilo narrativo | 0:00 – 2:00 | Criterio 1 (hilo narrativo, 1.12 pts) |
+| 1 | Luis Estrada | Apertura e hilo narrativo | 0:00 – 2:00 | Criterio 1 (hilo narrativo, 1.12 pts) |
 | 2 | Diana Sosa | Problemática del cliente | 2:00 – 4:00 | Criterio 2 (problemática del cliente, 0.96 pts) |
-| 3 | Diego Reyes | Valor e impacto de negocio | 4:00 – 6:00 | Criterio 3 (valor e impacto, 0.80 pts) |
-| 4 | Arodi Chávez | Demo EN VIVO de flujos principales | 6:00 – 9:00 | Criterio 4 (solución y demo, parte de 2.56 pts) |
-| 5 | Emilio Chen | Resultados UX (Neurolab) y calidad | 9:00 – 11:30 | Criterio 4 (pruebas con usuarios, resultados y mejoras) |
-| 6 | Luis Estrada | Justificación tecnológica y cierre | 11:30 – 14:00 | Criterio 5 (tecnología, 0.80 pts) + cierre del criterio 1 |
+| 3 | Arodi Chávez | Valor e impacto de negocio | 4:00 – 6:00 | Criterio 3 (valor e impacto, 0.80 pts) |
+| 4 | Emilio Chen | Demo EN VIVO y cómo lo probamos (Neurolab) | 6:00 – 9:40 | Criterio 4 (solución, demo y pruebas con usuarios, 2.56 pts) |
+| 5 | Diego Reyes | Resultados UX y calidad | 9:40 – 11:30 | Criterio 4 (resultados de usuarios y mejoras) |
+| 6 | Denil Parada | Arquitectura, justificación tecnológica y cierre | 11:30 – 14:00 | Criterio 5 (tecnología, 0.80 pts) + cierre del criterio 1 |
 
 # Preparación de la demo en vivo (hacer el día anterior y 15 min antes)
 
 1. **Equipos:** laptop conectada al proyector + celular del guardia con datos móviles (por si falla el WiFi del salón).
 2. **Cuentas de producción listas** (usar cuentas de demostración, nunca datos reales):
-   - Laptop, ventana normal: **residente** con vivienda asignada, saldo pendiente y alguna reserva.
-   - Laptop, ventana de incógnito: **administrador** (pestañas abiertas: Dashboard, Viviendas, Indicadores).
-   - Celular: **guardia** en *Control de acceso*, cámara ya autorizada en el navegador.
+   - Laptop, una pestaña por rol en la misma ventana: **residente** (con vivienda, saldo y alguna reserva), **inquilino**, **administrador** (Dashboard, Viviendas e Indicadores) y **guardia**.
+   - Celular: **guardia** en *Control de acceso* para escanear con la cámara (o usar la pestaña del guardia en la laptop con *Código manual*).
 3. **Horario:** la presentación debe caer dentro del horario de visitas (por defecto 06:00–22:00). La visita se crea con **inicio = hora actual** (el sistema da 10 minutos de margen) y fin una hora después.
 4. **Ensayo:** hacer el flujo completo una vez antes de entrar (crear visita → escanear). Borrar o cancelar esa visita de prueba.
 5. **Pantalla:** zoom del navegador al 110–125 % para que el jurado lea; desactivar notificaciones del sistema operativo.
-6. **Plan B:** si falla internet o la cámara, Arodi usa las slides 11–14 (son capturas del mismo flujo) o escribe el código del QR en *Código manual*.
+6. **Plan B:** si falla internet o la cámara, Emilio usa las slides 11–14 (son capturas del mismo flujo) o escribe el código del QR en *Código manual*.
 7. **Tiempo de la demo: 3 minutos.** Si se pasa, saltar el paso de Pagos (slide 13).
 
-# Denil Parada — Apertura e hilo narrativo (0:00 – 2:00)
+# Luis Estrada — Apertura e hilo narrativo (0:00 – 2:00)
 
 **Objetivo:** Abrir con el video, plantear la pregunta “¿Quién entró?” y anunciar el recorrido.
 
 **Cuenta para:** Criterio 1 (hilo narrativo, 1.12 pts)
 
-**Antes de hablar:** la slide 1 es el video de lanzamiento (21 s, con música). Denil se para al frente, lo deja correr sin hablar y al terminar avanza.
+**Antes de hablar:** la slide 1 es el video de lanzamiento (21 s, con música). Si aparece el botón ▶ Reproducir video, tóquenlo. Luis se para al frente, lo deja correr sin hablar y al terminar avanza.
 
 ## Slide 1 · 0:00 · Video de lanzamiento (/brag)
 
@@ -48,7 +48,7 @@ lang: es
 
 ## Slide 2 · 0:25 · Ingeniería de Software 1 · Proyecto final
 
-Buenos días. Somos NexusResidencial, un software para administrar residenciales: visitas con QR, cobros y la convivencia de toda la comunidad en una sola app. Somos seis: Diana, Diego, Arodi, Emilio, Luis y yo, Denil. (Pausa de 2 segundos.) Vuelvo a la pregunta del video.
+Buenos días. Somos NexusResidencial, un software para administrar residenciales: visitas con QR, cobros y la convivencia de toda la comunidad en una sola app. Somos seis: Diana, Arodi, Emilio, Diego, Denil y yo, Luis. (Pausa de 2 segundos.) Vuelvo a la pregunta del video.
 
 ## Slide 3 · 0:45 · Martes · 22:00 · garita
 
@@ -81,18 +81,18 @@ Hoy estos residenciales funcionan con libreta, Excel, llamadas y WhatsApp. Eso g
 
 ## Slide 7 · 3:20 · Las consecuencias (lo que nos dijeron en las entrevistas)
 
-Las consecuencias son concretas. Residentes que disputan sanciones porque nunca recibieron aviso. Visitantes que entran sin una autorización verificable. Amenidades usadas sin reserva y sin responsable. E inquilinos que se enteran tarde porque la información no les llega. Todo esto son horas de trabajo administrativo perdidas cada semana y una percepción de desorden que afecta la convivencia y el valor de la propiedad. Diego nos explica cuánto vale resolver esto.
+Las consecuencias son concretas. Residentes que disputan sanciones porque nunca recibieron aviso. Visitantes que entran sin una autorización verificable. Amenidades usadas sin reserva y sin responsable. E inquilinos que se enteran tarde porque la información no les llega. Todo esto son horas de trabajo administrativo perdidas cada semana y una percepción de desorden que afecta la convivencia y el valor de la propiedad. Arodi nos explica cuánto vale resolver esto.
 
-**Frase de relevo:** “…Diego nos explica cuánto vale resolver esto.”
+**Frase de relevo:** “…Arodi nos explica cuánto vale resolver esto.”
 
 **Preguntas que te pueden tocar:**
 
 - ¿Qué evidencia tienen? → Entrevistas, mapas de empatía e insights de Design Thinking con los 4 perfiles (feb 2026).
 - ¿Por qué ahora? → Los condominios y la vivienda vertical son la tendencia de construcción en Guatemala (E&N 2025).
 
-# Diego Reyes — Valor e impacto de negocio (4:00 – 6:00)
+# Arodi Chávez — Valor e impacto de negocio (4:00 – 6:00)
 
-**Objetivo:** Comparar antes vs después con métricas, decir los supuestos, quién gana y contra qué alternativas competimos.
+**Objetivo:** Comparar antes vs después con métricas, decir los supuestos, el modelo de negocio, los costos reales y cuánto cuesta pagar con tarjeta.
 
 **Cuenta para:** Criterio 3 (valor e impacto, 0.80 pts)
 
@@ -106,22 +106,22 @@ El modelo es suscripción: Q10 por vivienda al mes, más Q2,500 de instalación.
 
 ## Slide 10 · 5:25 · ¿Cuánto cuesta pagar con tarjeta?
 
-¿Y cuánto cuesta que un residente o inquilino pague con tarjeta? Recurrente cobra 4.5 % más Q2 por cada pago exitoso, sin mensualidad. Si alguien paga su mantenimiento de Q500, la comisión es de Q24.50 y al residencial le llegan Q475.50. Hoy el sistema funciona en el sandbox de Recurrente: es el modo de pruebas, con tarjetas de prueba, sin dinero real y sin comisión. Para cobrar de verdad, el residencial abre su cuenta comercial y cambiamos las llaves. El residencial decide si absorbe la comisión o la contempla en su cuota. Arodi les muestra el sistema, en vivo.
+¿Y cuánto cuesta que un residente o inquilino pague con tarjeta? Recurrente cobra 4.5 % más Q2 por cada pago exitoso, sin mensualidad. Si alguien paga su mantenimiento de Q500, la comisión es de Q24.50 y al residencial le llegan Q475.50. Hoy el sistema funciona en el sandbox de Recurrente: es el modo de pruebas, con tarjetas de prueba, sin dinero real y sin comisión. Para cobrar de verdad, el residencial abre su cuenta comercial y cambiamos las llaves. El residencial decide si absorbe la comisión o la contempla en su cuota. Emilio les muestra el sistema, en vivo.
 
-**Frase de relevo:** “…Arodi les muestra el sistema, en vivo.”
+**Frase de relevo:** “…Emilio les muestra el sistema, en vivo.”
 
 **Preguntas que te pueden tocar:**
 
 - ¿De dónde salen los números? → Supuestos explícitos: 150 casas, 40 visitas/día, 3 min vs <1 min por visita.
 - ¿Quién paga la comisión de Recurrente? → El residencial decide: la absorbe o la contempla en su cuota (4.5 % + Q2; Q500 → Q24.50). El sandbox no cuesta.
 - ¿Cuánto cuesta operarlo? → Railway Pro USD 20/mes + dominio USD 11/año ≈ USD 251/año.
-- ¿Cuándo recuperan la inversión? → Con 60 clientes ~2 años; con 30, ~4.5 años (doc. técnico, sección 10).
+- ¿Cuándo recuperan la inversión? → Con 60 clientes ~2.2 años; con 30, ~4.4 años (doc. técnico, sección 10).
 
-# Arodi Chávez — Demo EN VIVO de flujos principales (6:00 – 9:00)
+# Emilio Chen — Demo EN VIVO y cómo lo probamos (Neurolab) (6:00 – 9:40)
 
-**Objetivo:** Mostrar en vivo el producto resolviendo el problema de Diana: visita → QR → garita → cobros → administración.
+**Objetivo:** Mostrar en vivo visita → QR → garita → cobros → administración, y presentar cómo se probó con usuarios en el Neurolab.
 
-**Cuenta para:** Criterio 4 (solución y demo, parte de 2.56 pts)
+**Cuenta para:** Criterio 4 (solución, demo y pruebas con usuarios, 2.56 pts)
 
 ## Slide 11 · 6:00 · Demo en vivo · 1 · el residente autoriza una visita
 
@@ -137,25 +137,26 @@ EN VIVO (laptop, RESIDENTE) → menú “Mis pagos”. Digo: “El residente ve 
 
 ## Slide 14 · 8:15 · Demo en vivo · 4 · la administración ve todo
 
-EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita que acabamos de autorizar ya aparece aquí, con el guardia que la registró.” → Viviendas: giro el mapa 3D y toco una casa. → Indicadores: morosidad mes a mes y visitas por día. Cierro con las etiquetas de la slide: “Como es un producto para vender, cada residencial crea sus roles, hace votaciones, recibe fallas con foto e importa sus datos desde Excel.” Relevo: “Pero que funcione no significa que sea fácil de usar. Emilio les cuenta cómo lo probamos.”
-
-**Frase de relevo:** “…Emilio les cuenta cómo lo probamos.”
-
-**Preguntas que te pueden tocar:**
-
-- ¿Qué pasa si la visita llega tarde? → El QR expira y garita lo rechaza; el residente genera otro en segundos.
-- ¿Y si se queda más tiempo? → La salida se registra a cualquier hora; el historial muestra hora autorizada vs hora real.
-- ¿Fuera de horario (6:00–22:00)? → Acceso de emergencia con motivo, aprobado por la administración.
-
-# Emilio Chen — Resultados UX (Neurolab) y calidad (9:00 – 11:30)
-
-**Objetivo:** Probar que lo validamos con usuarios reales, mostrar números y, sobre todo, qué cambiamos por esos resultados.
-
-**Cuenta para:** Criterio 4 (pruebas con usuarios, resultados y mejoras)
+EN VIVO (laptop, pestaña del ADMINISTRADOR ya abierta). Dashboard: “La visita que acabamos de autorizar ya aparece aquí, con el guardia que la registró.” → Viviendas: giro el mapa 3D y toco una casa. → Indicadores: morosidad mes a mes y visitas por día. Cierro con las etiquetas de la slide: “Como es un producto para vender, cada residencial crea sus roles, hace votaciones, recibe fallas con foto e importa sus datos desde Excel.” Transición: “Pero que funcione no significa que sea fácil de usar, así que lo probamos con usuarios reales.”
 
 ## Slide 15 · 9:00 · Pruebas con usuarios · Neurolab UVG · 15 oct 2026
 
-En octubre llevamos el sistema al Neurolab de la UVG. Seis voluntarios, dos por rol: administrador, guardia y residente. No les preguntamos si les gustaba: medimos con seguimiento ocular dónde miraban, con un sensor GSR cuándo se estresaban, y al final llenaron el cuestionario de usabilidad SUS. Aquí ven el mapa de calor de un residente y su señal de estrés.
+En octubre llevamos el sistema al Neurolab de la UVG. Seis voluntarios, dos por rol: administrador, guardia y residente. No les preguntamos si les gustaba: medimos con seguimiento ocular dónde miraban, con un sensor GSR cuándo se estresaban, y al final llenaron el cuestionario de usabilidad SUS. Aquí ven el mapa de calor de un residente y su señal de estrés. Diego les muestra qué encontramos.
+
+**Frase de relevo:** “…Diego les muestra qué encontramos.”
+
+**Preguntas que te pueden tocar:**
+
+- ¿Qué pasa si la visita llega tarde? → Al vencer su hora el residente recibe aviso de QR expirado (app, push y correo) y crea otra autorización.
+- ¿Y si se queda más tiempo? → La salida se registra a cualquier hora y garita y residente reciben alerta de visita sin salida.
+- ¿Fuera de horario (6:00–22:00)? → Acceso de emergencia con motivo, aprobado por la administración.
+- ¿Cómo fue la prueba del Neurolab? → 15 de octubre de 2026, 6 voluntarios (2 por rol), seguimiento ocular, sensor GSR y cuestionario SUS.
+
+# Diego Reyes — Resultados UX y calidad (9:40 – 11:30)
+
+**Objetivo:** Mostrar los números del Neurolab y, sobre todo, qué cambiamos por esos resultados; cerrar con la calidad del proceso.
+
+**Cuenta para:** Criterio 4 (resultados de usuarios y mejoras)
 
 ## Slide 16 · 9:40 · Resultados
 
@@ -167,19 +168,19 @@ Cada hallazgo se volvió un cambio. El más importante, la pre-autorización dif
 
 ## Slide 18 · 11:00 · Calidad del proceso
 
-Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 puntos, más de 1,600 pruebas automáticas que corren en backend y frontend, revisiones técnicas formales y, antes de esta entrega, recorrimos las 67 pantallas de los cuatro roles. Luis nos explica con qué está construido y por qué.
+Y para que cada cambio no rompa lo anterior: 11 sprints con un promedio de 51 puntos, más de 1,600 pruebas automáticas que corren en backend y frontend, revisiones técnicas formales y, antes de esta entrega, recorrimos las 67 pantallas de los cuatro roles. Denil nos explica con qué está construido y por qué.
 
-**Frase de relevo:** “…Luis nos explica con qué está construido y por qué.”
+**Frase de relevo:** “…Denil nos explica con qué está construido y por qué.”
 
 **Preguntas que te pueden tocar:**
 
 - ¿Por qué el SUS es 69.6? → El residente batalló con la pre-autorización; por eso la volvimos el botón principal (lo acaban de ver en la demo).
 - ¿Repetirán la prueba? → Sí, es el siguiente paso para medir la mejora del residente.
-- ¿Cuántas pruebas automáticas? → 920 + 132 de backend y 575 de frontend.
+- ¿Cuántas pruebas automáticas? → 920 + 132 de backend y 578 de frontend.
 
-# Luis Estrada — Justificación tecnológica y cierre (11:30 – 14:00)
+# Denil Parada — Arquitectura, justificación tecnológica y cierre (11:30 – 14:00)
 
-**Objetivo:** Explicar cada tecnología por requisito, costo y alternativa; seguridad y escala; cerrar regresando a la pregunta inicial.
+**Objetivo:** Explicar la arquitectura y cada tecnología por requisito, costo y alternativa; seguridad y escala; cerrar regresando a la pregunta inicial.
 
 **Cuenta para:** Criterio 5 (tecnología, 0.80 pts) + cierre del criterio 1
 
@@ -206,7 +207,6 @@ Empezamos con una pregunta: martes, 10 de la noche, ¿quién entró? Hoy esa res
 - ¿Qué pasa si dos residenciales compran? → Cada uno tiene su copia y su base de datos; el mismo código para todos; los cambios particulares se vuelven configuración.
 - ¿Cuántos usuarios aguanta? → Prueba de carga: 280 peticiones/s con sesión, 0 errores ≈ 3,000 usuarios activos por instancia.
 - ¿Gmail cobra por correo? → No; Railway Pro (USD 20/mes) permite enviarlos; límite ~500 destinatarios/día. Si se supera, quedan en cola y la campana y el push siguen funcionando.
-- ¿Qué pasa si la visita no llega o se queda de más? → Al vencer su hora, el residente recibe aviso de QR expirado (app, push y correo); si entró y no salió, garita y residente reciben alerta.
 
 # Preguntas generales del jurado
 

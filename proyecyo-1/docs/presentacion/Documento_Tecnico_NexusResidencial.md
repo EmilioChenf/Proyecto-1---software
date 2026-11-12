@@ -49,7 +49,7 @@ lang: es
 | Avisos al celular | Web Push (estándar del navegador, llaves VAPID) | Gratis y sin depender de Firebase. | Firebase Cloud Messaging. |
 | Calidad | Jest, node:test, Supertest, Vitest, Testing Library, Playwright | Pruebas automáticas en cada capa. | — |
 
-**Tamaño del sistema:** unas 50,000 líneas de código, 67 tablas en la base de datos, 233 archivos de pruebas; **920 + 132 pruebas de backend y 575 de frontend pasando**; 67 pantallas entre los 4 roles.
+**Tamaño del sistema:** unas 50,000 líneas de código, 67 tablas en la base de datos, 233 archivos de pruebas; **920 + 132 pruebas de backend y 578 de frontend pasando**; 67 pantallas entre los 4 roles.
 
 ## Arquitectura y flujo del sistema
 
@@ -160,6 +160,7 @@ lang: es
 | Auditoría | Quién hizo qué, cuándo, desde qué IP, con datos antes/después. |
 | Importar desde Excel | Plantilla de 4 hojas (viviendas, residentes, inquilinos, saldos); vista previa fila por fila con errores; no se guarda nada hasta confirmar. |
 | Primeros pasos | Asistente de 6 pasos para dejar listo un residencial nuevo en minutos. |
+| Sesión por pestaña | Cada pestaña del navegador guarda su propia sesión: se pueden tener abiertos a la vez el administrador, el guardia, el residente y el inquilino (útil en garita compartida y en demostraciones). Una pestaña nueva entra con la última sesión iniciada; cerrar sesión o expirar por inactividad solo afecta a ese usuario. |
 | App instalable y push | PWA: se instala desde el navegador (Android con botón; iPhone desde Compartir → Agregar a inicio). Los avisos llegan aunque la app esté cerrada. |
 
 ---
