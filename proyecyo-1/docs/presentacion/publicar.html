@@ -10,8 +10,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:#03060f;color:var(--ink);font-family:"Plus Jakarta Sans","Segoe UI",system-ui,sans-serif;overflow:hidden}
-#stage{position:fixed;inset:0;display:grid;place-items:center}
-#deck{width:1920px;height:1080px;position:relative;transform-origin:center center}
+#stage{position:fixed;inset:0;overflow:hidden}
+#deck{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);transform-origin:center center}
 .slide{position:absolute;inset:0;padding:96px 120px 130px;display:flex;flex-direction:column;justify-content:center;background:radial-gradient(1200px 700px at 85% -10%,rgba(59,130,246,.22),transparent 60%),radial-gradient(900px 600px at -10% 110%,rgba(20,184,166,.16),transparent 60%),linear-gradient(160deg,var(--bg),var(--bg2));opacity:0;visibility:hidden;transition:opacity .6s ease,visibility .6s;overflow:hidden}
 .slide.on{opacity:1;visibility:visible}
 .slide::after{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:96px 96px;mask-image:radial-gradient(ellipse at 70% 30%,rgba(0,0,0,.5),transparent 70%);pointer-events:none;opacity:.35}
@@ -74,7 +74,7 @@ td.hi{color:#fff;font-weight:700}
   @page{size:1920px 1080px;margin:0}
   html,body{overflow:visible;background:#000}
   #stage{position:static;display:block}
-  #deck{transform:none!important}
+  #deck{transform:none!important;position:relative;left:auto;top:auto}
   .slide{position:relative;opacity:1!important;visibility:visible!important;page-break-after:always;width:1920px;height:1080px}
   .a,.zoom{opacity:1!important;transform:none!important}
   .bar-h>i{width:var(--w)!important}
@@ -437,7 +437,7 @@ td.hi{color:#fff;font-weight:700}
 (() => {
   const deck = document.getElementById("deck");
   const slides = [...document.querySelectorAll(".slide")];
-  const fit = () => { const s = Math.min(innerWidth / 1920, innerHeight / 1080); deck.style.transform = `scale(${s})`; };
+  const fit = () => { const s = Math.min(innerWidth / 1920, innerHeight / 1080); deck.style.transform = `translate(-50%,-50%) scale(${s})`; };
   addEventListener("resize", fit); fit();
   slides.forEach((s) => {
     if (s.dataset.who === "Equipo" || s.dataset.video) return;
