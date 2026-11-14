@@ -190,7 +190,7 @@ Así está construido. Los cuatro roles entran desde el celular o la computadora
 
 ## Slide 20 · 12:10 · Por qué esta tecnología
 
-Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.
+Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, liviano y con librerías listas para PDF, Excel, correo y pagos, en lugar de Django o Spring, que nos obligaban a usar otro lenguaje en el servidor. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.
 
 ## Slide 21 · 12:50 · Seguridad y escala
 

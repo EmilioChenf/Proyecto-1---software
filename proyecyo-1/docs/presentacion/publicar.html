@@ -73,7 +73,7 @@ td.hi{color:#fff;font-weight:700}
 @media print{
   @page{size:1920px 1080px;margin:0}
   html,body{overflow:visible;background:#000}
-  #stage{position:static;display:block}
+  #stage{position:static;display:block;overflow:visible}
   #deck{transform:none!important;position:relative;left:auto;top:auto}
   .slide{position:relative;opacity:1!important;visibility:visible!important;page-break-after:always;width:1920px;height:1080px}
   .a,.zoom{opacity:1!important;transform:none!important}
@@ -378,12 +378,12 @@ td.hi{color:#fff;font-weight:700}
   <table class="a" style="--d:1">
     <tr><th>Necesidad</th><th>Elegimos</th><th>En vez de</th><th>Porque</th></tr>
     <tr><td>Interfaz en celular y PC</td><td class="hi">React + TypeScript (app instalable)</td><td>Angular, apps nativas</td><td>Un solo lenguaje; sin tiendas de apps</td></tr>
-    <tr><td>Lógica del negocio</td><td class="hi">Node.js + Express</td><td>Django, Spring</td><td>El equipo ya lo dominaba</td></tr>
+    <tr><td>Lógica del negocio</td><td class="hi">Node.js + Express</td><td>Django, Spring</td><td>Mismo lenguaje que el frontend</td></tr>
     <tr><td>Pagos que no fallan a medias</td><td class="hi">MySQL (transacciones)</td><td>MongoDB</td><td>Casa → contrato → cuota → pago</td></tr>
     <tr><td>Operar barato</td><td class="hi">Railway (Pro)</td><td>AWS, VPS</td><td>USD 20/mes, correos y deploy automático</td></tr>
     <tr><td>Cobrar en quetzales</td><td class="hi">Recurrente</td><td>Stripe, PayPal</td><td>Guatemalteco, sin mensualidad</td></tr>
   </table>
-  <div class="notes">Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, que el equipo ya dominaba, en lugar de Django o Spring. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.</div>
+  <div class="notes">Cada tecnología responde a un requisito. La interfaz es React con TypeScript, instalable en el celular sin pasar por tiendas de apps. El servidor es Node.js con Express: el mismo lenguaje en todo el sistema, liviano y con librerías listas para PDF, Excel, correo y pagos, en lugar de Django o Spring, que nos obligaban a usar otro lenguaje en el servidor. La base es MySQL porque los pagos necesitan transacciones: una cuota no puede quedar pagada a medias, algo que MongoDB no garantiza tan naturalmente. Desplegamos en Railway: el plan Pro cuesta 20 dólares al mes, incluye el envío de correos y publica solo cada cambio, frente a operar AWS o un servidor propio. Y cobramos con Recurrente porque es guatemalteca, cobra en quetzales y no tiene mensualidad; Stripe no opera comercios en Guatemala.</div>
 </section>
 
 <section class="slide" data-who="Denil Parada" data-min="12:50">
